@@ -24,8 +24,14 @@ def build_bolt_app(settings: Settings, service: SlackApplicationService) -> Any:
 
     if settings.slack_bot_token is None:
         raise ValueError("SLACK_BOT_TOKEN is not configured")
+    from slack_sdk import WebClient  # noqa: PLC0415
+    from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler  # noqa: PLC0415
+
+    client = WebClient(token=settings.slack_bot_token.get_secret_value())
+    # The bare SDK client has no 429 handling; honor Retry-After a bounded number of times.
+    client.retry_handlers.append(RateLimitErrorRetryHandler(max_retry_count=2))
     app = App(
-        token=settings.slack_bot_token.get_secret_value(),
+        client=client,
         signing_secret=settings.slack_signing_secret.get_secret_value()
         if settings.slack_signing_secret
         else None,

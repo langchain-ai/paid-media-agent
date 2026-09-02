@@ -30,6 +30,26 @@ class ThreadAccessDenied(Exception):
     pass
 
 
+def _last_assistant_text(messages: list[Any]) -> str:
+    """Prose from the most recent assistant message, so an interrupt does not discard it."""
+    for message in reversed(messages):
+        if getattr(message, "type", "") == "ai":
+            content = message.content
+            if isinstance(content, str) and content.strip():
+                return content.strip()[:2000]
+            if isinstance(content, list):
+                texts = [
+                    b.get("text", "")
+                    for b in content
+                    if isinstance(b, dict) and b.get("type") == "text"
+                ]
+                joined = "\n".join(t for t in texts if t).strip()
+                if joined:
+                    return joined[:2000]
+            return ""
+    return ""
+
+
 class AgentRunner:
     """Runs the graph for a caller-owned thread and exposes proposal actions."""
 
@@ -69,7 +89,8 @@ class AgentRunner:
             stored = self._receipts.get(proposal.proposal_id)
             receipt = ReceiptView.from_receipt(stored) if stored else None
         if interrupted and proposal is not None:
-            text = "A change is waiting for review."
+            prose = _last_assistant_text(messages)
+            text = (prose + "\n\n" if prose else "") + "A change is waiting for review."
         return RunOutcome(
             thread_id=thread_id,
             text=text,

@@ -16,7 +16,8 @@ from paid_media_agent.middleware.tool_selection import (
     capabilities_for,
     plan_selection,
 )
-from paid_media_agent.runtime.profiles import load_accounts
+from paid_media_agent.runtime.profiles import load_accounts, load_write_policy_file
+from paid_media_agent.tools.fixtures import build_fixture_catalog
 
 SECRET_ENV_NAMES = (
     "PIPEBOARD_API_TOKEN",
@@ -126,6 +127,51 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             else "flag is true; live writes still require the Slice 6 release",
         )
     )
+    try:
+        policy_file = load_write_policy_file(settings, project_root)
+    except (ValueError, OSError) as exc:
+        policy_file = None
+        checks.append(Check("write_policy", "fail", f"unreadable: {type(exc).__name__}"))
+    if policy_file is not None:
+        # Offline validation uses the fixture catalog; a live runtime re-validates on startup.
+        validated, issues = policy_file.validate_against(build_fixture_catalog())
+        blocking = [i for i in issues if i.reason != "not_admitted"]
+        detail = f"{len(validated.operations)} operation(s) admitted against the fixture catalog"
+        if blocking:
+            detail += "; issues: " + ", ".join(f"{i.tool_name} ({i.reason})" for i in blocking)
+        checks.append(Check("write_policy", "warn" if blocking else "ok", detail))
+    elif settings.pipeboard_api_token is not None:
+        checks.append(
+            Check(
+                "write_policy",
+                "warn",
+                "no policy file; fixture policy applies, no live mutation is admitted",
+            )
+        )
+    kill_switch = settings.paid_media_kill_switch_path
+    if not kill_switch.is_absolute():
+        kill_switch = project_root / kill_switch
+    checks.append(
+        Check(
+            "kill_switch",
+            "warn" if kill_switch.exists() else "ok",
+            "engaged: every execution is refused"
+            if kill_switch.exists()
+            else f"clear ({kill_switch})",
+        )
+    )
+    pinned = settings.paid_media_live_write_catalog_revision
+    canary = settings.live_write_canary_tools()
+    if pinned or canary:
+        checks.append(
+            Check(
+                "live_write_gate",
+                "warn",
+                f"reviewed revision {pinned or 'unpinned'}; canary tools: {', '.join(sorted(canary)) or 'none'}",
+            )
+        )
+    else:
+        checks.append(Check("live_write_gate", "ok", "no live canary released"))
     if settings.paid_media_approval_signing_key is None:
         checks.append(
             Check(

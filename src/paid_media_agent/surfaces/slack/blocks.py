@@ -111,6 +111,7 @@ def render_proposal(view: ProposalView, *, can_act: bool) -> SlackMessage:
         f"Proposal {view.proposal_id} (revision {view.revision}, {view.state.value})\n"
         f"Platform: {view.platform.value} · Account: {view.account_ref} · Tool: {view.tool_name}\n"
         f"Target: {view.target_ref}\nBefore: {before}\nAfter: {after}\nRisk: {view.risk.value}"
+        + (f" [{', '.join(view.risk_flags)}]" if view.risk_flags else "")
     )
     blocks: list[dict[str, Any]] = [
         _header("Change proposal for review"),
@@ -149,7 +150,8 @@ def render_receipt(view: ReceiptView) -> SlackMessage:
     )
     text = (
         f"Receipt for proposal {view.proposal_id} revision {view.revision}: {view.status.upper()}\n"
-        f"Mutation attempted: {'yes' if view.mutation_attempted else 'no'} · readback attempts: {view.readback_attempts}\n"
+        f"Mutation attempted: {'yes' if view.mutation_attempted else 'no'} · provider acknowledged: "
+        f"{'yes' if view.provider_acknowledged else 'no'} · readback attempts: {view.readback_attempts}\n"
         f"Verified state: {state}\nReason: {view.reason}"
     )
     header = {

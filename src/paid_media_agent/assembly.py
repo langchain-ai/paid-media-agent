@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from langchain.agents.middleware import AgentMiddleware, InterruptOnConfig
+from langchain.agents.middleware import AgentMiddleware, InterruptOnConfig, ModelRetryMiddleware
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -37,11 +37,13 @@ from paid_media_agent.tools.discovery import (
 from paid_media_agent.tools.reads import ReadDispatcher, build_platform_read_tools
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL, build_render_report_tool
 from paid_media_agent.tools.writes import (
+    DISCOVER_WRITE_OPERATIONS_TOOL,
     EXECUTE_CHANGE_TOOL,
     GET_PROPOSAL_TOOL,
     PROPOSE_CHANGE_TOOL,
     ProposalService,
     WriteExecutor,
+    build_execute_interrupt,
     build_write_tools,
 )
 
@@ -53,9 +55,13 @@ CORE_TOOLS: tuple[str, ...] = (
     COMPARE_PERIODS_TOOL,
     RENDER_REPORT_TOOL,
 )
-WRITE_TOOLS: tuple[str, ...] = (PROPOSE_CHANGE_TOOL, EXECUTE_CHANGE_TOOL, GET_PROPOSAL_TOOL)
-
-EXECUTE_CHANGE_INTERRUPT = InterruptOnConfig(allowed_decisions=["approve", "reject"])
+WRITE_TOOLS: tuple[str, ...] = (
+    DISCOVER_WRITE_OPERATIONS_TOOL,
+    PROPOSE_CHANGE_TOOL,
+    EXECUTE_CHANGE_TOOL,
+    GET_PROPOSAL_TOOL,
+)
+MODEL_RETRY_ATTEMPTS = 2
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,8 @@ class AssemblyMetadata:
     denied_entry_count: int
     tool_names: tuple[str, ...]
     run_mode: str
+    write_gate: str
+    write_policy_issues: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -186,7 +194,12 @@ def build_agent_components(
         selector_model=selector_model,
     )
     secrets = tuple(s for s in _secret_values(settings) if s)
+    retry: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
+    if model_config.provider != "scripted":
+        # Transient model failures should not kill a run; bounded, and tool effects never repeat.
+        retry = (ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),)
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...] = (
+        *retry,
         *selection,
         InvocationGuardMiddleware(surface=surface, catalog_provider=runtime.catalog_provider),
         ResultOffloadMiddleware(
@@ -196,7 +209,7 @@ def build_agent_components(
     )
     interrupt_on: dict[str, InterruptOnConfig] = {}
     if write_tools:
-        interrupt_on[EXECUTE_CHANGE_TOOL] = EXECUTE_CHANGE_INTERRUPT
+        interrupt_on[EXECUTE_CHANGE_TOOL] = build_execute_interrupt(services.proposal_service)
 
     prompt = system_prompt
     if prompt is None:
@@ -212,6 +225,10 @@ def build_agent_components(
         denied_entry_count=len(catalog.denied_entries()),
         tool_names=tuple(t.name for t in tools),
         run_mode=runtime.run_mode,
+        write_gate=services.executor.gate.describe(),
+        write_policy_issues=tuple(
+            f"{i.tool_name}: {i.reason}" for i in runtime.write_policy_issues
+        ),
     )
     return AgentComponents(
         model=resolved_model,

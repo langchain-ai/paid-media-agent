@@ -108,6 +108,12 @@ class ChangeSet(BaseModel):
     thread_id: str
     measurement_plan: str = ""
     reversal_plan: str = ""
+    schema_hash: str = ""
+    """Hash of the mutation tool's input schema at proposal time. Execution re-checks it."""
+    policy_digest: str = ""
+    """Hash of the reviewed write-policy entry that admitted this operation."""
+    risk_flags: tuple[str, ...] = ()
+    """Code-derived risk facts shown to reviewers (for example status_flip, budget_delta)."""
 
     def digest_material(self) -> dict[str, JsonValue]:
         """Fields that the digest binds. Presentation-only fields are excluded on purpose."""
@@ -122,6 +128,8 @@ class ChangeSet(BaseModel):
             "before": [fv.model_dump(mode="json") for fv in self.before],
             "after": [fv.model_dump(mode="json") for fv in self.after],
             "catalog_revision": self.catalog_revision,
+            "schema_hash": self.schema_hash,
+            "policy_digest": self.policy_digest,
             "requester_ref": self.requester_ref,
             "thread_id": self.thread_id,
         }
@@ -184,6 +192,8 @@ class WriteReceipt(BaseModel):
     revision: int
     status: ReceiptStatus
     mutation_attempted: bool
+    provider_acknowledged: bool = False
+    """True when the provider returned a non-error response to the mutation call."""
     provider_operation_ref: str | None
     verified_state: tuple[FieldValue, ...]
     checked_at: datetime

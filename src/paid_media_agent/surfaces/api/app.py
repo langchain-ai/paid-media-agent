@@ -91,11 +91,7 @@ def create_app(runtime: Any) -> Any:
         view = runner.proposal(proposal_id)
         if view is None:
             raise HTTPException(status_code=404, detail="unknown proposal")
-        if (
-            runtime.threads.owner(view.requester_ref) not in (None, who)
-            and view.requester_ref != who
-            and who not in runtime.profile.approval_policy.approver_refs
-        ):
+        if view.requester_ref != who and who not in runtime.profile.approval_policy.approver_refs:
             raise HTTPException(status_code=403, detail="not visible to this caller")
         receipt = runner.receipt(proposal_id)
         return {

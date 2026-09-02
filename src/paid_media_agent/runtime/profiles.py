@@ -24,8 +24,10 @@ from paid_media_agent.tools.providers import ReadProvider, WriteProvider
 from paid_media_agent.tools.writes import (
     ApprovalPolicy,
     ApprovalSigner,
+    PolicyIssue,
     WriteGate,
     WritePolicy,
+    WritePolicyFile,
     fixture_write_policy,
 )
 
@@ -54,11 +56,20 @@ class RuntimeProfile:
     run_mode: RunMode = "conversation"
     skills_root: Path | None = None
     extra_secrets: tuple[str, ...] = field(default_factory=tuple)
+    write_policy_issues: tuple[PolicyIssue, ...] = field(default_factory=tuple)
 
     def write_gate(self, settings: Settings) -> WriteGate:
+        kill_switch = settings.paid_media_kill_switch_path
+        if not kill_switch.is_absolute():
+            kill_switch = (self.skills_root or Path.cwd()) / kill_switch
+        provider = self.catalog_provider
         return WriteGate(
             writes_enabled=settings.paid_media_writes_enabled,
             provider_is_fake=self.write_provider_is_fake,
+            kill_switch_path=kill_switch,
+            released_catalog_revision=settings.paid_media_live_write_catalog_revision,
+            canary_tools=settings.live_write_canary_tools(),
+            current_revision=lambda: provider.current().revision,
         )
 
 
@@ -69,6 +80,25 @@ def load_accounts(settings: Settings, project_root: Path) -> AccountRegistry:
     if not path.exists():
         return AccountRegistry()
     return AccountRegistry.from_toml(path)
+
+
+def load_write_policy_file(settings: Settings, project_root: Path) -> WritePolicyFile | None:
+    path = settings.paid_media_write_policy_path
+    if not path.is_absolute():
+        path = project_root / path
+    if not path.exists():
+        return None
+    return WritePolicyFile.from_toml(path)
+
+
+def resolve_write_policy(
+    settings: Settings, project_root: Path, catalog_provider: CatalogProvider
+) -> tuple[WritePolicy, tuple[PolicyIssue, ...]]:
+    """Reviewed policy file validated against the current catalog; fixture policy as fallback."""
+    policy_file = load_write_policy_file(settings, project_root)
+    if policy_file is None:
+        return fixture_write_policy(), ()
+    return policy_file.validate_against(catalog_provider.current())
 
 
 def signer_from_settings(settings: Settings) -> ApprovalSigner:

@@ -8,7 +8,8 @@
 | Change paid-media judgment | [docs/business-context/README.md](docs/business-context/README.md) |
 | Check sources | [prep/source-inventory.md](prep/source-inventory.md) |
 | Add or edit skills | [prep/skills-plan.md](prep/skills-plan.md) |
-| Run or release | [OPERATIONS.md](OPERATIONS.md) |
+| Run or release | [OPERATIONS.md](OPERATIONS.md) and [docs/operations/live-write-runbook.md](docs/operations/live-write-runbook.md) |
+| Contribute or report a vulnerability | [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) |
 | Read the code | [src/paid_media_agent/assembly.py](src/paid_media_agent/assembly.py) and [AGENTS.md](AGENTS.md) code shape |
 | See current working context | [hot.md](hot.md) |
 | Resolve a decision | [open-questions.md](open-questions.md) |

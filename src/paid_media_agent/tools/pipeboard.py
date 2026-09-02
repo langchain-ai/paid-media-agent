@@ -1,13 +1,15 @@
-"""Host-side Pipeboard Streamable HTTP MCP loading and read execution."""
+"""Host-side Pipeboard Streamable HTTP MCP loading, read execution, and the live write adapter."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Mapping
 from typing import Any
 
+from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool
 from pydantic import SecretStr
 
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 PIPEBOARD_SOURCE = "pipeboard"
 STREAMABLE_HTTP = "streamable_http"
+_OPERATION_REF_KEYS = ("operation_ref", "operation_id", "resource_name", "id", "campaign_id")
 
 
 def pipeboard_connections(
@@ -85,6 +88,14 @@ class PipeboardCatalogLoader:
         self._loaded_at = 0.0
         self._tools_by_name: dict[str, BaseTool] = {}
 
+    @property
+    def policy(self) -> LocalPolicy:
+        return self._policy
+
+    def with_policy(self, policy: LocalPolicy) -> None:
+        """Replace the local policy. The next `refresh()` reclassifies the catalog with it."""
+        self._policy = policy
+
     def current(self) -> AuthorizedToolCatalog:
         if self._catalog is None:
             raise RuntimeError("catalog not loaded; call refresh() first")
@@ -124,6 +135,45 @@ class PipeboardCatalogLoader:
         return self._tools_by_name.get(qualified_name)
 
 
+async def invoke_mcp_tool(
+    tool: BaseTool, arguments: dict[str, JsonValue], *, timeout: float
+) -> dict[str, JsonValue]:
+    """Invoke a loaded MCP tool as a tool call so structured content and error status are visible."""
+    call = {"name": tool.name, "args": dict(arguments), "id": "host-call", "type": "tool_call"}
+    try:
+        message = await asyncio.wait_for(tool.ainvoke(call), timeout=timeout)
+    except TimeoutError as exc:
+        raise ProviderTimeout("provider call timed out") from exc
+    except Exception as exc:  # noqa: BLE001 - sanitized for the caller
+        raise ProviderError(sanitize_exception(exc)) from None
+    if isinstance(message, ToolMessage):
+        if message.status == "error":
+            raise ProviderError(sanitize_exception(RuntimeError(str(message.content)[:300])))
+        structured = getattr(message.artifact, "structured_content", None)
+        if isinstance(structured, dict):
+            return structured
+        return _payload_from_content(message.content)
+    return _payload_from_content(message)
+
+
+def _payload_from_content(content: Any) -> dict[str, JsonValue]:
+    """Coerce MCP content into a JSON object. Text results are parsed when they are JSON."""
+    if isinstance(content, dict):
+        return content
+    if isinstance(content, list):
+        texts = [item.get("text", "") if isinstance(item, dict) else str(item) for item in content]
+        content = "\n".join(t for t in texts if t)
+    if isinstance(content, str):
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            return {"text": content}
+        if isinstance(parsed, dict):
+            return parsed
+        return {"items": parsed}
+    return {"text": str(content)}
+
+
 class PipeboardReadProvider:
     """Executes authorized reads through the loaded MCP tools. Never called for mutations."""
 
@@ -137,37 +187,29 @@ class PipeboardReadProvider:
         tool = self._loader.langchain_tool(entry.qualified_name)
         if tool is None:
             raise ProviderError("tool is not loaded in the current catalog")
-        try:
-            result = await asyncio.wait_for(tool.ainvoke(dict(arguments)), timeout=self._timeout)
-        except TimeoutError as exc:
-            raise ProviderTimeout("provider read timed out") from exc
-        except Exception as exc:  # noqa: BLE001
-            raise ProviderError(sanitize_exception(exc)) from None
-        payload = _payload_from_result(result)
+        payload = await invoke_mcp_tool(tool, arguments, timeout=self._timeout)
         return ProviderResult(payload=payload)
 
 
-def _payload_from_result(result: Any) -> dict[str, JsonValue]:
-    """Coerce MCP content into a JSON object. Text results are parsed when they are JSON."""
-    import json  # noqa: PLC0415
+class PipeboardWriteProvider:
+    """Exact live mutation adapter. Reachable only through `WriteExecutor` behind `WriteGate`."""
 
-    if isinstance(result, tuple) and len(result) == 2:
-        content, artifact = result
-        structured = getattr(artifact, "structured_content", None)
-        if isinstance(structured, dict):
-            return structured
-        result = content
-    if isinstance(result, dict):
-        return result
-    if isinstance(result, list):
-        texts = [item.get("text", "") if isinstance(item, dict) else str(item) for item in result]
-        result = "\n".join(t for t in texts if t)
-    if isinstance(result, str):
-        try:
-            parsed = json.loads(result)
-        except json.JSONDecodeError:
-            return {"text": result}
-        if isinstance(parsed, dict):
-            return parsed
-        return {"items": parsed}
-    return {"text": str(result)}
+    def __init__(self, loader: PipeboardCatalogLoader, *, timeout_seconds: float = 60.0) -> None:
+        self._loader = loader
+        self._timeout = timeout_seconds
+
+    async def call_mutation(
+        self, entry: CatalogEntry, arguments: dict[str, JsonValue]
+    ) -> dict[str, JsonValue]:
+        tool = self._loader.langchain_tool(entry.qualified_name)
+        if tool is None:
+            raise ProviderError("mutation tool is not loaded in the current catalog")
+        if entry.read_only_hint is not False:
+            raise ProviderError("refusing to mutate through a tool without readOnlyHint=false")
+        payload = await invoke_mcp_tool(tool, arguments, timeout=self._timeout)
+        for key in _OPERATION_REF_KEYS:
+            value = payload.get(key)
+            if value is not None and "operation_ref" not in payload:
+                payload = {**payload, "operation_ref": str(value)}
+                break
+        return payload

@@ -1,0 +1,29 @@
+name: compatibility
+
+# Weekly check that the fast-moving framework dependencies still satisfy the offline contract.
+# It never commits: a failure is a signal to review the upgrade, not to auto-merge it.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upgraded-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Resolve the newest compatible versions
+        run: uv lock --upgrade
+      - name: Show what changed
+        run: git --no-pager diff --stat uv.lock
+      - name: Install and test with the upgraded lock
+        run: |
+          uv sync --all-extras --dev
+          uv run ruff check .
+          uv run mypy src
+          uv run pytest -q
+          uv run paid-media-agent demo

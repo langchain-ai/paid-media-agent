@@ -85,10 +85,45 @@ live-write canary is separately authorized.
 | Model capability registry and two selection paths | `middleware/tool_selection.py` | `tests/contract/test_selection_matrix.py` |
 | Deterministic comparison and reports | `tools/compute.py`, `reports/` | `tests/unit/test_compute.py`, `tests/unit/test_reads_and_surfaces.py` |
 | Governed writes with signed single-use approvals | `tools/writes.py`, `persistence/` | `tests/contract/test_write_flows_graph.py` |
+| Live-write gates, kill switch, reviewed policy file | `tools/writes.py` `WriteGate`, `config/write-policy.example.toml` | `tests/contract/test_live_write_gates.py`, `tests/unit/test_write_policy_and_gate.py` |
 | Slack (native, Socket Mode, signed HTTP), API, UI views | `agent.py`, `channels/slack.py`, `surfaces/` | `tests/contract/test_surfaces_and_runtimes.py` |
 
 PDF rendering needs WeasyPrint's native libraries (Pango, Cairo). Without them the report renders as
 HTML and `doctor` says so; nothing else changes.
+
+## Writes
+
+Changes are proposals, never direct calls. `discover_write_operations` lists the admitted operations
+from the reviewed policy file (`config/write-policy.example.toml`, validated against the current
+catalog at startup). `propose_change` reads the current value, derives risk flags, and persists a
+digest-bound ChangeSet. `execute_change` pauses the graph; only a host-created, signed, single-use
+approval lets the executor run one mutation attempt followed by bounded readback.
+
+Live provider mutations stay off. With a live catalog the runtime builds the exact Pipeboard write
+adapter, but the executor refuses it unless the operator clears every gate in
+[docs/operations/live-write-runbook.md](docs/operations/live-write-runbook.md): no kill-switch file,
+`PAID_MEDIA_WRITES_ENABLED=true`, a pinned reviewed catalog revision, and an explicit canary tool
+allowlist. Automated tests never set those values.
+
+## Managed Deep Agents path
+
+`agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, and `channels/slack.py`
+are the managed project files. With a LangSmith API key in `.env`:
+
+```bash
+uv run mda dev        # local managed run with LangSmith Studio
+uv run mda deploy .   # hosted deployment; provisions native Slack from channels/slack.py
+```
+
+Native Slack supports approve and reject on `execute_change`. Use the rich adapter
+(`paid-media-agent slack`) when reviewers need edits, receipts, and files in Block Kit.
+
+## Release status
+
+The first tagged release is gated on the items in [open-questions.md](open-questions.md). The
+repository ships under the [Apache-2.0 license](LICENSE) as the recommended default pending
+maintainer approval, with a [security policy](SECURITY.md), [contributing guide](CONTRIBUTING.md),
+[changelog](CHANGELOG.md), and CI that runs the offline suite, the fixture demo, and a secret scan.
 
 ## Start here
 
@@ -98,6 +133,8 @@ HTML and `doctor` says so; nothing else changes.
 - [Paid-media business context](docs/business-context/README.md)
 - [Source inventory](prep/source-inventory.md)
 - [Operating contract](AGENTS.md)
+- [Live-write canary runbook](docs/operations/live-write-runbook.md)
+- [Examples](examples/README.md) and [migration notes](docs/migration.md)
 
 ## Public-release boundary
 

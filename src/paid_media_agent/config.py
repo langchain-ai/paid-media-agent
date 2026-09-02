@@ -122,6 +122,12 @@ class Settings(BaseSettings):
     pipeboard_reddit_ads_mcp_url: str = "https://reddit-ads.mcp.pipeboard.co/"
 
     paid_media_writes_enabled: bool = False
+    paid_media_write_policy_path: Path = Path("config/write-policy.example.toml")
+    paid_media_kill_switch_path: Path = Path("workspace/KILL_SWITCH")
+    paid_media_live_write_catalog_revision: str | None = None
+    """Catalog revision the operator reviewed for live writes. Live execution requires a match."""
+    paid_media_live_write_canary_tools: str = ""
+    """Comma-separated qualified mutation names released for the live canary."""
     paid_media_approver_ids: str = ""
     paid_media_approval_signing_key: SecretStr | None = None
     paid_media_approval_ttl_seconds: int = Field(default=900, ge=60, le=86400)
@@ -137,7 +143,12 @@ class Settings(BaseSettings):
     paid_media_api_host: str = "127.0.0.1"
     paid_media_api_port: int = Field(default=8080, ge=1, le=65535)
 
-    @field_validator("paid_media_model_base_url", "paid_media_tool_selector_model", mode="before")
+    @field_validator(
+        "paid_media_model_base_url",
+        "paid_media_tool_selector_model",
+        "paid_media_live_write_catalog_revision",
+        mode="before",
+    )
     @classmethod
     def _blank_to_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
@@ -165,6 +176,13 @@ class Settings(BaseSettings):
             self.paid_media_model,
             base_url=self.paid_media_model_base_url,
             tool_selector_model=self.paid_media_tool_selector_model,
+        )
+
+    def live_write_canary_tools(self) -> frozenset[str]:
+        return frozenset(
+            part.strip()
+            for part in self.paid_media_live_write_canary_tools.split(",")
+            if part.strip()
         )
 
     def approver_refs(self) -> frozenset[str]:

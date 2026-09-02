@@ -1,21 +1,31 @@
-"""Governed writes: typed proposals, host-created signed approvals, one attempt, bounded readback."""
+"""Governed writes: typed proposals, host-created signed approvals, one attempt, bounded readback.
+
+The reviewed mutation set is data (`WritePolicyFile`), validated against the current catalog. The
+live path is refused unless the operator has pinned the reviewed catalog revision, released the
+exact tool for the canary, and enabled writes; an incident kill switch halts every execution.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import hmac
 import json
 import logging
 import secrets
+import tomllib
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 import jsonschema
+from langchain.agents.middleware import InterruptOnConfig
+from langchain.agents.middleware.types import ToolCallRequest
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +43,7 @@ from paid_media_agent.domain.proposals import (
     ProposalState,
     ReceiptStatus,
     WriteReceipt,
+    canonical_json,
     compute_payload_digest,
     stamp_digest,
     transition,
@@ -43,7 +54,12 @@ from paid_media_agent.persistence.interfaces import (
     ProposalRepository,
     ReceiptRepository,
 )
-from paid_media_agent.tools.catalog import CatalogEntry, CatalogProvider, ToolClass
+from paid_media_agent.tools.catalog import (
+    AuthorizedToolCatalog,
+    CatalogEntry,
+    CatalogProvider,
+    ToolClass,
+)
 from paid_media_agent.tools.providers import (
     ProviderError,
     ProviderTimeout,
@@ -56,10 +72,15 @@ logger = logging.getLogger(__name__)
 PROPOSE_CHANGE_TOOL = "propose_change"
 EXECUTE_CHANGE_TOOL = "execute_change"
 GET_PROPOSAL_TOOL = "get_proposal"
+DISCOVER_WRITE_OPERATIONS_TOOL = "discover_write_operations"
 
 DEFAULT_READBACK_ATTEMPTS = 3
 DEFAULT_READBACK_SECONDS = 20.0
 DEFAULT_MUTATION_TIMEOUT_SECONDS = 30.0
+
+_STATUS_FIELDS = frozenset({"status", "state", "enabled", "paused", "active"})
+_BUDGET_MARKERS = ("budget", "bid", "spend", "amount")
+_BULK_MARKERS = ("ids", "items", "operations", "batch", "bulk")
 
 
 class WriteOperation(BaseModel):
@@ -77,6 +98,15 @@ class WriteOperation(BaseModel):
     units: dict[str, str] = Field(default_factory=dict)
     readback_entity_key: str | None = "campaign"
     """Key holding the entity object inside the readback payload, or None for a flat payload."""
+    validate_only_arg: str | None = None
+    """Schema argument that turns the call into provider-side validation, when the tool has one."""
+    idempotency_arg: str | None = None
+    """Schema argument for a provider idempotency key, when the tool has one."""
+
+    def digest(self) -> str:
+        return hashlib.sha256(
+            canonical_json(self.model_dump(mode="json")).encode("utf-8")
+        ).hexdigest()[:16]
 
 
 class WritePolicy(BaseModel):
@@ -89,6 +119,113 @@ class WritePolicy(BaseModel):
             if op.tool_name == tool_name:
                 return op
         return None
+
+    def admitted_names(self) -> tuple[str, ...]:
+        return tuple(op.tool_name for op in self.operations)
+
+
+class PolicyIssue(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    tool_name: str
+    reason: str
+
+
+class WritePolicyEntry(BaseModel):
+    """One TOML row. `admitted` is the operator's explicit release decision for this operation."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    admitted: bool = False
+    readback_tool: str
+    target_arg: str
+    editable_fields: tuple[str, ...]
+    readback_fields: dict[str, str]
+    risk: RiskLevel = RiskLevel.MEDIUM
+    units: dict[str, str] = Field(default_factory=dict)
+    readback_entity_key: str | None = "campaign"
+    validate_only_arg: str | None = None
+    idempotency_arg: str | None = None
+    notes: str = ""
+
+
+class WritePolicyFile(BaseModel):
+    """Reviewed mutation set. Rows are data: removing a row makes the operation unreachable."""
+
+    model_config = ConfigDict(frozen=True)
+
+    operations: dict[str, WritePolicyEntry] = Field(default_factory=dict)
+
+    @classmethod
+    def from_toml(cls, path: Path) -> WritePolicyFile:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        raw = data.get("operations", {})
+        if not isinstance(raw, Mapping):
+            raise ValueError("write policy must contain an [operations] table")
+        return cls(operations={name: WritePolicyEntry.model_validate(v) for name, v in raw.items()})
+
+    def admitted_names(self) -> tuple[str, ...]:
+        return tuple(name for name, entry in self.operations.items() if entry.admitted)
+
+    def validate_against(
+        self, catalog: AuthorizedToolCatalog
+    ) -> tuple[WritePolicy, tuple[PolicyIssue, ...]]:
+        """Keep only admitted operations the current catalog can honor. Everything else is an issue."""
+        operations: list[WriteOperation] = []
+        issues: list[PolicyIssue] = []
+        for name, entry in self.operations.items():
+            if not entry.admitted:
+                issues.append(PolicyIssue(tool_name=name, reason="not_admitted"))
+                continue
+            catalog_entry = catalog.get(name)
+            if catalog_entry is None:
+                issues.append(PolicyIssue(tool_name=name, reason="not_in_catalog"))
+                continue
+            if catalog_entry.tool_class is not ToolClass.MUTATION:
+                issues.append(
+                    PolicyIssue(
+                        tool_name=name,
+                        reason=f"catalog_class_{catalog_entry.tool_class.value}:{catalog_entry.policy.reason}",
+                    )
+                )
+                continue
+            properties = catalog_entry.input_schema.get("properties", {})
+            if not isinstance(properties, Mapping):
+                issues.append(PolicyIssue(tool_name=name, reason="malformed_schema"))
+                continue
+            missing = [f for f in (entry.target_arg, *entry.editable_fields) if f not in properties]
+            for optional_arg in (entry.validate_only_arg, entry.idempotency_arg):
+                if optional_arg is not None and optional_arg not in properties:
+                    missing.append(optional_arg)
+            if missing:
+                issues.append(
+                    PolicyIssue(tool_name=name, reason=f"schema_missing_fields:{','.join(missing)}")
+                )
+                continue
+            readback = catalog.get(entry.readback_tool)
+            if readback is None or readback.tool_class is not ToolClass.READ:
+                issues.append(PolicyIssue(tool_name=name, reason="readback_tool_unavailable"))
+                continue
+            if set(entry.readback_fields) != set(entry.editable_fields):
+                issues.append(
+                    PolicyIssue(tool_name=name, reason="readback_fields_must_cover_editable_fields")
+                )
+                continue
+            operations.append(
+                WriteOperation(
+                    tool_name=name,
+                    readback_tool=entry.readback_tool,
+                    target_arg=entry.target_arg,
+                    editable_fields=entry.editable_fields,
+                    readback_fields=entry.readback_fields,
+                    risk=entry.risk,
+                    units=entry.units,
+                    readback_entity_key=entry.readback_entity_key,
+                    validate_only_arg=entry.validate_only_arg,
+                    idempotency_arg=entry.idempotency_arg,
+                )
+            )
+        return WritePolicy(operations=tuple(operations)), tuple(issues)
 
 
 def fixture_write_policy() -> WritePolicy:
@@ -104,6 +241,7 @@ def fixture_write_policy() -> WritePolicy:
                 readback_fields={"daily_budget": "daily_budget"},
                 risk=RiskLevel.MEDIUM,
                 units={"daily_budget": "account currency per day"},
+                validate_only_arg="validate_only",
             )
         )
         ops.append(
@@ -117,6 +255,58 @@ def fixture_write_policy() -> WritePolicy:
             )
         )
     return WritePolicy(operations=tuple(ops))
+
+
+def classify_risk(
+    entry: CatalogEntry,
+    operation: WriteOperation,
+    changes: Mapping[str, JsonValue],
+    before: Mapping[str, JsonValue],
+) -> tuple[str, ...]:
+    """Derive reviewer-facing risk facts from the operation, its schema, and the actual change."""
+    name = entry.name.lower()
+    flags: list[str] = []
+    changed = {f.lower() for f in changes}
+    if changed & _STATUS_FIELDS or any(
+        m in name for m in ("activate", "enable", "pause", "archive", "status")
+    ):
+        flags.append("status_flip")
+        for field, value in changes.items():
+            if field.lower() in _STATUS_FIELDS and str(value).upper() in (
+                "ENABLED",
+                "ACTIVE",
+                "RUNNING",
+                "LIVE",
+            ):
+                flags.append("starts_delivery")
+    for field, value in changes.items():
+        if any(m in field.lower() for m in _BUDGET_MARKERS):
+            flags.append("budget_delta")
+            try:
+                previous = Decimal(str(before.get(field)))
+                proposed = Decimal(str(value))
+                if proposed > previous:
+                    flags.append("budget_increase")
+            except (InvalidOperation, ValueError, TypeError):
+                flags.append("budget_unverified_before")
+    if any(m in name for m in ("publish", "activate", "enable", "lead_form")):
+        flags.append("publishes_live")
+    if any(m in name for m in ("permission", "invitation", "account_slots", "member")):
+        flags.append("access_change")
+    if entry.destructive_hint is True or any(m in name for m in ("delete", "remove")):
+        flags.append("destructive_change")
+    if any(m in name for m in ("audience", "conversion_event", "customer_list", "upload", "user")):
+        flags.append("sensitive_data_transfer")
+    if any(m in name for m in ("rule", "schedule", "automation")):
+        flags.append("standing_automation")
+    properties = entry.input_schema.get("properties", {})
+    if isinstance(properties, Mapping) and any(
+        any(m in f.lower() for m in _BULK_MARKERS) for f in properties
+    ):
+        flags.append("bulk_capable")
+    if operation.risk is RiskLevel.HIGH:
+        flags.append("policy_high_risk")
+    return tuple(dict.fromkeys(flags))
 
 
 class ApprovalPolicy(BaseModel):
@@ -161,20 +351,63 @@ class WriteDenied(Exception):
 
 
 class WriteGate:
-    """Global kill switch for live providers. Fakes are always allowed; they cannot spend money."""
+    """Execution gate. Fakes need only the kill switch to be clear; live providers need every flag.
 
-    def __init__(self, *, writes_enabled: bool, provider_is_fake: bool) -> None:
+    A live mutation requires, in this order: kill switch absent, `PAID_MEDIA_WRITES_ENABLED=true`,
+    the operator-pinned catalog revision equal to the current one, and the exact tool released for
+    the canary. Tests never set those values, so no automated path reaches a live mutation.
+    """
+
+    def __init__(
+        self,
+        *,
+        writes_enabled: bool,
+        provider_is_fake: bool,
+        kill_switch_path: Path | None = None,
+        released_catalog_revision: str | None = None,
+        canary_tools: frozenset[str] = frozenset(),
+        current_revision: Callable[[], str] | None = None,
+    ) -> None:
         self.writes_enabled = writes_enabled
         self.provider_is_fake = provider_is_fake
+        self.kill_switch_path = kill_switch_path
+        self.released_catalog_revision = released_catalog_revision
+        self.canary_tools = canary_tools
+        self._current_revision = current_revision
 
-    def check(self) -> None:
+    def kill_switch_engaged(self) -> bool:
+        return self.kill_switch_path is not None and self.kill_switch_path.exists()
+
+    def check(self, tool_name: str) -> None:
+        if self.kill_switch_engaged():
+            raise WriteDenied(
+                "kill_switch",
+                f"{self.kill_switch_path} exists; remove it after the incident review",
+            )
         if self.provider_is_fake:
             return
         if not self.writes_enabled:
             raise WriteDenied("writes_disabled", "PAID_MEDIA_WRITES_ENABLED is false")
-        raise WriteDenied(
-            "live_writes_not_released", "live provider mutations require the Slice 6 canary release"
-        )
+        if self.released_catalog_revision is None:
+            raise WriteDenied(
+                "live_writes_not_released", "PAID_MEDIA_LIVE_WRITE_CATALOG_REVISION is not pinned"
+            )
+        current = self._current_revision() if self._current_revision else None
+        if current != self.released_catalog_revision:
+            raise WriteDenied(
+                "stale_catalog", "current catalog revision differs from the reviewed revision"
+            )
+        if tool_name not in self.canary_tools:
+            raise WriteDenied(
+                "tool_not_released", f"{tool_name} is not in PAID_MEDIA_LIVE_WRITE_CANARY_TOOLS"
+            )
+
+    def describe(self) -> str:
+        if self.provider_is_fake:
+            return "fake provider (fixture); live writes unreachable"
+        state = "enabled" if self.writes_enabled else "disabled"
+        pinned = self.released_catalog_revision or "unpinned"
+        return f"live provider; writes {state}; reviewed revision {pinned}; canary tools {len(self.canary_tools)}"
 
 
 Clock = Callable[[], datetime]
@@ -247,6 +480,32 @@ class ProposalService:
     def proposals(self) -> ProposalRepository:
         return self._proposals
 
+    @property
+    def write_policy(self) -> WritePolicy:
+        return self._write_policy
+
+    def admitted_operations(self) -> list[dict[str, JsonValue]]:
+        """Operations the current catalog can honor, for `discover_write_operations`."""
+        catalog = self._catalog_provider.current()
+        rows: list[dict[str, JsonValue]] = []
+        for op in self._write_policy.operations:
+            entry = catalog.get(op.tool_name)
+            if entry is None or entry.tool_class is not ToolClass.MUTATION:
+                continue
+            rows.append(
+                {
+                    "tool_name": op.tool_name,
+                    "platform": entry.platform.value,
+                    "description": entry.description[:200],
+                    "target_arg": op.target_arg,
+                    "editable_fields": list(op.editable_fields),
+                    "units": dict(op.units),
+                    "risk": op.risk.value,
+                    "readback_tool": op.readback_tool,
+                }
+            )
+        return rows
+
     def _resolve_mutation(self, tool_name: str) -> tuple[CatalogEntry, WriteOperation, str]:
         catalog = self._catalog_provider.current()
         entry = catalog.get(tool_name)
@@ -281,6 +540,8 @@ class ProposalService:
                 raise WriteDenied("field_not_editable", field)
         if not changes:
             raise WriteDenied("no_changes")
+        if not isinstance(target_ref, str) or not target_ref.strip():
+            raise WriteDenied("invalid_target")
         args: dict[str, JsonValue] = {
             entry.account_arg: binding.provider_account_id,
             operation.target_arg: target_ref,
@@ -324,13 +585,10 @@ class ProposalService:
         entry, operation, catalog_revision = self._resolve_mutation(tool_name)
         args = self._scoped_args(entry, account_alias, target_ref, operation, changes)
         state = await self._current_state(entry, operation, args)
+        before_values = {f: _json_ready(state.get(operation.readback_fields[f])) for f in changes}
         before = tuple(
-            FieldValue(
-                field=f,
-                value=_json_ready(state.get(operation.readback_fields[f])),
-                unit=operation.units.get(f),
-            )
-            for f in changes
+            FieldValue(field=f, value=v, unit=operation.units.get(f))
+            for f, v in before_values.items()
         )
         after = tuple(
             FieldValue(field=f, value=_json_ready(v), unit=operation.units.get(f))
@@ -355,6 +613,9 @@ class ProposalService:
                 thread_id=thread_id,
                 measurement_plan=measurement_plan,
                 reversal_plan=reversal_plan,
+                schema_hash=entry.schema_hash,
+                policy_digest=operation.digest(),
+                risk_flags=classify_risk(entry, operation, changes, before_values),
             )
         )
         state_value = transition(
@@ -372,6 +633,16 @@ class ProposalService:
     def get(self, proposal_id: UUID) -> ProposalRecord | None:
         return self._proposals.get(proposal_id)
 
+    def is_pending(self, proposal_id: UUID, thread_id: str | None = None) -> bool:
+        record = self._proposals.get(proposal_id)
+        if record is None or record.state is not ProposalState.AWAITING_APPROVAL:
+            return False
+        return thread_id is None or record.changeset.thread_id == thread_id
+
+    def belongs_to(self, proposal_id: UUID, thread_id: str) -> bool:
+        record = self._proposals.get(proposal_id)
+        return record is not None and record.changeset.thread_id == thread_id
+
     def revise(
         self, proposal_id: UUID, *, editor_ref: str, changes: dict[str, JsonValue]
     ) -> ProposalRecord:
@@ -388,6 +659,7 @@ class ProposalService:
         before = tuple(fv for fv in record.changeset.before if fv.field in changes)
         if {fv.field for fv in before} != set(changes):
             raise WriteDenied("field_not_editable", "edits must keep the proposed fields")
+        before_values = {fv.field: fv.value for fv in before}
         changeset = stamp_digest(
             record.changeset.model_copy(
                 update={
@@ -396,6 +668,9 @@ class ProposalService:
                     "before": before,
                     "after": after,
                     "catalog_revision": catalog_revision,
+                    "schema_hash": entry.schema_hash,
+                    "policy_digest": operation.digest(),
+                    "risk_flags": classify_risk(entry, operation, changes, before_values),
                 }
             )
         )
@@ -520,6 +795,10 @@ class WriteExecutor:
         self._readback_seconds = readback_seconds
         self._mutation_timeout = mutation_timeout_seconds
 
+    @property
+    def gate(self) -> WriteGate:
+        return self._gate
+
     def _verify_claim(self, record: ProposalRecord, claim: ApprovalClaim) -> None:
         cs = record.changeset
         if not self._signer.verify(claim.signing_material(), claim.signature):
@@ -546,9 +825,13 @@ class WriteExecutor:
         entry = catalog.get(cs.tool_name)
         if entry is None or entry.tool_class is not ToolClass.MUTATION:
             raise WriteDenied("stale_catalog", "mutation tool is no longer authorized")
+        if cs.schema_hash and entry.schema_hash != cs.schema_hash:
+            raise WriteDenied("stale_catalog", "mutation tool schema changed since the proposal")
         operation = self._write_policy.get(cs.tool_name)
         if operation is None:
             raise WriteDenied("no_write_policy")
+        if cs.policy_digest and operation.digest() != cs.policy_digest:
+            raise WriteDenied("stale_policy", "write policy changed since the proposal")
         readback = catalog.get(operation.readback_tool)
         if readback is None or readback.tool_class is not ToolClass.READ:
             raise WriteDenied("stale_catalog", "readback tool is no longer authorized")
@@ -573,6 +856,7 @@ class WriteExecutor:
         status: ReceiptStatus,
         *,
         attempted: bool,
+        acknowledged: bool,
         op_ref: str | None,
         verified: tuple[FieldValue, ...],
         catalog_revision: str,
@@ -584,6 +868,7 @@ class WriteExecutor:
             revision=record.changeset.revision,
             status=status,
             mutation_attempted=attempted,
+            provider_acknowledged=acknowledged,
             provider_operation_ref=op_ref,
             verified_state=verified,
             checked_at=self._clock(),
@@ -643,78 +928,92 @@ class WriteExecutor:
             return "matches_before", observed, attempts
         return "unproven", observed, attempts
 
+    def _rejected(self, record: ProposalRecord, catalog_revision: str, reason: str) -> WriteReceipt:
+        return self._receipt(
+            record,
+            "rejected",
+            attempted=False,
+            acknowledged=False,
+            op_ref=None,
+            verified=(),
+            catalog_revision=catalog_revision,
+            reason=reason,
+        )
+
     async def execute(self, proposal_id: UUID) -> WriteReceipt:
         record = self._service.get(proposal_id)
         if record is None:
             raise WriteDenied("unknown_proposal")
         catalog_revision = self._catalog_provider.current().revision
         if record.state is not ProposalState.AWAITING_APPROVAL:
-            return self._receipt(
-                record,
-                "rejected",
-                attempted=False,
-                op_ref=None,
-                verified=(),
-                catalog_revision=catalog_revision,
-                reason=f"proposal is {record.state.value}",
-            )
+            return self._rejected(record, catalog_revision, f"proposal is {record.state.value}")
         claim = self._approvals.latest_unused(
             record.changeset.proposal_id, record.changeset.revision
         )
         if claim is None:
-            return self._receipt(
-                record,
-                "rejected",
-                attempted=False,
-                op_ref=None,
-                verified=(),
-                catalog_revision=catalog_revision,
-                reason="no valid approval claim for this revision",
+            return self._rejected(
+                record, catalog_revision, "no valid approval claim for this revision"
             )
         try:
             self._verify_claim(record, claim)
             entry, operation, readback_entry, catalog_revision = self._verify_catalog(record)
-            self._gate.check()
+            self._gate.check(record.changeset.tool_name)
         except WriteDenied as exc:
             self._service.mark(
                 proposal_id,
                 ProposalEvent.REJECT,
                 f"{self._clock().isoformat()} execution refused: {exc.reason}",
             )
-            return self._receipt(
-                record,
-                "rejected",
-                attempted=False,
-                op_ref=None,
-                verified=(),
-                catalog_revision=catalog_revision,
-                reason=f"{exc.reason}: {exc.detail}".rstrip(": "),
+            return self._rejected(
+                record, catalog_revision, f"{exc.reason}: {exc.detail}".rstrip(": ")
             )
         if not self._approvals.mark_used(claim.claim_id):
             self._service.mark(proposal_id, ProposalEvent.REJECT, "approval replay refused")
-            return self._receipt(
-                record,
-                "rejected",
-                attempted=False,
-                op_ref=None,
-                verified=(),
-                catalog_revision=catalog_revision,
-                reason="approval already used",
-            )
+            return self._rejected(record, catalog_revision, "approval already used")
 
         record = self._service.mark(
             proposal_id,
             ProposalEvent.APPROVE,
             f"{self._clock().isoformat()} executing with claim {claim.claim_id}",
         )
+        arguments = dict(record.changeset.canonical_args)
+        if operation.validate_only_arg is not None:
+            try:
+                await asyncio.wait_for(
+                    self._provider.call_mutation(
+                        entry, {**arguments, operation.validate_only_arg: True}
+                    ),
+                    timeout=self._mutation_timeout,
+                )
+            except (ProviderError, TimeoutError) as exc:
+                self._service.mark(
+                    proposal_id,
+                    ProposalEvent.FAIL,
+                    f"validation refused: {sanitize_exception(exc)}",
+                )
+                return self._receipt(
+                    record,
+                    "failed",
+                    attempted=False,
+                    acknowledged=False,
+                    op_ref=None,
+                    verified=(),
+                    catalog_revision=catalog_revision,
+                    reason=f"provider validation refused the payload: {sanitize_exception(exc)}",
+                )
+        if operation.idempotency_arg is not None:
+            arguments[operation.idempotency_arg] = (
+                f"{record.changeset.proposal_id}:{record.changeset.revision}"
+            )
         attempted = True
+        acknowledged = False
         op_ref: str | None = None
         outcome_reason = ""
         try:
             response = await asyncio.wait_for(
-                self._provider.call_mutation(entry, dict(record.changeset.canonical_args)),
-                timeout=self._mutation_timeout,
+                self._provider.call_mutation(entry, arguments), timeout=self._mutation_timeout
             )
+            acknowledged = True
             ref = response.get("operation_ref") if isinstance(response, dict) else None
             op_ref = str(ref) if ref is not None else None
         except (ProviderTimeout, TimeoutError):
@@ -727,6 +1026,7 @@ class WriteExecutor:
                 record,
                 "failed",
                 attempted=attempted,
+                acknowledged=False,
                 op_ref=None,
                 verified=(),
                 catalog_revision=catalog_revision,
@@ -735,54 +1035,49 @@ class WriteExecutor:
 
         record = self._service.mark(proposal_id, ProposalEvent.START_VERIFY, "readback started")
         outcome, observed, attempts = await self._readback(record, operation, readback_entry, entry)
+        suffix = f" ({outcome_reason})" if outcome_reason else ""
         if outcome == "matches_after":
             self._service.mark(
                 proposal_id, ProposalEvent.VERIFIED, "readback matched the approved change"
-            )
-            reason = "readback matched the approved change" + (
-                f" ({outcome_reason})" if outcome_reason else ""
             )
             return self._receipt(
                 record,
                 "verified",
                 attempted=attempted,
+                acknowledged=acknowledged,
                 op_ref=op_ref,
                 verified=observed,
                 catalog_revision=catalog_revision,
-                reason=reason,
+                reason="readback matched the approved change" + suffix,
                 readback_attempts=attempts,
             )
         if outcome == "matches_before":
             self._service.mark(
                 proposal_id, ProposalEvent.FAIL, "readback shows the change was not applied"
             )
-            reason = "provider state still matches the before value" + (
-                f" ({outcome_reason})" if outcome_reason else ""
-            )
             return self._receipt(
                 record,
                 "failed",
                 attempted=attempted,
+                acknowledged=acknowledged,
                 op_ref=op_ref,
                 verified=observed,
                 catalog_revision=catalog_revision,
-                reason=reason,
+                reason="provider state still matches the before value" + suffix,
                 readback_attempts=attempts,
             )
         self._service.mark(
             proposal_id, ProposalEvent.UNKNOWN, "readback could not prove the provider state"
         )
-        reason = "provider state could not be proven within the readback budget" + (
-            f" ({outcome_reason})" if outcome_reason else ""
-        )
         return self._receipt(
             record,
             "unknown",
             attempted=attempted,
+            acknowledged=acknowledged,
             op_ref=op_ref,
             verified=observed,
             catalog_revision=catalog_revision,
-            reason=reason,
+            reason="provider state could not be proven within the readback budget" + suffix,
             readback_attempts=attempts,
         )
 
@@ -790,7 +1085,7 @@ class WriteExecutor:
 class ProposeChangeArgs(BaseModel):
     account_alias: str = Field(description="Configured account alias from list_accounts.")
     tool_name: str = Field(
-        description="Admitted mutation tool name, e.g. google_ads__update_campaign_budget."
+        description="Admitted mutation from discover_write_operations, e.g. google_ads__update_campaign_budget."
     )
     target_ref: str = Field(
         description="Provider entity id being changed, e.g. a campaign id from a read."
@@ -807,12 +1102,66 @@ class ProposalIdArgs(BaseModel):
     proposal_id: str = Field(description="UUID of the proposal returned by propose_change.")
 
 
-def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
-    config = getattr(runtime, "config", None) or {}
+class _NoArgs(BaseModel):
+    pass
+
+
+def _caller_from_config(config: Any) -> tuple[str, str]:
     configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
     thread_id = str(configurable.get("thread_id") or "local-thread")
     caller = str(configurable.get("caller_ref") or "local-user")
     return thread_id, caller
+
+
+def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
+    return _caller_from_config(getattr(runtime, "config", None) or {})
+
+
+def _proposal_id_from_call(tool_call: Mapping[str, Any]) -> UUID | None:
+    raw = (
+        tool_call.get("args", {}).get("proposal_id")
+        if isinstance(tool_call.get("args"), Mapping)
+        else None
+    )
+    try:
+        return UUID(str(raw))
+    except (ValueError, TypeError):
+        return None
+
+
+def build_execute_interrupt(service: ProposalService) -> InterruptOnConfig:
+    """Interrupt only for a proposal that exists on this thread; anything else runs and is denied.
+
+    The predicate is evaluated again when the graph resumes, so it must not depend on state that
+    the reviewer's decision changes (a rejection is persisted before the resume). Existence on the
+    thread is stable; the executor still refuses anything that is not awaiting approval.
+    """
+
+    def _when(request: ToolCallRequest) -> bool:
+        proposal_id = _proposal_id_from_call(request.tool_call)
+        if proposal_id is None:
+            return False
+        thread_id, _ = _caller_from_config(getattr(request.runtime, "config", None) or {})
+        return service.belongs_to(proposal_id, thread_id)
+
+    def _description(tool_call: Any, state: Any, runtime: Any) -> str:  # noqa: ARG001
+        proposal_id = _proposal_id_from_call(tool_call)
+        record = service.get(proposal_id) if proposal_id is not None else None
+        if record is None:
+            return "Execute a staged change (proposal not found)."
+        cs = record.changeset
+        before = ", ".join(f"{fv.field}={fv.value}" for fv in cs.before) or "n/a"
+        after = ", ".join(f"{fv.field}={fv.value}" for fv in cs.after) or "n/a"
+        flags = ", ".join(cs.risk_flags) or "none"
+        return (
+            f"Approve change {cs.proposal_id} (revision {cs.revision}, {record.state.value}) on {cs.platform.value} account "
+            f"{cs.account_ref}: {cs.tool_name} target {cs.target_ref}. Before: {before}. After: {after}. "
+            f"Risk: {cs.risk.value} [{flags}]. Reason: {cs.reason[:300]}"
+        )
+
+    return InterruptOnConfig(
+        allowed_decisions=["approve", "reject"], description=_description, when=_when
+    )
 
 
 def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list[BaseTool]:
@@ -869,6 +1218,15 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
             return json.dumps({"denied": True, "reason": "unknown_proposal"})
         return json.dumps({"proposal": ProposalView.from_record(record).model_dump(mode="json")})
 
+    def _discover() -> str:
+        return json.dumps(
+            {
+                "operations": service.admitted_operations(),
+                "execution_gate": executor.gate.describe(),
+                "note": "Only these operations can be proposed. Each needs a human approval before one execution attempt.",
+            }
+        )
+
     propose_tool = StructuredTool.from_function(
         coroutine=_propose,
         name=PROPOSE_CHANGE_TOOL,
@@ -893,4 +1251,10 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
         description="Read the current persisted state of a proposal by id.",
         args_schema=ProposalIdArgs,
     )
-    return [propose_tool, execute_tool, get_tool]
+    discover_tool = StructuredTool.from_function(
+        func=_discover,
+        name=DISCOVER_WRITE_OPERATIONS_TOOL,
+        description="List the admitted mutation operations, their editable fields, units, risk, and the current execution gate.",
+        args_schema=_NoArgs,
+    )
+    return [discover_tool, propose_tool, execute_tool, get_tool]

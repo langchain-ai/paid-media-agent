@@ -3,7 +3,20 @@ name = "paid-media-agent"
 version = "0.1.0"
 description = "A portable Deep Agents application for governed paid-media analysis and management."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
+keywords = ["paid-media", "deep-agents", "langchain", "mcp", "pipeboard", "slack"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Typing :: Typed",
+]
 dependencies = [
     "deepagents>=0.7.12,<0.8",
     "managed-deepagents>=0.6.1,<0.7",
@@ -19,6 +32,11 @@ dependencies = [
     # LangChain does not validate dict-form JSON schema tool arguments; the host guard does.
     "jsonschema>=4.23,<5",
 ]
+
+[project.urls]
+Repository = "https://github.com/amal-irgashev/paid-media-agent-open-source"
+Changelog = "https://github.com/amal-irgashev/paid-media-agent-open-source/blob/main/CHANGELOG.md"
+Security = "https://github.com/amal-irgashev/paid-media-agent-open-source/blob/main/SECURITY.md"
 
 [project.scripts]
 paid-media-agent = "paid_media_agent.cli:main"

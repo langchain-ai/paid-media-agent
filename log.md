@@ -30,3 +30,32 @@ entries except to correct a factual typo with an explicit correction entry.
   model, which the authorization contract forbids. Recorded in `open-questions.md`.
 - Added `pydantic-settings`, `click`, and `jsonschema` as explicit dependencies (LangChain does not
   validate dict-form tool schemas).
+
+## 2026-09-01 (slice 6: live-write readiness, writes still off)
+
+- Made the reviewed mutation set data (`config/write-policy.example.toml`) validated against the
+  current catalog; rows that fail validation are excluded and reported by `doctor`.
+- Bound the mutation schema hash and policy-row digest into the proposal digest; execution rejects
+  `stale_catalog` and `stale_policy`.
+- Added code-derived risk flags to proposals, a pre-interrupt guard so only real proposals on the
+  current thread pause for review, provider validate-only support, honest
+  `provider_acknowledged` receipts, and `discover_write_operations`.
+- Added `WriteGate` with an incident kill-switch file, the global flag, a pinned reviewed catalog
+  revision, and a canary tool allowlist; added the exact `PipeboardWriteProvider`; live profiles no
+  longer use the fake when the catalog is live.
+- Wrote `docs/operations/live-write-runbook.md`. No live canary ran; that still needs separate
+  human authorization and the gate settings above.
+- Review against the private reference implementation drove these changes: honest mutation vs
+  verification outcomes, edit-as-new-authorization, static approver policy, exclusion before
+  review, contract identity beyond the payload digest, and Slack 429 retries.
+
+## 2026-09-01 (slice 7: release hardening)
+
+- Added `LICENSE` (Apache-2.0 as the recommended default pending maintainer approval),
+  `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, project metadata and URLs.
+- Added CI (`.github/workflows/ci.yml`: lint, format, types, offline tests, fixture demo, MDA
+  import smoke, secret scan on Python 3.11 and 3.13), a weekly compatibility workflow that tests an
+  upgraded lock without committing, and Dependabot for the uv and Actions ecosystems.
+- Added `examples/ask.py`, `docs/migration.md`, `sandbox/README.md`, a Slack app manifest example,
+  and README sections for writes, the MDA path, and release status.
+- Screenshots are not included: no Slack workspace or model run was available in this session.

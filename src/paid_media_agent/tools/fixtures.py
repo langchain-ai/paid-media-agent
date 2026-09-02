@@ -108,6 +108,7 @@ def fixture_raw_tools() -> list[RawTool]:
                         {
                             "campaign_id": {"type": "string"},
                             "daily_budget": {"type": "number", "minimum": 0},
+                            "validate_only": {"type": "boolean"},
                         },
                         ["campaign_id", "daily_budget"],
                     ),
@@ -307,7 +308,12 @@ class FixtureReadProvider:
 
 
 FakeWriteBehavior = Literal[
-    "succeed", "timeout_after_commit", "timeout_without_commit", "error", "silent_no_change"
+    "succeed",
+    "timeout_after_commit",
+    "timeout_without_commit",
+    "error",
+    "silent_no_change",
+    "validation_error",
 ]
 
 
@@ -318,6 +324,7 @@ class FakeWriteProvider:
         self.state = state
         self.behavior = behavior
         self.mutation_calls: list[tuple[str, dict[str, JsonValue]]] = []
+        self.validation_calls: list[tuple[str, dict[str, JsonValue]]] = []
 
     def _apply(self, entry: CatalogEntry, arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
         campaign = self.state.campaign(entry.platform, str(arguments.get("campaign_id")))
@@ -341,6 +348,18 @@ class FakeWriteProvider:
         dataset = self.state.datasets[entry.platform]
         if arguments.get(entry.account_arg or "") != dataset["account_id"]:
             raise ProviderError("account not found or not permitted")
+        if arguments.get("validate_only") is True:
+            # Provider-side validation: no state change, no operation reference.
+            self.mutation_calls.pop()
+            self.validation_calls.append((entry.qualified_name, dict(arguments)))
+            if (
+                self.behavior == "validation_error"
+                or self.state.campaign(entry.platform, str(arguments.get("campaign_id"))) is None
+            ):
+                raise ProviderError("validation rejected the payload")
+            return {"validated": True}
+        if self.behavior == "validation_error":
+            raise ProviderError("validation rejected the payload")
         if self.behavior == "error":
             raise ProviderError("provider rejected the mutation")
         if self.behavior == "timeout_without_commit":

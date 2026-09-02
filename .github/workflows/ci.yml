@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install from the lockfile
+        run: uv sync --frozen --all-extras --dev --python ${{ matrix.python-version }}
+      - name: Lint
+        run: uv run --frozen ruff check .
+      - name: Format check
+        run: uv run --frozen ruff format --check .
+      - name: Type check
+        run: uv run --frozen mypy src
+      - name: Offline tests
+        run: uv run --frozen pytest -q
+      - name: Fixture demo
+        run: uv run --frozen paid-media-agent demo --with-proposal
+      - name: MDA definition import smoke
+        run: uv run --frozen python -c "import agent; print(agent.agent.config['name'])"
+      - name: Secret scan
+        run: |
+          ! grep -rnE "xox[abp]-[A-Za-z0-9-]{8,}|sk-ant-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}|BEGIN (RSA|OPENSSH) PRIVATE" \
+            --include='*.py' --include='*.md' --include='*.toml' --include='*.json' --include='*.yaml' \
+            --exclude-dir=.venv --exclude-dir=.git . \
+            | grep -v "src/paid_media_agent/middleware/redaction.py" | grep -v "tests/unit/test_proposals_and_security.py"

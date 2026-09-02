@@ -51,3 +51,27 @@ attempts to bypass the dispatcher.
 - `WriteGate` admits fakes unconditionally and refuses live providers while
   `PAID_MEDIA_WRITES_ENABLED` is false or the Slice 6 canary is unreleased. No runtime profile
   constructs a live write provider today.
+
+## Slice 6 notes (2026-09-01)
+
+- The reviewed mutation set is data: `WritePolicyFile` rows in `config/write-policy.example.toml`.
+  `validate_against(catalog)` keeps only admitted rows whose tool is a MUTATION entry with the
+  listed target, editable, validate-only, and idempotency arguments in its current schema and whose
+  readback tool is an authorized READ. Everything else becomes a `PolicyIssue` that `doctor` prints.
+- The ChangeSet digest now binds `schema_hash` (the mutation tool's schema at proposal time) and
+  `policy_digest` (the admitting policy row). Execution rejects `stale_catalog` when the schema
+  changed and `stale_policy` when the row changed, in addition to the earlier digest checks.
+- `classify_risk` derives reviewer facts from the operation, schema, and actual change:
+  `status_flip`, `starts_delivery`, `budget_delta`, `budget_increase`, `publishes_live`,
+  `access_change`, `destructive_change`, `sensitive_data_transfer`, `standing_automation`,
+  `bulk_capable`, `policy_high_risk`. They are shown on cards and in the interrupt description.
+- `execute_change` interrupts only when the proposal id exists on the current thread. Unknown ids,
+  malformed ids, and proposals from other threads run straight into the executor's refusal, so a
+  reviewer is never asked to approve something that cannot execute.
+- When the policy row names a `validate_only_arg`, the executor calls the provider in validation
+  mode first; a refusal yields `failed` with `mutation_attempted=false`. The single real attempt
+  follows. `provider_acknowledged` on the receipt separates "the provider answered" from
+  "readback proved it".
+- `WriteGate` order: kill-switch file, then for live providers `writes_enabled`, pinned reviewed
+  revision equal to the current one, and the canary tool allowlist. Fakes pass after the kill
+  switch. The live `PipeboardWriteProvider` refuses any tool whose `readOnlyHint` is not `false`.

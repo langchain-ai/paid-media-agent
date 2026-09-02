@@ -89,3 +89,11 @@ Source order:
 Publishing, deployment, migrations, account connection, and live write canaries require explicit
 human authorization.
 
+## Write gates
+
+Every execution passes `WriteGate` in `tools/writes.py`. The fixture fake needs only a clear kill
+switch. A live provider additionally needs `PAID_MEDIA_WRITES_ENABLED=true`,
+`PAID_MEDIA_LIVE_WRITE_CATALOG_REVISION` equal to the current catalog revision, and the tool name in
+`PAID_MEDIA_LIVE_WRITE_CANARY_TOOLS`. The reviewed mutation set is the TOML file at
+`PAID_MEDIA_WRITE_POLICY_PATH`; `doctor` reports rows that fail validation. Incident procedure and
+canary steps: [docs/operations/live-write-runbook.md](docs/operations/live-write-runbook.md).

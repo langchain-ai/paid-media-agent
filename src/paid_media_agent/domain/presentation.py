@@ -42,6 +42,7 @@ class ProposalView(BaseModel):
     payload_digest: str
     catalog_revision: str
     requester_ref: str
+    risk_flags: tuple[str, ...] = ()
 
     @classmethod
     def from_record(cls, record: ProposalRecord) -> ProposalView:
@@ -64,6 +65,7 @@ class ProposalView(BaseModel):
             payload_digest=cs.payload_digest,
             catalog_revision=cs.catalog_revision,
             requester_ref=cs.requester_ref,
+            risk_flags=cs.risk_flags,
         )
 
 
@@ -75,6 +77,7 @@ class ReceiptView(BaseModel):
     revision: int
     status: str
     mutation_attempted: bool
+    provider_acknowledged: bool = False
     verified_state: tuple[FieldValue, ...]
     checked_at: datetime
     reason: str
@@ -87,6 +90,7 @@ class ReceiptView(BaseModel):
             revision=receipt.revision,
             status=receipt.status,
             mutation_attempted=receipt.mutation_attempted,
+            provider_acknowledged=receipt.provider_acknowledged,
             verified_state=receipt.verified_state,
             checked_at=receipt.checked_at,
             reason=receipt.reason,

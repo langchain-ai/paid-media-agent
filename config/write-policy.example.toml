@@ -1,0 +1,82 @@
+# Reviewed mutation set. This file is data: a row that is absent or `admitted = false` makes the
+# operation unreachable for proposals, and removing a row is the rollback.
+#
+# Each admitted row is validated against the current authorized catalog at startup:
+#   - the tool must exist with readOnlyHint=false and must not be denied by local policy;
+#   - `target_arg`, every `editable_fields` entry, and any optional argument must be in the schema;
+#   - `readback_tool` must be an authorized read tool and `readback_fields` must cover every
+#     editable field.
+# Rows that fail validation are excluded and reported by `paid-media-agent doctor`.
+#
+# Names are `<platform>__<tool>` as exposed by the catalog. The rows below match the fixture
+# catalog used by the offline demo. For a live Pipeboard catalog, add rows only after reading the
+# live schema (`discover_tools` shows reads; the doctor prints denied mutation names), reviewing
+# the fields, and running the read-only integration check. Live execution additionally requires
+# the gate settings described in docs/operations/live-write-runbook.md.
+
+[operations."google_ads__update_campaign_budget"]
+admitted = true
+readback_tool = "google_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["daily_budget"]
+readback_fields = { daily_budget = "daily_budget" }
+units = { daily_budget = "account currency per day" }
+risk = "medium"
+validate_only_arg = "validate_only"
+notes = "Fixture operation. Budget changes are reversible; provider validation runs first."
+
+[operations."google_ads__update_campaign_status"]
+admitted = true
+readback_tool = "google_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["status"]
+readback_fields = { status = "status" }
+risk = "high"
+notes = "Fixture operation. Enabling a campaign starts delivery; the risk flag says so."
+
+[operations."meta_ads__update_campaign_budget"]
+admitted = true
+readback_tool = "meta_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["daily_budget"]
+readback_fields = { daily_budget = "daily_budget" }
+units = { daily_budget = "account currency per day" }
+risk = "medium"
+validate_only_arg = "validate_only"
+
+[operations."meta_ads__update_campaign_status"]
+admitted = true
+readback_tool = "meta_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["status"]
+readback_fields = { status = "status" }
+risk = "high"
+
+[operations."reddit_ads__update_campaign_budget"]
+admitted = true
+readback_tool = "reddit_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["daily_budget"]
+readback_fields = { daily_budget = "daily_budget" }
+units = { daily_budget = "account currency per day" }
+risk = "medium"
+validate_only_arg = "validate_only"
+
+[operations."reddit_ads__update_campaign_status"]
+admitted = true
+readback_tool = "reddit_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["status"]
+readback_fields = { status = "status" }
+risk = "high"
+
+# Example of a row kept for review but not released. It is reported as `not_admitted` and can
+# never be proposed until an operator flips it after reading the live schema.
+[operations."google_ads__update_campaign_bid"]
+admitted = false
+readback_tool = "google_ads__get_campaign"
+target_arg = "campaign_id"
+editable_fields = ["target_cpa"]
+readback_fields = { target_cpa = "target_cpa" }
+risk = "high"
+notes = "Not in the fixture catalog. Placeholder showing how an unreleased row is recorded."

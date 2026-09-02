@@ -65,3 +65,11 @@ terms.
   token is configured; otherwise the fixture catalog is used.
 - `connectors/mcp.py` is intentionally absent: MDA's MCP connector would bind provider tools to the
   model directly, bypassing the authorized catalog. Tools always enter through the assembly.
+
+## Slice 6 notes (2026-09-01)
+
+- With a live catalog, `self_hosted` and `mda` profiles use `PipeboardReadProvider` and the gated
+  `PipeboardWriteProvider` and mark the provider as not fake. The fixture fake is used only with the
+  fixture catalog, so a production receipt can never come from a fake.
+- `load_catalog` applies the admitted names from the write-policy file to `LocalPolicy` before the
+  live catalog is classified, so the catalog, the policy, and the gate agree on one reviewed set.
