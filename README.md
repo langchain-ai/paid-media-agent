@@ -58,14 +58,15 @@ uv run paid-media-agent setup
 
 `setup` opens a local-only onboarding page and walks you through it in a few minutes:
 
-1. **Model.** Pick a provider card (Anthropic recommended; OpenAI, Google, Groq, xAI, Mistral,
-   DeepSeek, OpenRouter, Kimi, GLM, or a custom endpoint), paste the key, and test one call. Keys
-   are stored under the name you choose in your local `.env`.
-2. **Ad accounts.** Paste a scoped Pipeboard token, load the live catalog, and tick the accounts
-   the agent may read. The model only ever sees the aliases you assign.
-3. **Try it.** Ask a question in the page, or start LangGraph Studio to watch the graph run, tool
+1. **Welcome.** Run the fixture demo through the real graph, or start setup. No ad account required.
+2. **Model.** The LangSmith Gateway is the featured card (one key, every provider, a trace per
+   call); Anthropic and other providers sit behind More providers. Paste a key, test one call,
+   and the wizard advances on success. Keys stay in your local `.env`.
+3. **Ad accounts.** Paste a scoped Pipeboard token, load the live catalog, and tick the accounts
+   the agent may read. The model only ever sees the aliases you assign. Skip to keep fixture data.
+4. **Try it.** Ask a question in the page, or start LangGraph Studio to watch the graph run, tool
    by tool, including the approval interrupt.
-4. **Where it lives.** Managed Deep Agents (recommended: `mda dev` locally, one command deploy,
+5. **Where it lives.** Managed Deep Agents (recommended: `mda dev` locally, one command deploy,
    Slack provisioned) or self-host with your own Slack app and Postgres.
 
 Every step shows the CLI command it runs, so a coding agent can do the same without a browser:
@@ -73,9 +74,11 @@ Every step shows the CLI command it runs, so a coding agent can do the same with
 ```bash
 uv run paid-media-agent demo --with-proposal        # fixture demo through the real graph
 uv run paid-media-agent doctor --json               # every check, machine-readable
-uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-sonnet-4-6 ANTHROPIC_API_KEY=...
+uv run paid-media-agent config set PAID_MEDIA_MODEL=langsmith:anthropic/claude-sonnet-4-6 LANGSMITH_API_KEY=...
 uv run paid-media-agent test model|pipeboard|slack|db|all --json
 uv run paid-media-agent accounts discover|list|add|remove
+uv run paid-media-agent ask "How did spend move week over week?"
+uv run paid-media-agent report --cadence weekly       # deterministic HTML/PDF report
 uv run langgraph dev                                # local LangGraph Server + Studio
 uv run paid-media-agent serve                       # self-hosted API
 uv run paid-media-agent slack                       # rich Slack adapter (Socket Mode)
@@ -92,15 +95,50 @@ local `.env` (mode 0600), and never displays a secret value.
 ![Try it with LangGraph Studio](docs/screenshots/setup-try-studio.png)
 ![Where it lives, dark theme](docs/screenshots/setup-path-dark.png)
 
+## Platform coverage
+
+| Platform | Path | Reads | Writes |
+|---|---|---|---|
+| Google Ads, Meta Ads, Reddit Ads | Pipeboard Streamable HTTP MCP | live catalog, classified by MCP annotations | admitted rows only, behind the write gates |
+| LinkedIn Ads | direct adapter (`tools/direct/linkedin.py`), OAuth 2.0 bearer with refresh | accounts, campaigns, daily campaign analytics | none in v1 |
+| X Ads | direct adapter (`tools/direct/x_ads.py`), OAuth 1.0a signed | accounts, campaigns, daily campaign stats | none in v1 |
+| OpenAI Ads | direct adapter (`tools/direct/openai_ads.py`), bearer key | account, campaigns, daily insights | none in v1 |
+
+Direct platforms join the same authorized catalog as Pipeboard tools whenever their credentials
+are configured, so alias scope, schema validation, artifact offload, and `compare_periods` work the
+same way across all six.
+
+## Models and the LangSmith Gateway
+
+`PAID_MEDIA_MODEL` takes `provider:model`. The recommended path for teams already on LangSmith is
+the LLM Gateway: `PAID_MEDIA_MODEL=langsmith:anthropic/claude-sonnet-4-6` with `LANGSMITH_API_KEY`,
+which gives one key for every provider and a trace for every call. Gateway models use the portable
+tool selector; direct Anthropic and OpenAI keys unlock provider-native tool search.
+
+## Reports
+
+`uv run paid-media-agent report --cadence weekly` (or `monthly`) reads every alias, compares the
+last complete window with the one before, and renders HTML and PDF with no model in the loop. The
+MDA project ships the same runs as schedules in `schedules/`. A platform whose read fails stays
+visible as unavailable and suppresses the cross-platform total.
+
 ## Managed Deep Agents path
 
-`agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, and `channels/slack.py`
-are the managed project files. With a LangSmith API key in `.env`:
+`agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, `channels/slack.py`,
+`identity.py` (the LangSmith identity Slack ingress requires), `schedules/` (weekly and monthly
+reports), and `sandbox/example_sandbox.py` (opt-in; MDA needs a named `sandbox` export when the
+file exists) are the managed project files. With a LangSmith API key in `.env`:
 
 ```bash
 uv run mda dev        # local managed run with LangSmith Studio
 uv run mda deploy .   # hosted deployment; provisions native Slack from channels/slack.py
 ```
+
+The managed build installs core dependencies only, so the Anthropic and OpenAI integration
+packages (the latter also serves `langsmith:` gateway models) ship in core; other providers stay
+optional extras and are unavailable in a managed build unless you move them into core.
+`mda deploy` needs a LangSmith key with deployment permissions; a key that can only trace or
+call the gateway fails with `403 deployments:read`.
 
 Native Slack supports approve and reject on `execute_change`. Use the rich adapter
 (`paid-media-agent slack`) when reviewers need edits, receipts, and files in Block Kit.

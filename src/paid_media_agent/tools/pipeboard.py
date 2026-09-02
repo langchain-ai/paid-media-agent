@@ -78,11 +78,13 @@ class PipeboardCatalogLoader:
         settings: Settings,
         policy: LocalPolicy = DEFAULT_LOCAL_POLICY,
         ttl_seconds: int | None = None,
+        extra_raw_tools: list[RawTool] | None = None,
     ) -> None:
         if settings.pipeboard_api_token is None:
             raise ValueError("PIPEBOARD_API_TOKEN is not configured")
         self._settings = settings
         self._policy = policy
+        self._extra_raw_tools = list(extra_raw_tools or [])
         self._ttl = ttl_seconds or settings.paid_media_catalog_ttl_seconds
         self._catalog: AuthorizedToolCatalog | None = None
         self._loaded_at = 0.0
@@ -125,7 +127,9 @@ class PipeboardCatalogLoader:
             raw_tools.extend(raw_tools_from_langchain(platform.value, url, tools))
             for tool in tools:
                 tools_by_name[f"{platform.value}__{tool.name}"] = tool
-        catalog = build_authorized_catalog(raw_tools, policy=self._policy, source=PIPEBOARD_SOURCE)
+        catalog = build_authorized_catalog(
+            [*raw_tools, *self._extra_raw_tools], policy=self._policy, source=PIPEBOARD_SOURCE
+        )
         self._catalog = catalog
         self._tools_by_name = tools_by_name
         self._loaded_at = time.monotonic()

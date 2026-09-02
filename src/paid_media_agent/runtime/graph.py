@@ -28,9 +28,24 @@ def project_root() -> Path:
     return Path.cwd()
 
 
-def make_graph() -> CompiledStateGraph[Any, Any, Any, Any]:
-    """Build the agent for a local LangGraph Server. Requires a configured model and key."""
+def _build() -> CompiledStateGraph[Any, Any, Any, Any]:
     root = project_root()
     settings = Settings(_env_file=str(root / ".env"))
-    components = build_mda_components(settings, project_root=root, loop=asyncio.run)
+    components = build_mda_components(settings, project_root=root)
     return compile_graph(components, project_root=root, checkpointer=None)
+
+
+_graph: CompiledStateGraph[Any, Any, Any, Any] | None = None
+
+
+async def make_graph() -> CompiledStateGraph[Any, Any, Any, Any]:
+    """Build the agent for a local LangGraph Server. Requires a configured model and key.
+
+    The server calls this factory from its event loop and flags blocking calls (blockbuster), so
+    the catalog and skill loading run in a worker thread. One process serves one configuration,
+    so the compiled graph is built once and reused across runs.
+    """
+    global _graph  # noqa: PLW0603 - process-wide cache for a long-lived server
+    if _graph is None:
+        _graph = await asyncio.to_thread(_build)
+    return _graph

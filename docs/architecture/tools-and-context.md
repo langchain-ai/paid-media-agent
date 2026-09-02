@@ -63,3 +63,11 @@ extraction and uploaded filenames are normalized and size-bounded.
 - Live Pipeboard loading (`tools/pipeboard.py`) keeps the bearer token inside the MCP connection map
   and never in state. Tool annotations arrive as LangChain tool metadata; a tool without
   `readOnlyHint` is treated as mutation and denied.
+
+## Direct adapters (2026-09-02)
+
+Platforms outside Pipeboard live under `tools/direct/`. Each adapter publishes `RawTool` entries
+with `readOnlyHint=true` and an account argument, so `build_authorized_catalog` classifies them
+with the same policy as MCP tools, and a `CompositeReadProvider` routes execution by platform.
+Direct adapters validate identifiers and ISO dates before building any query, bound every HTTP
+call, and reduce provider errors to status codes. No direct adapter defines a mutation.

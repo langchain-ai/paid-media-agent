@@ -104,6 +104,9 @@ DEFAULT_LOCAL_POLICY = LocalPolicy(
             platform=Platform.META_ADS, account_arg_names=("account_id", "ad_account_id")
         ),
         PlatformPolicy(platform=Platform.REDDIT_ADS, account_arg_names=("account_id",)),
+        PlatformPolicy(platform=Platform.LINKEDIN_ADS, account_arg_names=("account_id",)),
+        PlatformPolicy(platform=Platform.X_ADS, account_arg_names=("account_id",)),
+        PlatformPolicy(platform=Platform.OPENAI_ADS, account_arg_names=("account_id",)),
     ),
 )
 

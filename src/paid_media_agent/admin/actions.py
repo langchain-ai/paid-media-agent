@@ -35,7 +35,7 @@ from paid_media_agent.admin.envfile import (
 )
 from paid_media_agent.config import AccountBinding, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
-from paid_media_agent.domain.common import JsonValue, Platform
+from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.middleware.tool_selection import capabilities_for, plan_selection
 from paid_media_agent.runtime.profiles import load_write_policy_file
@@ -107,16 +107,27 @@ def catalog_summary(catalog: AuthorizedToolCatalog) -> dict[str, JsonValue]:
 
 MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
     {
+        "id": "langsmith",
+        "label": "LangSmith Gateway",
+        "model": "anthropic/claude-sonnet-4-6",
+        "key": "LANGSMITH_API_KEY",
+        "url": "https://smith.langchain.com/settings",
+        "note": "One key, every provider, traced",
+        "package": "",
+        "recommended": True,
+        "logo": "langchain",
+    },
+    {
         "id": "anthropic",
         "label": "Anthropic",
         "logo": "anthropic",
         "model": "anthropic:claude-sonnet-4-6",
         "key": "ANTHROPIC_API_KEY",
-        "package": "langchain_anthropic",
+        "package": "",
         "extra": "anthropic",
         "url": "https://console.anthropic.com/settings/keys",
         "note": "Native tool search",
-        "recommended": True,
+        "recommended": False,
     },
     {
         "id": "openai",
@@ -124,7 +135,7 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
         "logo": "openai",
         "model": "openai:gpt-5.5",
         "key": "OPENAI_API_KEY",
-        "package": "langchain_openai",
+        "package": "",
         "extra": "openai",
         "url": "https://platform.openai.com/api-keys",
         "note": "Native tool search",
@@ -364,9 +375,11 @@ PROVIDER_MODULES: dict[str, str] = {
     "xai": "langchain_xai",
     "mistralai": "langchain_mistralai",
     "deepseek": "langchain_deepseek",
+    "langsmith": "langchain_openai",
     "scripted": "paid_media_agent",
 }
 PROVIDER_DEFAULT_KEYS: dict[str, str] = {
+    "langsmith": "LANGSMITH_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
     "google_genai": "GOOGLE_API_KEY",
@@ -428,6 +441,8 @@ def generate_secret(root: Path, key: str) -> ActionResult:
     if shown:
         # An API token is shown once so the operator can store it in their client; it is not logged.
         detail["show_once"] = shown
+        # `.env` stores `token:caller`; clients send only the token part as the bearer.
+        detail["usage"] = f"Authorization: Bearer {shown.split(':', 1)[0]}"
     return _result(
         "generate_secret",
         "ok",
@@ -471,7 +486,7 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
             from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
 
             chat = resolve_model(model, api_key_env=settings.paid_media_model_api_key_env)
-            reply = str(chat.invoke("Reply with the single word OK.").content)
+            reply = _content_text(chat.invoke("Reply with the single word OK.").content)
         else:
             reply = invoke(model.spec)
     except Exception as exc:  # noqa: BLE001 - reported, never raised to the page
@@ -495,6 +510,18 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
         },
         command="paid-media-agent test model --json",
     )
+
+
+def _content_text(content: Any) -> str:
+    """Model content is a string or a list of blocks; keep only the text either way."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = [
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        ]
+        return " ".join(p for p in parts if p)
+    return str(content)
 
 
 def _os_env(name: str) -> str | None:
@@ -544,7 +571,7 @@ def pipeboard_test(
         if isinstance(summary["platforms"], dict)
         else []
     )
-    missing = [p.value for p in Platform if p.value not in (summary["platforms"] or {})]
+    missing = [p.value for p in PIPEBOARD_PLATFORMS if p.value not in (summary["platforms"] or {})]
     status_value: Status = "ok" if not missing and not empty else "warn"
     note = ""
     if missing:
@@ -558,7 +585,7 @@ def pipeboard_test(
     )
 
 
-_LISTING_TOOL_RE = re.compile(r"^(list|get)_.*(customers|ad_accounts|accounts)$")
+_LISTING_TOOL_RE = re.compile(r"^(list|get)_.*(customers|ad_accounts|accounts)$|^list_ad_accounts$")
 _ID_KEYS = ("customer_id", "account_id", "ad_account_id", "id")
 _NAME_KEYS = ("descriptive_name", "account_name", "name", "title")
 _CURRENCY_KEYS = ("currency_code", "currency", "account_currency")
@@ -615,9 +642,9 @@ def accounts_discover(
 ) -> ActionResult:
     """Host-side discovery of provider accounts. The model never sees these ids."""
     settings = load_settings(root)
-    if settings.pipeboard_api_token is None:
+    if settings.pipeboard_api_token is None and not settings.direct_platforms():
         fixture_rows: list[dict[str, str]] = []
-        for platform in Platform:
+        for platform in PIPEBOARD_PLATFORMS:
             data = load_fixture_dataset(platform)
             fixture_rows.append(
                 {
@@ -641,8 +668,10 @@ def accounts_discover(
         return _result(
             "accounts_discover", "fail", f"catalog load failed: {sanitize_exception(exc)}"
         )
+    from paid_media_agent.tools.direct import direct_read_providers  # noqa: PLC0415
     from paid_media_agent.tools.pipeboard import invoke_mcp_tool  # noqa: PLC0415
 
+    direct_providers = direct_read_providers(settings)
     rows: list[dict[str, str]] = []
     used: list[str] = []
     errors: list[str] = []
@@ -653,15 +682,19 @@ def accounts_discover(
             or entry.account_arg is not None
         ):
             continue
-        tool = (
-            live.loader.langchain_tool(entry.qualified_name)
-            if hasattr(live.loader, "langchain_tool")
-            else None
-        )
-        if tool is None:
-            continue
         try:
-            payload = asyncio.run(invoke_mcp_tool(tool, {}, timeout=60))
+            if entry.platform in direct_providers:
+                result = asyncio.run(direct_providers[entry.platform].call_read(entry, {}))
+                payload: Any = result.payload
+            else:
+                tool = (
+                    live.loader.langchain_tool(entry.qualified_name)
+                    if hasattr(live.loader, "langchain_tool")
+                    else None
+                )
+                if tool is None:
+                    continue
+                payload = asyncio.run(invoke_mcp_tool(tool, {}, timeout=60))
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{entry.qualified_name}: {sanitize_exception(exc)}")
             continue
@@ -931,6 +964,8 @@ def mda_check(root: Path) -> ActionResult:
         "instructions": (root / "instructions.md").exists(),
         "skills": (root / "skills").is_dir(),
         "slack_channel": (root / "channels" / "slack.py").exists(),
+        "identity": (root / "identity.py").exists(),
+        "sandbox_declared": (root / "sandbox" / "__init__.py").exists(),
         "model": settings.model_settings().spec,
         "model_package": _module_available(settings.model_settings().provider),
         "provider_key_set": _provider_key_set(settings, env),
@@ -949,6 +984,9 @@ def mda_check(root: Path) -> ActionResult:
         )
         if not items[k]
     ]
+    if items["slack_channel"] and not items["identity"]:
+        # MDA refuses to build an ingress channel without a root identity declaration.
+        blocking.append("identity")
     if items["import_smoke"] != "ok":
         blocking.append("import_smoke")
     summary = "ready to deploy" if not blocking else f"blocked by {', '.join(blocking)}"
@@ -1044,8 +1082,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
         state = asyncio.run(
             runtime.graph.ainvoke({"messages": [{"role": "user", "content": text}]}, config=config)
         )
-        answer = state["messages"][-1].content
-        answer_text = answer if isinstance(answer, str) else json.dumps(answer, default=str)
+        answer_text = _content_text(state["messages"][-1].content)
     except Exception as exc:  # noqa: BLE001 - reported, never raised to the page
         return _result("ask", "fail", f"run failed: {sanitize_exception(exc)}")
     if answer_text.startswith("Model call failed"):

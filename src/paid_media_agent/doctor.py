@@ -93,6 +93,25 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             Check(f"env:{name}", "ok" if present else "warn", "set" if present else "not set")
         )
 
+    direct = settings.direct_platforms()
+    checks.append(
+        Check(
+            "direct_platforms",
+            "ok" if direct else "warn",
+            ", ".join(p.value for p in direct)
+            if direct
+            else "none configured (LinkedIn, X, OpenAI Ads are direct adapters)",
+        )
+    )
+    gateway = os.environ.get("LANGSMITH_GATEWAY", "")
+    if gateway:
+        checks.append(
+            Check(
+                "model_gateway",
+                "ok",
+                f"LANGSMITH_GATEWAY={gateway}; provider SDKs route through LangSmith",
+            )
+        )
     if settings.pipeboard_api_token is None:
         checks.append(Check("pipeboard", "warn", "no token: fixture catalog only"))
     else:

@@ -242,13 +242,21 @@ class RenderedReport:
 
 
 def pdf_renderer_available() -> tuple[bool, str]:
-    import contextlib  # noqa: PLC0415
-    import io  # noqa: PLC0415
+    import os  # noqa: PLC0415
+    import sys  # noqa: PLC0415
 
+    # WeasyPrint writes installation advice straight to file descriptor 2 when Pango or Cairo is
+    # missing, so a Python-level redirect is not enough; park fd 2 on /dev/null for the import.
     try:
-        # WeasyPrint prints installation advice to stderr when native libraries are missing.
-        with contextlib.redirect_stderr(io.StringIO()):
-            import weasyprint  # noqa: F401, PLC0415
+        sys.stderr.flush()
+        saved = os.dup(2)
+        with open(os.devnull, "w") as sink:
+            os.dup2(sink.fileno(), 2)
+            try:
+                import weasyprint  # noqa: F401, PLC0415
+            finally:
+                os.dup2(saved, 2)
+                os.close(saved)
     except Exception as exc:  # noqa: BLE001 - missing native libraries raise OSError, not ImportError
         return False, f"{type(exc).__name__}: WeasyPrint native libraries unavailable"
     return True, "ok"

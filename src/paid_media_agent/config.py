@@ -123,6 +123,17 @@ class Settings(BaseSettings):
     pipeboard_meta_ads_mcp_url: str = "https://meta-ads.mcp.pipeboard.co/"
     pipeboard_reddit_ads_mcp_url: str = "https://reddit-ads.mcp.pipeboard.co/"
 
+    # Direct adapters for platforms Pipeboard does not cover. Unset means the platform is absent.
+    linkedin_client_id: str | None = None
+    linkedin_client_secret: SecretStr | None = None
+    linkedin_access_token: SecretStr | None = None
+    linkedin_refresh_token: SecretStr | None = None
+    x_ads_consumer_key: SecretStr | None = None
+    x_ads_consumer_secret: SecretStr | None = None
+    x_ads_access_token: SecretStr | None = None
+    x_ads_access_token_secret: SecretStr | None = None
+    openai_ads_api_key: SecretStr | None = None
+
     paid_media_writes_enabled: bool = False
     paid_media_write_policy_path: Path = Path("config/write-policy.example.toml")
     paid_media_kill_switch_path: Path = Path("workspace/KILL_SWITCH")
@@ -150,6 +161,7 @@ class Settings(BaseSettings):
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
         "paid_media_live_write_catalog_revision",
+        "linkedin_client_id",
         mode="before",
     )
     @classmethod
@@ -160,6 +172,14 @@ class Settings(BaseSettings):
 
     @field_validator(
         "pipeboard_api_token",
+        "linkedin_client_secret",
+        "linkedin_access_token",
+        "linkedin_refresh_token",
+        "x_ads_consumer_key",
+        "x_ads_consumer_secret",
+        "x_ads_access_token",
+        "x_ads_access_token_secret",
+        "openai_ads_api_key",
         "paid_media_approval_signing_key",
         "slack_bot_token",
         "slack_app_token",
@@ -199,6 +219,22 @@ class Settings(BaseSettings):
             Platform.META_ADS: self.pipeboard_meta_ads_mcp_url,
             Platform.REDDIT_ADS: self.pipeboard_reddit_ads_mcp_url,
         }
+
+    def direct_platforms(self) -> tuple[Platform, ...]:
+        """Direct-adapter platforms with complete credentials."""
+        platforms: list[Platform] = []
+        if self.linkedin_access_token is not None:
+            platforms.append(Platform.LINKEDIN_ADS)
+        if None not in (
+            self.x_ads_consumer_key,
+            self.x_ads_consumer_secret,
+            self.x_ads_access_token,
+            self.x_ads_access_token_secret,
+        ):
+            platforms.append(Platform.X_ADS)
+        if self.openai_ads_api_key is not None:
+            platforms.append(Platform.OPENAI_ADS)
+        return tuple(platforms)
 
     def api_token_map(self) -> dict[str, str]:
         """Parse `token:caller_ref,token:caller_ref` into a lookup. Values stay in memory only."""

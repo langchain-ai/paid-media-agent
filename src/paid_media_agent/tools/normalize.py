@@ -19,6 +19,9 @@ _SPEND_KEYS: dict[Platform, tuple[tuple[str, Decimal], ...]] = {
     ),
     Platform.META_ADS: (("spend", Decimal(1)),),
     Platform.REDDIT_ADS: (("spend_micros", Decimal(1_000_000)), ("spend", Decimal(1))),
+    Platform.LINKEDIN_ADS: (("spend", Decimal(1)), ("costInLocalCurrency", Decimal(1))),
+    Platform.X_ADS: (("spend_micros", Decimal(1_000_000)), ("spend", Decimal(1))),
+    Platform.OPENAI_ADS: (("spend", Decimal(1)),),
 }
 _CONVERSION_KEYS = ("conversions", "purchases", "results")
 _VALUE_KEYS = ("conversion_value", "conversions_value", "value", "purchase_value", "action_values")

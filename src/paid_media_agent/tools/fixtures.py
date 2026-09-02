@@ -10,7 +10,7 @@ from decimal import Decimal
 from importlib import resources
 from typing import Literal
 
-from paid_media_agent.domain.common import JsonValue, Platform
+from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
 from paid_media_agent.tools.catalog import (
     DEFAULT_LOCAL_POLICY,
     AuthorizedToolCatalog,
@@ -61,7 +61,7 @@ def _schema(
 def fixture_raw_tools() -> list[RawTool]:
     """A Pipeboard-shaped catalog including tools that policy must deny."""
     tools: list[RawTool] = []
-    for platform in Platform:
+    for platform in PIPEBOARD_PLATFORMS:
         account_arg = _ACCOUNT_ARG[platform]
         endpoint = f"fixture://{platform.value}"
         date_props: dict[str, JsonValue] = {
@@ -190,7 +190,8 @@ class FixtureState:
 
     def __init__(self) -> None:
         self.datasets: dict[Platform, dict[str, JsonValue]] = {
-            platform: copy.deepcopy(load_fixture_dataset(platform)) for platform in Platform
+            platform: copy.deepcopy(load_fixture_dataset(platform))
+            for platform in PIPEBOARD_PLATFORMS
         }
 
     def account_id(self, platform: Platform) -> str:
@@ -296,11 +297,16 @@ class FixtureReadProvider:
                 "row_count": len(selected),
             }
             names = {c["id"]: c["name"] for c in campaigns}
+            covered = sorted(str(r["date"]) for r in dataset["daily"])
             return ProviderResult(
                 payload={
                     "rows": _to_native_rows(entry.platform, selected),
                     "entity_names": names,
                     "totals": totals,
+                    # Fixture data is static; say what it covers so an empty window is explained.
+                    "fixture_data_window": {"start": covered[0], "end": covered[-1]}
+                    if covered
+                    else None,
                 },
                 **meta,
             )

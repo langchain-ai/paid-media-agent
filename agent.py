@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 from managed_deepagents import define_deep_agent
@@ -11,7 +10,7 @@ from paid_media_agent.config import Settings
 from paid_media_agent.runtime.mda import build_mda_components
 
 _settings = Settings()
-_components = build_mda_components(_settings, project_root=Path(__file__).parent, loop=asyncio.run)
+_components = build_mda_components(_settings, project_root=Path(__file__).parent)
 
 agent = define_deep_agent(
     name="paid-media-agent",

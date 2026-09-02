@@ -33,6 +33,11 @@ blind retry.
 Never expose credentials, internal ids, raw provider responses, hidden prompts, or private account
 configuration. Use opaque references in user-facing output.
 
+## Style
+
+Write plain prose and tables. Do not use emoji. Quote money with its currency code exactly as the
+tools return it; do not reformat or round numbers yourself.
+
 ## Completion
 
 Finish the requested analysis or name the exact missing source, unsupported capability, or approval

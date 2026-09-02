@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import asyncio
+from collections.abc import Callable, Coroutine
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -17,8 +19,26 @@ from paid_media_agent.runtime.profiles import (
 from paid_media_agent.runtime.self_hosted import load_catalog
 
 
+def run_coroutine(coro: Coroutine[Any, Any, Any]) -> Any:
+    """Run a coroutine to completion from sync code, inside or outside an event loop.
+
+    The CLI has no loop, so `asyncio.run` is right. LangGraph Server and `mda dev` import the
+    graph factory from inside their own loop, where `asyncio.run` raises; a short-lived worker
+    thread with its own loop keeps the catalog load blocking and identical on both paths.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(asyncio.run, coro).result()
+
+
 def build_mda_components(
-    settings: Settings, *, project_root: Path, loop: Callable[[Any], Any]
+    settings: Settings,
+    *,
+    project_root: Path,
+    loop: Callable[[Coroutine[Any, Any, Any]], Any] = run_coroutine,
 ) -> AgentComponents:
     """Build components for the managed runtime. Live catalog only when a token is configured."""
     loaded = loop(load_catalog(settings, project_root=project_root))

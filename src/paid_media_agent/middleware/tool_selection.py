@@ -12,7 +12,11 @@ from langchain.agents.middleware import (
     ProviderToolSearchMiddleware,
 )
 from langchain.agents.middleware.types import ModelRequest
-from langchain_core.language_models import BaseChatModel
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict
 
@@ -65,6 +69,15 @@ _GOOGLE = ModelCapabilities(
     notes="No provider-side deferred tool search; portable selector path.",
     verified=True,
 )
+_GATEWAY = ModelCapabilities(
+    tool_calling=True,
+    structured_output=True,
+    native_tool_search=False,
+    streaming_tool_calls=True,
+    integration_package="langchain-openai",
+    notes="LangSmith LLM Gateway (langsmith:provider/model). Standard endpoint; portable selector path.",
+    verified=True,
+)
 _SCRIPTED = ModelCapabilities(
     tool_calling=True,
     structured_output=False,
@@ -94,6 +107,11 @@ CAPABILITY_REGISTRY: dict[str, ModelCapabilities] = {
     "google_genai:gemini-3-flash": _GOOGLE,
     "google_genai:gemini-3.6-flash": _GOOGLE,
     "scripted:demo": _SCRIPTED,
+    "langsmith:anthropic/claude-sonnet-4-6": _GATEWAY,
+    "langsmith:anthropic/claude-opus-5": _GATEWAY,
+    "langsmith:openai/gpt-5.5": _GATEWAY,
+    "langsmith:openai/gpt-5.4-mini": _GATEWAY,
+    "langsmith:moonshotai/kimi-k3": _GATEWAY,
 }
 
 UNKNOWN_MODEL = ModelCapabilities(
@@ -110,6 +128,7 @@ INTEGRATION_PACKAGES: dict[str, str] = {
     "anthropic": "langchain-anthropic",
     "openai": "langchain-openai",
     "google_genai": "langchain-google-genai",
+    "langsmith": "langchain-openai",
 }
 
 
@@ -129,6 +148,9 @@ class SelectionPlan(BaseModel):
 
 def plan_selection(config: ModelConfig, *, max_tools: int) -> SelectionPlan:
     caps = capabilities_for(config)
+    if config.provider == "langsmith" and not caps.verified:
+        # Any gateway model is reachable; only the registered ones carry a verified note.
+        caps = _GATEWAY
     if config.provider == "scripted":
         return SelectionPlan(
             strategy=SelectionStrategy.NONE,
@@ -194,6 +216,57 @@ class PortableToolSelectorMiddleware(LLMToolSelectorMiddleware):
             if "invalid tools" not in str(exc):
                 raise
             return await handler(self._core_only(request))
+
+
+class LenientStructuredOutputModel(BaseChatModel):
+    """Delegate to a chat model but run structured output through function calling.
+
+    `LLMToolSelectorMiddleware` asks the selector for a JSON object whose schema has no
+    `additionalProperties: false`. OpenAI-format strict schemas (which the LangSmith Gateway
+    applies to `langsmith:` models) reject that, so the selection call uses function calling,
+    which every gateway provider translates.
+    """
+
+    inner: BaseChatModel
+
+    @property
+    def _llm_type(self) -> str:
+        return f"lenient-{self.inner._llm_type}"
+
+    def _get_ls_params(self, stop: list[str] | None = None, **kwargs: Any) -> Any:
+        return self.inner._get_ls_params(stop=stop, **kwargs)
+
+    def bind_tools(
+        self, tools: Any, *, tool_choice: Any = None, **kwargs: Any
+    ) -> Runnable[LanguageModelInput, AIMessage]:
+        return self.inner.bind_tools(tools, tool_choice=tool_choice, **kwargs)
+
+    def with_structured_output(
+        self, schema: Any, **kwargs: Any
+    ) -> Runnable[LanguageModelInput, Any]:
+        kwargs.pop("method", None)
+        kwargs.pop("strict", None)
+        try:
+            return self.inner.with_structured_output(schema, method="function_calling", **kwargs)
+        except TypeError:
+            return self.inner.with_structured_output(schema, **kwargs)
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,  # noqa: ARG002 - base signature
+        **kwargs: Any,
+    ) -> ChatResult:
+        message = self.inner.invoke(messages, stop=stop, **kwargs)
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+
+def lenient_selector(model: BaseChatModel, config: ModelConfig) -> BaseChatModel | None:
+    """Selector model for the portable path, or None to let the middleware reuse the main model."""
+    if config.provider == "langsmith":
+        return LenientStructuredOutputModel(inner=model)
+    return None
 
 
 def build_selection_middleware(

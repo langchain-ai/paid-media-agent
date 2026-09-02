@@ -23,6 +23,12 @@ trace exports.
 
 ## Runtime commands
 
+Every `paid-media-agent` command exports the allowlisted values of the project `.env` into its
+own process first, so provider SDKs that read their key from the environment work without a
+manual `export`. Values already set in your shell win over the file. `serve` takes `--host` and
+`--port` (defaults `PAID_MEDIA_API_HOST` / `PAID_MEDIA_API_PORT`); the bearer a client sends is
+the part of `PAID_MEDIA_API_TOKENS` before `:caller`.
+
 The implementation must expose these stable commands:
 
 ```bash
@@ -129,3 +135,20 @@ fixture accounts are used.
 Moonshot, Zhipu, your own gateway) use the `openai:` prefix, `PAID_MEDIA_MODEL_BASE_URL`, and a key
 stored under any `*_API_KEY` name declared in `PAID_MEDIA_MODEL_API_KEY_ENV`. A base URL disables
 provider-native tool search; the portable selector is used instead.
+
+## Direct platforms
+
+The setup console lists these under Advanced · Direct platforms (route `direct`): one form per
+platform, then the same account discovery as Pipeboard. `paid-media-agent accounts discover`
+lists direct accounts next to Pipeboard ones once their credentials are in `.env`.
+
+LinkedIn Ads, X Ads, and OpenAI Ads are not Pipeboard connectors. Set their credentials in `.env`
+(see `.env.example`); the runtime adds their read tools to the catalog on startup and
+`paid-media-agent accounts discover` lists their accounts next to Pipeboard's. Token refresh for
+LinkedIn happens in-process from `LINKEDIN_REFRESH_TOKEN`; X requests are signed with OAuth 1.0a.
+
+## Scheduled reports
+
+`paid-media-agent report --cadence weekly|monthly [--end YYYY-MM-DD] [--alias a]` runs the
+deterministic pipeline. On MDA, `schedules/weekly_report.py` and `schedules/monthly_report.py`
+start the agent in schedule mode with read and render tools only.

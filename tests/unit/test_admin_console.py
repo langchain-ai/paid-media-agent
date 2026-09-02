@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import shutil
 import sys
@@ -105,7 +106,7 @@ def test_status_and_routes_reflect_configuration(
     assert result.action == "status"
     assert result.detail["pipeboard"]["token_set"] is False
     routes = {r.id: r for r in build_routes(result.detail)}
-    assert list(routes) == ["local", "pipeboard", "slack", "mda", "self_hosted", "writes"]
+    assert list(routes) == ["local", "pipeboard", "direct", "slack", "mda", "self_hosted", "writes"]
     statuses = {s.id: s.status for s in routes["pipeboard"].steps}
     assert statuses["pb_token"] == "todo" and statuses["pb_test"] == "blocked"
     assert all("--json" in s.cli or s.cli for s in routes["local"].steps)
@@ -336,7 +337,10 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
         "proxy base URL disables native search"
     )
     presets = {p["id"]: p for p in result.detail["model_presets"]}
-    assert presets["anthropic"]["recommended"] is True and presets["custom"]["key"] == ""
+    assert presets["langsmith"]["recommended"] is True, (
+        "the gateway is the single recommended preset"
+    )
+    assert presets["anthropic"]["recommended"] is False and presets["custom"]["key"] == ""
     assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
 
     seen: dict[str, str] = {}
@@ -376,7 +380,9 @@ def test_graph_factory_compiles_for_langgraph_server(
         },
     )
     monkeypatch.setattr(graph_module, "project_root", lambda: workspace)
-    compiled = graph_module.make_graph()
+    monkeypatch.setattr(graph_module, "_graph", None)
+    # The server awaits the factory from its own loop; the build must not block that loop.
+    compiled = asyncio.run(graph_module.make_graph())
     assert not compiled.checkpointer, "LangGraph Server injects its own persistence"
     assert "tools" in compiled.get_graph().nodes
     assert PROCESS_TEMPLATES["studio"][-2:] == ("--port", "2024")

@@ -60,14 +60,43 @@ class LoadedCatalog:
 async def load_catalog(settings: Settings, *, project_root: Path | None = None) -> LoadedCatalog:
     """Live Pipeboard catalog when a token is configured, otherwise the fixture catalog.
 
-    The reviewed write-policy file decides which live mutations are even classified as admitted.
+    Direct adapters (LinkedIn, X, OpenAI Ads) join the same catalog whenever their credentials
+    are configured. The reviewed write-policy file decides which live mutations are admitted.
     """
+    from paid_media_agent.tools.direct import (  # noqa: PLC0415
+        CompositeReadProvider,
+        direct_raw_tools,
+        direct_read_providers,
+    )
+
+    direct_tools = direct_raw_tools(settings)
+    direct_providers = direct_read_providers(settings)
     if settings.pipeboard_api_token is None:
-        catalog = build_fixture_catalog()
+        if not direct_tools:
+            catalog = build_fixture_catalog()
+            return LoadedCatalog(
+                catalog=catalog,
+                provider=StaticCatalogProvider(catalog),
+                read_provider=None,
+                write_provider=None,
+            )
+        # Fixture catalog for the Pipeboard platforms plus live direct platforms.
+        from paid_media_agent.tools.catalog import build_authorized_catalog  # noqa: PLC0415
+        from paid_media_agent.tools.fixtures import (  # noqa: PLC0415
+            FIXTURE_LOCAL_POLICY,
+            FixtureReadProvider,
+            fixture_raw_tools,
+        )
+
+        catalog = build_authorized_catalog(
+            [*fixture_raw_tools(), *direct_tools],
+            policy=FIXTURE_LOCAL_POLICY,
+            source="fixture+direct",
+        )
         return LoadedCatalog(
             catalog=catalog,
             provider=StaticCatalogProvider(catalog),
-            read_provider=None,
+            read_provider=CompositeReadProvider(FixtureReadProvider(), direct_providers),
             write_provider=None,
         )
     from paid_media_agent.tools.pipeboard import (  # noqa: PLC0415
@@ -82,12 +111,14 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
         if policy_file is not None:
             admitted = policy_file.admitted_names()
     local_policy = DEFAULT_LOCAL_POLICY.model_copy(update={"admitted_mutations": admitted})
-    loader = PipeboardCatalogLoader(settings=settings, policy=local_policy)
+    loader = PipeboardCatalogLoader(
+        settings=settings, policy=local_policy, extra_raw_tools=direct_tools
+    )
     catalog = await loader.refresh()
     return LoadedCatalog(
         catalog=catalog,
         provider=loader,
-        read_provider=PipeboardReadProvider(loader),
+        read_provider=CompositeReadProvider(PipeboardReadProvider(loader), direct_providers),
         write_provider=PipeboardWriteProvider(loader),
     )
 

@@ -71,9 +71,16 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     writes = _get(detail, "writes") or {}
     accounts = _get(detail, "accounts") or []
     token_set = bool(_get(detail, "pipeboard", "token_set"))
-    model_ready = bool(model.get("package_installed")) and _provider_key_set(
-        model.get("provider"), env
-    )
+    model_ready = bool(model.get("package_installed")) and bool(_get(detail, "model_key_set"))
+    direct_keys = {
+        "linkedin": ("LINKEDIN_ACCESS_TOKEN",),
+        "x": ("X_ADS_CONSUMER_KEY", "X_ADS_ACCESS_TOKEN"),
+        "openai_ads": ("OPENAI_ADS_API_KEY",),
+    }
+    direct_set = {
+        name: all(isinstance(env, dict) and env.get(k) for k in keys)
+        for name, keys in direct_keys.items()
+    }
     accounts_path = str(_get(detail, "accounts_path") or "")
     real_accounts = accounts_path.endswith("config/accounts.toml")
 
@@ -127,6 +134,14 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 status="optional" if not model_ready else "todo",
                 cli="uv run paid-media-agent test model --json",
                 action=StepAction(kind="test", label="Test model", action="model_test"),
+            ),
+            Step(
+                id="report",
+                title="Run the weekly report",
+                description="Reads every alias, compares the last 7 complete days with the 7 before, renders HTML and PDF. No model involved.",
+                status="optional",
+                cli="uv run paid-media-agent report --cadence weekly",
+                action=StepAction(kind="command", label="Copy command"),
             ),
             Step(
                 id="ask",
@@ -212,6 +227,71 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         if slack.get("transport") == "socket_mode"
         else bool(slack.get("signing_secret_set"))
     )
+    direct = Route(
+        id="direct",
+        title="Direct platforms",
+        tagline="LinkedIn Ads, X Ads, and OpenAI Ads without Pipeboard",
+        description="These platforms are not on Pipeboard. Paste platform credentials; the adapters join the same authorized catalog with read-only tools.",
+        steps=(
+            Step(
+                id="direct_linkedin",
+                title="LinkedIn Ads",
+                description="OAuth 2.0 access token; add the refresh token, client id, and secret so the adapter can refresh once on 401.",
+                status="done" if direct_set["linkedin"] else "optional",
+                cli="uv run paid-media-agent config set LINKEDIN_ACCESS_TOKEN=... LINKEDIN_REFRESH_TOKEN=... LINKEDIN_CLIENT_ID=... LINKEDIN_CLIENT_SECRET=...",
+                action=StepAction(
+                    kind="form",
+                    label="Save LinkedIn credentials",
+                    keys=(
+                        "LINKEDIN_ACCESS_TOKEN",
+                        "LINKEDIN_REFRESH_TOKEN",
+                        "LINKEDIN_CLIENT_ID",
+                        "LINKEDIN_CLIENT_SECRET",
+                    ),
+                ),
+            ),
+            Step(
+                id="direct_x",
+                title="X Ads",
+                description="OAuth 1.0a app credentials and user tokens from the X developer portal; requests are signed locally.",
+                status="done" if direct_set["x"] else "optional",
+                cli="uv run paid-media-agent config set X_ADS_CONSUMER_KEY=... X_ADS_CONSUMER_SECRET=... X_ADS_ACCESS_TOKEN=... X_ADS_ACCESS_TOKEN_SECRET=...",
+                action=StepAction(
+                    kind="form",
+                    label="Save X Ads credentials",
+                    keys=(
+                        "X_ADS_CONSUMER_KEY",
+                        "X_ADS_CONSUMER_SECRET",
+                        "X_ADS_ACCESS_TOKEN",
+                        "X_ADS_ACCESS_TOKEN_SECRET",
+                    ),
+                ),
+            ),
+            Step(
+                id="direct_openai_ads",
+                title="OpenAI Ads",
+                description="Bearer API key for the OpenAI Ads API.",
+                status="done" if direct_set["openai_ads"] else "optional",
+                cli="uv run paid-media-agent config set OPENAI_ADS_API_KEY=...",
+                action=StepAction(
+                    kind="form", label="Save OpenAI Ads key", keys=("OPENAI_ADS_API_KEY",)
+                ),
+            ),
+            Step(
+                id="direct_accounts",
+                title="Discover and map accounts",
+                description="Lists accounts from every configured direct platform next to Pipeboard ones; pick an alias per account.",
+                status="done"
+                if real_accounts and accounts
+                else ("blocked" if not any(direct_set.values()) else "todo"),
+                cli="uv run paid-media-agent accounts discover --json",
+                action=StepAction(
+                    kind="accounts", label="Discover accounts", action="accounts_discover"
+                ),
+            ),
+        ),
+    )
+
     slack_route = Route(
         id="slack",
         title="Slack (rich adapter)",
@@ -455,15 +535,4 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             ),
         ),
     )
-    return [local, pipeboard, slack_route, mda_route, self_route, writes_route]
-
-
-def _provider_key_set(provider: JsonValue, env: JsonValue) -> bool:
-    key_name = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "google_genai": "GOOGLE_API_KEY",
-    }.get(str(provider))
-    if key_name is None:
-        return str(provider) == "scripted"
-    return bool(isinstance(env, dict) and env.get(key_name))
+    return [local, pipeboard, direct, slack_route, mda_route, self_route, writes_route]

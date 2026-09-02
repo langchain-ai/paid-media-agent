@@ -31,7 +31,7 @@ from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from paid_media_agent.config import AccountRegistry
-from paid_media_agent.domain.common import JsonValue, Platform, RiskLevel
+from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, RiskLevel
 from paid_media_agent.domain.presentation import ProposalView, ReceiptView
 from paid_media_agent.domain.proposals import (
     ApprovalClaim,
@@ -230,7 +230,7 @@ class WritePolicyFile(BaseModel):
 
 def fixture_write_policy() -> WritePolicy:
     ops: list[WriteOperation] = []
-    for platform in Platform:
+    for platform in PIPEBOARD_PLATFORMS:
         prefix = f"{platform.value}__"
         ops.append(
             WriteOperation(

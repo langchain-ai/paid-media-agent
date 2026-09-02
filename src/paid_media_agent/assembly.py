@@ -18,11 +18,13 @@ from paid_media_agent.middleware.authorization import (
     InvocationGuardMiddleware,
     ToolSurfacePolicy,
 )
+from paid_media_agent.middleware.current_date import CurrentDateMiddleware
 from paid_media_agent.middleware.offload import ResultOffloadMiddleware
 from paid_media_agent.middleware.redaction import RedactionMiddleware
 from paid_media_agent.middleware.tool_selection import (
     SelectionPlan,
     build_selection_middleware,
+    lenient_selector,
     plan_selection,
 )
 from paid_media_agent.runtime.profiles import RuntimeProfile
@@ -203,7 +205,7 @@ def build_agent_components(
             *(t.name for t in core_tools),
             *(t.name for t in write_tools),
         ],
-        selector_model=selector_model,
+        selector_model=selector_model or lenient_selector(resolved_model, model_config),
     )
     secrets = tuple(s for s in _secret_values(settings) if s)
     retry: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
@@ -212,6 +214,7 @@ def build_agent_components(
         retry = (ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),)
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...] = (
         *retry,
+        CurrentDateMiddleware(),
         *selection,
         InvocationGuardMiddleware(surface=surface, catalog_provider=runtime.catalog_provider),
         ResultOffloadMiddleware(

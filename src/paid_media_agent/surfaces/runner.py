@@ -30,23 +30,23 @@ class ThreadAccessDenied(Exception):
     pass
 
 
+def _content_text(content: Any) -> str:
+    """Model content is a string or a list of blocks; keep only the text either way."""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        texts = [
+            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
+        ]
+        return "\n".join(t for t in texts if t).strip()
+    return str(content)
+
+
 def _last_assistant_text(messages: list[Any]) -> str:
     """Prose from the most recent assistant message, so an interrupt does not discard it."""
     for message in reversed(messages):
         if getattr(message, "type", "") == "ai":
-            content = message.content
-            if isinstance(content, str) and content.strip():
-                return content.strip()[:2000]
-            if isinstance(content, list):
-                texts = [
-                    b.get("text", "")
-                    for b in content
-                    if isinstance(b, dict) and b.get("type") == "text"
-                ]
-                joined = "\n".join(t for t in texts if t).strip()
-                if joined:
-                    return joined[:2000]
-            return ""
+            return _content_text(message.content)[:2000]
     return ""
 
 
@@ -81,8 +81,7 @@ class AgentRunner:
         messages = state.get("messages", [])
         text = ""
         if messages:
-            content = messages[-1].content
-            text = content if isinstance(content, str) else str(content)
+            text = _content_text(messages[-1].content)
         proposal = self._latest_proposal(thread_id)
         receipt = None
         if proposal is not None:

@@ -13,6 +13,17 @@ class Platform(StrEnum):
     GOOGLE_ADS = "google_ads"
     META_ADS = "meta_ads"
     REDDIT_ADS = "reddit_ads"
+    LINKEDIN_ADS = "linkedin_ads"
+    X_ADS = "x_ads"
+    OPENAI_ADS = "openai_ads"
+
+
+PIPEBOARD_PLATFORMS: tuple[Platform, ...] = (
+    Platform.GOOGLE_ADS,
+    Platform.META_ADS,
+    Platform.REDDIT_ADS,
+)
+"""Platforms reached through Pipeboard MCP. The others use direct adapters in tools/direct."""
 
 
 class EntityType(StrEnum):

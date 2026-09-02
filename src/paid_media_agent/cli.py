@@ -50,7 +50,15 @@ def _emit(result: actions.ActionResult, as_json: bool) -> None:
 
 @click.group()
 def main() -> None:
-    """Paid Media Agent."""
+    """Paid Media Agent command line.
+
+    Every command sees the project `.env` the same way `langgraph dev` and the managed build do:
+    allowlisted values are exported into this process before the command runs, so provider SDKs
+    that read their key from the environment work without a manual `export`.
+    """
+    from paid_media_agent.admin.envfile import apply_env_file  # noqa: PLC0415
+
+    apply_env_file(project_root())
 
 
 # ---------------------------------------------------------------- setup console
@@ -230,6 +238,8 @@ def config_generate(keys: tuple[str, ...], as_json: bool) -> None:
         _emit(result, as_json)
         if not as_json and result.detail.get("show_once"):
             click.echo(f"      API token (shown once): {result.detail['show_once']}")
+            if result.detail.get("usage"):
+                click.echo(f"      Use as: {result.detail['usage']}")
 
 
 # ---------------------------------------------------------------- accounts
@@ -448,13 +458,127 @@ def writes_kill_switch(state: str, yes: bool, as_json: bool) -> None:
     _emit(actions.kill_switch_set(project_root(), engaged=state == "on", confirmed=yes), as_json)
 
 
+# ---------------------------------------------------------------- ask
+
+
+@main.command()
+@click.argument("question")
+@click.option("--json", "as_json", is_flag=True)
+def ask(question: str, as_json: bool) -> None:
+    """Run one question through the configured model and the same graph the deployment uses."""
+    result = actions.ask_question(project_root(), question)
+    if as_json:
+        _emit(result, True)
+        return
+    click.echo(result.detail.get("answer", result.summary))
+    if result.status == "fail":
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------- reports
+
+
+@main.command()
+@click.option(
+    "--cadence", type=click.Choice(["weekly", "monthly"]), default="weekly", show_default=True
+)
+@click.option(
+    "--end", "end_date", default=None, help="Last complete day (YYYY-MM-DD). Defaults to yesterday."
+)
+@click.option(
+    "--alias",
+    "aliases",
+    multiple=True,
+    help="Account alias to include. Repeatable; default is every alias.",
+)
+@click.option("--no-render", is_flag=True, help="Compare only; skip the HTML/PDF report.")
+@click.option("--json", "as_json", is_flag=True)
+def report(
+    cadence: str, end_date: str | None, aliases: tuple[str, ...], no_render: bool, as_json: bool
+) -> None:
+    """Run the deterministic cross-platform report: reads, comparison, and rendering, no model."""
+    from datetime import date, timedelta  # noqa: PLC0415
+
+    from paid_media_agent.reports.cadence import run_cadence_report  # noqa: PLC0415
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime  # noqa: PLC0415
+
+    settings = Settings()
+    _configure_logging(settings)
+    root = project_root()
+    end = date.fromisoformat(end_date) if end_date else date.today() - timedelta(days=1)
+
+    async def _run() -> Any:
+        runtime = await build_self_hosted_runtime(settings, project_root=root)
+        return await run_cadence_report(
+            cadence=cadence,  # type: ignore[arg-type]
+            end=end,
+            accounts=runtime.profile.accounts,
+            catalog=runtime.catalog,
+            dispatcher=runtime.components.read_dispatcher,
+            artifacts=runtime.profile.artifacts,
+            aliases=aliases or None,
+            render=not no_render,
+        )
+
+    try:
+        run = asyncio.run(_run())
+    except RuntimeError as exc:
+        click.echo(f"FAIL report: {exc}", err=True)
+        sys.exit(1)
+    if as_json:
+        click.echo(
+            json.dumps(
+                {
+                    "cadence": run.cadence,
+                    "current": run.windows.current.model_dump(mode="json"),
+                    "previous": run.windows.previous.model_dump(mode="json"),
+                    "reads": list(run.read_artifacts),
+                    "unavailable": list(run.unavailable),
+                    "analysis_artifact_id": run.analysis_artifact_id,
+                    "summary": run.summary,
+                    "report": run.report,
+                    "reconciled": run.reconciled,
+                },
+                indent=2,
+                default=str,
+            )
+        )
+        return
+    click.echo(
+        f"{run.cadence} report · {run.windows.current.start} to {run.windows.current.end} vs {run.windows.previous.start} to {run.windows.previous.end}"
+    )
+    for platform in run.summary["platforms"]:
+        click.echo(
+            f"  {platform['platform']:<12} spend {platform['spend_current']} vs {platform['spend_previous']} ({platform['spend_change']}); CPA {platform['cpa_current']} vs {platform['cpa_previous']}"
+        )
+    if run.unavailable:
+        click.echo("  unavailable: " + "; ".join(run.unavailable))
+    click.echo(
+        f"  analysis {run.analysis_artifact_id} · reconciled={'yes' if run.reconciled else 'NO'}"
+    )
+    if run.report:
+        click.echo(
+            "  files: "
+            + ", ".join(f["path"] for f in run.report["files"])
+            + f" · pdf {run.report['pdf']}"
+        )
+    if not run.reconciled:
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------- runtimes
 
 
 @main.command()
-def serve() -> None:
+@click.option("--host", default=None, help="Bind address (default PAID_MEDIA_API_HOST).")
+@click.option("--port", type=int, default=None, help="Port (default PAID_MEDIA_API_PORT).")
+def serve(host: str | None, port: int | None) -> None:
     """Serve the self-hosted API (Postgres when DATABASE_URL is set, else in-memory state)."""
     settings = Settings()
+    if host is not None:
+        settings = settings.model_copy(update={"paid_media_api_host": host})
+    if port is not None:
+        settings = settings.model_copy(update={"paid_media_api_port": port})
     _configure_logging(settings)
     import uvicorn  # noqa: PLC0415
 

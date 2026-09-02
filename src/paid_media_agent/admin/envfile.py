@@ -110,6 +110,51 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         example="config/accounts.toml",
     ),
     EnvKeySpec(
+        name="LINKEDIN_CLIENT_ID",
+        group="direct",
+        secret=False,
+        description="LinkedIn app client id (token refresh)",
+    ),
+    EnvKeySpec(
+        name="LINKEDIN_CLIENT_SECRET",
+        group="direct",
+        secret=True,
+        description="LinkedIn app client secret (token refresh)",
+    ),
+    EnvKeySpec(
+        name="LINKEDIN_ACCESS_TOKEN",
+        group="direct",
+        secret=True,
+        description="LinkedIn Marketing API access token",
+    ),
+    EnvKeySpec(
+        name="LINKEDIN_REFRESH_TOKEN",
+        group="direct",
+        secret=True,
+        description="LinkedIn refresh token",
+    ),
+    EnvKeySpec(
+        name="X_ADS_CONSUMER_KEY", group="direct", secret=True, description="X Ads API consumer key"
+    ),
+    EnvKeySpec(
+        name="X_ADS_CONSUMER_SECRET",
+        group="direct",
+        secret=True,
+        description="X Ads API consumer secret",
+    ),
+    EnvKeySpec(
+        name="X_ADS_ACCESS_TOKEN", group="direct", secret=True, description="X Ads API access token"
+    ),
+    EnvKeySpec(
+        name="X_ADS_ACCESS_TOKEN_SECRET",
+        group="direct",
+        secret=True,
+        description="X Ads API access token secret",
+    ),
+    EnvKeySpec(
+        name="OPENAI_ADS_API_KEY", group="direct", secret=True, description="OpenAI Ads API key"
+    ),
+    EnvKeySpec(
         name="PAID_MEDIA_WRITES_ENABLED",
         group="writes",
         secret=False,
@@ -218,7 +263,19 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         name="LANGSMITH_API_KEY",
         group="mda",
         secret=True,
-        description="LangSmith key used by mda dev and mda deploy",
+        description="LangSmith key for mda dev, mda deploy, and the LLM Gateway",
+    ),
+    EnvKeySpec(
+        name="LANGSMITH_GATEWAY",
+        group="model",
+        secret=False,
+        description="Route provider SDKs through the LangSmith Gateway (true or a gateway URL)",
+    ),
+    EnvKeySpec(
+        name="LANGSMITH_GATEWAY_API_KEY",
+        group="model",
+        secret=True,
+        description="Gateway key override when it differs from LANGSMITH_API_KEY",
     ),
 )
 ENV_KEY_BY_NAME: dict[str, EnvKeySpec] = {spec.name: spec for spec in ENV_KEYS}

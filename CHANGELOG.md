@@ -2,13 +2,35 @@
 
 ## Unreleased (2026-09-01)
 
+### Fixed
+
+- The LangGraph Server graph factory is now async and builds off the event loop; it previously
+  called `asyncio.run` and tripped the server's blocking-call guard on the first run.
+- Every CLI command exports the project `.env` into its process before running, so `serve`
+  and `slack` find provider keys the same way `langgraph dev` and the managed build do.
+- The self-hosted API returned the Python repr of content blocks; it now returns the text.
+- The model is told the current UTC date on every call, so "last week" resolves from today.
+- Fixture performance reads report the static data window so an empty range is explained.
+- `serve` accepts `--host` and `--port`; the Anthropic and OpenAI integration packages moved
+  into core dependencies so managed builds can run the recommended gateway preset.
+
 ### Added
+
+- Direct read adapters for LinkedIn Ads (OAuth 2.0 with refresh), X Ads (OAuth 1.0a), and OpenAI
+  Ads, joined into the same authorized catalog as Pipeboard tools.
+- LangSmith LLM Gateway as the recommended model preset (`langsmith:provider/model`).
+- Deterministic weekly and monthly report command plus MDA schedules.
 
 - Local setup console (`paid-media-agent setup`): a guided onboarding wizard (welcome with
   capabilities, model providers with custom key names, Pipeboard accounts with checkboxes, try it
   with an in-page question and LangGraph Studio, managed vs self-hosted path) plus an advanced view
   over the same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`,
   `writes`).
+- Setup wizard first-run pass: fixture demo as the welcome primary, featured
+  Anthropic card with More providers, auto-advance after a green test, designed
+  receipts, and three next steps on Done. No Agent Chat UI. The wizard frame
+  follows the Watermelon Budget Card anatomy (corner ticks, display title,
+  thin meter, metric pair, segmented breakdown) in CORE 14 tokens.
 - Setup wizard tuned for engineers: larger reading scale, the runtime facts it actually runs on,
   and the equivalent shell command under every step.
 - Generated onboarding art (gpt-image-2): light and dark glyph-field backgrounds and three
