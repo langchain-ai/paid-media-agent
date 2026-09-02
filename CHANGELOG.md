@@ -9,6 +9,8 @@
   with an in-page question and LangGraph Studio, managed vs self-hosted path) plus an advanced view
   over the same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`,
   `writes`).
+- Setup wizard tuned for engineers: larger reading scale, the runtime facts it actually runs on,
+  and the equivalent shell command under every step.
 - Generated onboarding art (gpt-image-2): light and dark glyph-field backgrounds and three
   capability tiles, shipped as small WebP files with inline SVG fallbacks.
 - `langgraph.json` and a graph factory for LangGraph Server and Studio; `studio` extra.

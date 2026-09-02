@@ -21,6 +21,8 @@
   const check = (checked, large = false) => el("span", { class: `check${large ? " lg" : ""}`, "data-checked": checked ? "true" : "false", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' });
   const badge = (tone, text) => el("span", { class: "badge", "data-tone": tone, text });
   const tick = () => el("span", { class: "tick", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' });
+  const facts = (items) => el("div", { class: "facts" }, items.map((t) => el("span", { class: "fact", text: t })));
+  const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: command })]);
   const intro = (logoName, title, note, actions = null, cls = "") => el("div", { class: "intro" }, [logo(logoName, cls), el("div", {}, [el("span", { class: "name", text: title }), el("span", { class: "note", text: note }), actions])]);
 
   // ---- fragment: #token=...&view=...&step=...&route=...
@@ -151,34 +153,36 @@
     report: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="ln" x="60" y="6" width="80" height="58" rx="6"/><rect class="txt" x="70" y="16" width="40" height="4" rx="2"/><rect class="txt" x="70" y="26" width="60" height="3" rx="1.5"/><rect class="txt" x="70" y="33" width="52" height="3" rx="1.5"/><rect class="bar hi" x="70" y="42" width="24" height="12" rx="2"/><rect class="bar" x="98" y="46" width="14" height="8" rx="2"/><rect class="bar" x="116" y="44" width="14" height="10" rx="2"/></svg>',
   };
   const EXAMPLES = [
-    "Which campaigns need attention this week?",
     "Compare the last 14 days with the prior 14 days.",
     "Where is spend rising while CPA gets worse?",
-    "Pause the Performance Max campaign that is bleeding budget.",
+    "Cut the Performance Max daily budget to 240.",
   ];
 
   function screenWelcome() {
-    const s = derive();
-    const items = [["Choose a model", s.modelDone], ["Connect your ad accounts", s.pipeboardDone], ["Try it locally", !!state.session.answer], ["Pick managed or self-hosted", s.runtime !== "local"]];
     return [
       el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Hi! Thanks for downloading the Paid Media Agent." }),
-        el("p", { class: "hero-sub", text: "It reads your ad accounts through Pipeboard, does the math in code, and turns every change into a proposal a human approves. Setup takes a few minutes." }),
+        el("h1", { class: "hero-title", text: "Paid Media Agent" }),
+        el("p", { class: "hero-sub", text: "One Deep Agents core over your ad accounts. The model chooses evidence and explains it; code owns the arithmetic, the tool authorization, and every provider mutation behind a signed approval." }),
       ]),
+      facts(["deepagents + langgraph", "pipeboard mcp", "deny-by-default tools", "hitl approvals"]),
       el("div", { class: "caps-grid stagger" }, [
-        cap("analyze", "Analyze", "Period comparisons, movers, and data gaps across Google, Meta, and Reddit. Missing is never zero."),
-        cap("approve", "Change with approval", "Budget and status changes become typed proposals. One click to approve, one attempt, then readback."),
-        cap("report", "Report", "Reconciled HTML and PDF reports where every number traces to a source artifact."),
+        cap("analyze", "Analyze", "Period comparison in Decimal, per platform, with missing metrics kept missing and totals suppressed when sources disagree."),
+        cap("approve", "Change", "Typed ChangeSet, digest-bound approval, one mutation attempt, bounded readback, honest receipt."),
+        cap("report", "Report", "Versioned payload rendered by code to HTML and PDF; every value reconciles to a source artifact."),
       ]),
-      el("div", { class: "form" }, [el("span", { class: "mini", text: "Things you can ask" }), el("div", { class: "prompts" }, EXAMPLES.map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { state.session.draft = q; go("try"); } })))]),
-      el("ul", { class: "checklist" }, items.map(([label, done]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label })]))),
+      el("div", { class: "form" }, [
+        el("span", { class: "mini", text: "Ask it things like" }),
+        el("div", { class: "prompts" }, EXAMPLES.slice(0, 2).map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { state.session.draft = q; go("try"); } }))),
+      ]),
       el("div", { class: "actions" }, [
-        el("button", { class: "btn btn-primary", type: "button", text: "Let's get started", onclick: () => go(firstOpenStep() === "done" ? "model" : firstOpenStep()) }),
-        el("button", { class: "btn btn-outline", type: "button", text: "Run the demo first", onclick: (ev) => demoInline(ev.currentTarget) }),
+        el("button", { class: "btn btn-primary", type: "button", text: "Start setup", onclick: () => go(firstOpenStep() === "done" ? "model" : firstOpenStep()) }),
+        el("button", { class: "btn btn-outline", type: "button", text: "Run the fixture demo", onclick: (ev) => demoInline(ev.currentTarget) }),
       ]),
+      cli("paid-media-agent demo --with-proposal"),
       el("div", { class: "status-line", id: "welcome-status" }),
     ];
   }
+
   const cap = (art, name, note) => {
     const tile = el("div", { class: "art-tile" });
     const img = el("img", { src: `/static/art-${art}.webp`, alt: "", decoding: "async" });
@@ -212,7 +216,10 @@
       el("span", { class: "note" }, [el("span", { text: p.note }), p.recommended ? badge("info", "Recommended") : null]),
     ])));
     const nodes = [
-      el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Choose a model." }), el("p", { class: "hero-sub", text: s.modelDone ? `Using ${currentSpec}. Pick another provider or continue.` : "Pick a provider, paste its API key, and we test one call. Keys stay in your local .env." })]),
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Model" }),
+        el("p", { class: "hero-sub", text: s.modelDone ? `${currentSpec} is configured. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector.` : "PAID_MEDIA_MODEL takes provider:model. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector with a bounded tool set." }),
+      ]),
       cards,
     ];
     const preset = presets.find((p) => p.id === state.picked);
@@ -239,7 +246,7 @@
       const line = el("div", { class: "status-line", id: "model-status" });
       if (state.session.modelTested) setLine(line, state.session.modelTested.status, state.session.modelTested.text);
       const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test" });
-      form.append(line, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("pipeboard") }), el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Skip for now", onclick: () => go("pipeboard") })]));
+      form.append(line, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("pipeboard") })]), cli("paid-media-agent test model"));
       form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(save, async () => {
         const keyName = (isCustom ? keyNameInput.value : preset.key).trim();
         if (!/^[A-Z][A-Z0-9_]{1,40}_API_KEY$/.test(keyName)) { setLine(line, "fail", "Key name must look like MY_PROVIDER_API_KEY."); return; }
@@ -254,7 +261,7 @@
       }); });
       nodes.push(form);
     } else {
-      nodes.push(el("div", { class: "actions" }, [el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Skip for now", onclick: () => go("pipeboard") })]));
+      nodes.push(el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Skip", onclick: () => go("pipeboard") })]));
     }
     return nodes;
   }
@@ -262,7 +269,10 @@
   function screenPipeboard() {
     const d = state.status.detail;
     const s = derive();
-    const nodes = [el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Connect your ad accounts." }), el("p", { class: "hero-sub", text: "Pipeboard handles the platform logins. One scoped token here, then pick the accounts the agent may read." })])];
+    const nodes = [el("div", { class: "hero" }, [
+      el("h1", { class: "hero-title", text: "Ad accounts" }),
+      el("p", { class: "hero-sub", text: "Pipeboard owns the platform OAuth and exposes each one as a Streamable HTTP MCP server. The host loads that catalog, classifies every tool, and denies anything without a read-only hint." }),
+    ])];
     const introNode = intro("pipeboard", "Pipeboard", "Handles the Google, Meta, and Reddit logins. Connect them there, create a scoped read-only token, and paste it here.",
       el("div", { class: "actions" }, [el("a", { class: "btn btn-outline btn-compact", href: "https://pipeboard.co/api-tokens", target: "_blank", rel: "noopener", text: "Open Pipeboard" })]));
     const tokenInput = el("input", { class: "input", id: "w-token", type: "password", placeholder: s.tokenSet ? "Token already set. Paste to replace." : "Pipeboard API token", autocomplete: "off" });
@@ -284,8 +294,11 @@
       runAction("accounts_discover").then((disc) => { state.discovered = disc.detail.accounts || []; refreshScreen(); }).catch(() => {});
     }
     if (state.discovered && state.discovered.length) nodes.push(accountsPicker());
-    else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `Without a token you are on demo accounts (${(d.accounts || []).map((a) => a.alias).join(", ")}).` }));
-    nodes.push(el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") }), el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: s.tokenSet ? "Later" : "Skip for now", onclick: () => go("try") })]));
+    else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `No token yet, so reads resolve against the fixture catalog: ${(d.accounts || []).map((a) => a.alias).join(", ")}.` }));
+    nodes.push(
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]),
+      cli("paid-media-agent accounts discover"),
+    );
     return nodes;
   }
 
@@ -365,10 +378,14 @@
       processStatus("studio"),
     ]);
     return [
-      el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Try it." }), el("p", { class: "hero-sub", text: "Ask a question right here, or open LangGraph Studio to see the graph run step by step." })]),
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Try it" }),
+        el("p", { class: "hero-sub", text: "The question runs through the same compiled graph the deployment uses. Studio serves it on 127.0.0.1:2024 so you can step through tool calls, offloaded artifacts, and the approval interrupt." }),
+      ]),
       form,
       studioBlock,
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("path") }), el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Skip", onclick: () => go("path") })]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("path") })]),
+      cli("langgraph dev  # http://127.0.0.1:2024"),
     ];
   }
 
@@ -385,7 +402,8 @@
   }
   function processStatus(name) {
     const p = state.processes.find((x) => x.name === name) || {};
-    if (!p.running && !p.log_tail) return null;
+    // Show the log while it runs, or when it failed. A finished run leaves no clutter behind.
+    if (!p.running && !p.returncode) return null;
     return el("div", { class: "form" }, [el("div", { class: "status-line" }, [badge(p.running ? "positive" : "info", p.running ? `running · ${p.command}` : `${p.command} · exited ${p.returncode ?? ""}`)]), el("pre", { class: "log mono", text: p.log_tail || "" })]);
   }
 
@@ -394,17 +412,19 @@
     const choose = async (button, runtime) => busy(button, async () => { await saveConfig({ PAID_MEDIA_RUNTIME: runtime }); await loadStatus(); go(runtime === "mda" ? "mda" : "selfhost"); });
     const card = (id, logoNode, title, note, bullets, pressed, recommended) => el("button", { class: "option", type: "button", "aria-pressed": pressed ? "true" : "false", onclick: (ev) => choose(ev.currentTarget, id) }, [
       el("div", { class: "row" }, [logoNode, el("span", { class: "name", text: title })]),
-      el("span", { class: "note with-flag" }, [el("span", { text: note }), recommended ? badge("info", "Recommended") : null]),
+      el("span", { class: "note" }, [recommended ? el("b", { class: "rec", text: "Recommended · " }) : null, el("span", { text: note })]),
       el("ul", {}, bullets.map((b) => el("li", {}, [tick(), el("span", { text: b })]))),
-      el("span", { class: "pick" }, [check(pressed, true)]),
     ]);
     return [
-      el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Where should the agent live?" }), el("p", { class: "hero-sub", text: "Both paths run the same agent. Managed is the fastest way to get a Slack-connected agent in front of your team." })]),
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Runtime" }),
+        el("p", { class: "hero-sub", text: "Both compile the same AgentComponents. Managed supplies the backend, threads, and Slack app; self-hosting gives you Postgres, your own Slack app, and the FastAPI boundary." }),
+      ]),
       el("div", { class: "options two stagger" }, [
         card("mda", logo("langchain", "lc"), "Managed Deep Agents", "One command deploy on LangSmith Cloud.", ["mda dev runs it locally with Studio", "Slack app provisioned on first deploy", "Managed threads, sandbox, and schedules", "Secrets forwarded from your .env"], s.runtime === "mda", true),
         card("self_hosted", logo("slack"), "Self-host with Slack", "Your Postgres, your Slack app, your API.", ["Block Kit review cards with edits", "Socket Mode, no public URL needed", "Full control of data and auth"], s.runtime === "self_hosted", false),
       ]),
-      el("div", { class: "actions" }, [el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Keep it local for now", onclick: () => go("done") })]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Stay local", onclick: () => go("done") })]),
     ];
   }
 
@@ -429,13 +449,22 @@
       state.session.preflightSummary = result.summary;
       await loadStatus();
     }); });
-    const nodes = [el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Deploy to Managed Deep Agents." }), el("p", { class: "hero-sub", text: "mda dev runs the managed runtime locally with Studio. mda deploy builds the project and provisions the Slack app; the first deploy prints a Slack authorization link in the log." })]), form];
+    const nodes = [el("div", { class: "hero" }, [
+      el("h1", { class: "hero-title", text: "Managed Deep Agents" }),
+      el("p", { class: "hero-sub", text: "agent.py, instructions.md, skills/, and channels/slack.py are the project files. Deploy compiles them, forwards non-reserved .env values as deployment secrets, and provisions the Slack app on first run." }),
+    ]), form];
     if (preflight) {
       nodes.push(el("ul", { class: "checklist" }, items.map(([label, done]) => el("li", { "data-done": done ? "true" : "false" }, [check(!!done), el("span", { text: label })]))));
       const ready = items.every(([, done]) => done);
       nodes.push(processControls("mda-deploy", ready ? "Deploy" : "Deploy (blocked)", !ready, true, "mda-dev", "Run locally with Studio"));
     }
-    nodes.push(el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }), el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Switch to self-host", onclick: () => go("path") })]));
+    nodes.push(
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
+        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to self-host", onclick: () => go("path") }),
+      ]),
+      cli("mda deploy ."),
+    );
     return nodes;
   }
 
@@ -494,11 +523,18 @@
       await loadStatus();
     }); });
     return [
-      el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "Connect Slack and choose storage." }), el("p", { class: "hero-sub", text: "Your Slack app talks to the agent over Socket Mode. Postgres is optional until you need state to survive restarts." })]),
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Slack and storage" }),
+        el("p", { class: "hero-sub", text: "Socket Mode needs no public URL. Postgres holds checkpoints, proposals, approval claims, and receipts; without it the runtime keeps them in memory." }),
+      ]),
       slackForm,
       el("div", { class: "block" }, [dbForm]),
       el("div", { class: "block" }, [el("h2", { class: "section-title", text: "Run it" }), processControls("serve", "Start API", false, false, "slack", "Start Slack adapter")]),
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }), el("span", { class: "spacer" }), el("button", { class: "btn btn-ghost", type: "button", text: "Switch to managed", onclick: () => go("path") })]),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
+        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to managed", onclick: () => go("path") }),
+      ]),
+      cli("paid-media-agent serve"),
     ];
   }
 
@@ -531,10 +567,13 @@
     const d = state.status.detail;
     const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Runtime", s.runtime !== "local", s.runtime === "mda" ? "Managed Deep Agents" : s.runtime === "self_hosted" ? "Self-hosted" : "local"], ["Slack", s.slackDone, s.slackDone ? d.slack?.transport : "not connected"]];
     return [
-      el("div", { class: "hero" }, [el("h1", { class: "hero-title", text: "You're set." }), el("p", { class: "hero-sub", text: "Ask the agent a question, or open the advanced console for policy, gates, and processes." })]),
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Configured" }),
+        el("p", { class: "hero-sub", text: "The advanced console holds the authorized catalog, the reviewed mutation policy, the write gates, and the running processes." }),
+      ]),
       el("ul", { class: "checklist stagger" }, items.map(([label, done, meta]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label }), el("span", { class: "sub mono", text: meta || "" })]))),
-      el("div", { class: "form" }, [el("span", { class: "caps", text: "Try it" }), el("code", { class: "mono log", text: 'uv run python examples/ask.py "Which campaign moved the most in the last two weeks?"' })]),
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } }), el("button", { class: "btn btn-ghost", type: "button", text: "Back to start", onclick: () => go("welcome") })]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } })]),
+      cli("paid-media-agent doctor"),
     ];
   }
 
