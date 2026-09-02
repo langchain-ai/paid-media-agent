@@ -4,9 +4,14 @@
 
 ### Added
 
-- Local setup console (`paid-media-agent setup`): localhost-only, token-protected page over the
-  same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`, `writes`).
-  Routes for the local demo, Pipeboard, Slack, MDA deployment, self-hosting, and write gates.
+- Local setup console (`paid-media-agent setup`): a guided onboarding wizard (welcome with
+  capabilities, model providers with custom key names, Pipeboard accounts with checkboxes, try it
+  with an in-page question and LangGraph Studio, managed vs self-hosted path) plus an advanced view
+  over the same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`,
+  `writes`).
+- `langgraph.json` and a graph factory for LangGraph Server and Studio; `studio` extra.
+- Provider extras for Groq, xAI, Mistral, and DeepSeek; OpenAI-compatible presets (OpenRouter,
+  Moonshot, Zhipu) through `PAID_MEDIA_MODEL_BASE_URL` and `PAID_MEDIA_MODEL_API_KEY_ENV`.
 
 - Shared Deep Agents assembly with a fixture-backed offline demo (`paid-media-agent demo`).
 - Deny-by-default authorized catalog, host-side read dispatch with schema validation and

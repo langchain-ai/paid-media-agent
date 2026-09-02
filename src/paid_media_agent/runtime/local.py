@@ -47,10 +47,13 @@ def compile_graph(
     components: AgentComponents,
     *,
     project_root: Path,
-    checkpointer: BaseCheckpointSaver[Any],
+    checkpointer: BaseCheckpointSaver[Any] | None,
     name: str = "paid-media-agent",
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
-    """Compile the shared components with Deep Agents. Used by local and self-hosted runtimes."""
+    """Compile the shared components with Deep Agents.
+
+    Pass `checkpointer=None` for LangGraph Server, which injects its own persistence.
+    """
     backend = FilesystemBackend(root_dir=project_root, virtual_mode=True)
     return create_deep_agent(
         components.model,

@@ -58,6 +58,13 @@ reports = [
     "jinja2>=3.1,<4",
     "weasyprint>=68,<69",
 ]
+# Local LangGraph Server + Studio for testing the graph before deploying.
+studio = ["langgraph-cli[inmem]>=0.3,<1"]
+# Extra model providers. Each adds a `provider:` prefix for PAID_MEDIA_MODEL.
+groq = ["langchain-groq>=1,<2"]
+xai = ["langchain-xai>=1,<2"]
+mistral = ["langchain-mistralai>=1,<2"]
+deepseek = ["langchain-deepseek>=1,<2"]
 
 [dependency-groups]
 dev = [

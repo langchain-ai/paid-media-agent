@@ -26,7 +26,13 @@ from paid_media_agent.admin.accounts_file import (
     remove_account,
     writable_accounts_path,
 )
-from paid_media_agent.admin.envfile import EnvFileError, masked_env, read_env, write_env
+from paid_media_agent.admin.envfile import (
+    EnvFileError,
+    apply_env_file,
+    masked_env,
+    read_env,
+    write_env,
+)
 from paid_media_agent.config import AccountBinding, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import JsonValue, Platform
@@ -73,7 +79,8 @@ def _checks_json(checks: list[Check]) -> list[dict[str, JsonValue]]:
 
 
 def load_settings(root: Path) -> Settings:
-    """Settings from the project `.env` plus the process environment."""
+    """Settings from the project `.env`, exported into the process so SDKs and children see them."""
+    apply_env_file(root)
     return Settings(_env_file=str(root / ".env"))
 
 
@@ -96,6 +103,140 @@ def catalog_summary(catalog: AuthorizedToolCatalog) -> dict[str, JsonValue]:
         "platforms": per_platform,
         "denied_reasons": sorted({e.policy.reason for e in catalog.denied_entries()}),
     }
+
+
+MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
+    {
+        "id": "anthropic",
+        "label": "Anthropic",
+        "logo": "anthropic",
+        "model": "anthropic:claude-sonnet-4-6",
+        "key": "ANTHROPIC_API_KEY",
+        "package": "langchain_anthropic",
+        "extra": "anthropic",
+        "url": "https://console.anthropic.com/settings/keys",
+        "note": "Native tool search",
+        "recommended": True,
+    },
+    {
+        "id": "openai",
+        "label": "OpenAI",
+        "logo": "openai",
+        "model": "openai:gpt-5.5",
+        "key": "OPENAI_API_KEY",
+        "package": "langchain_openai",
+        "extra": "openai",
+        "url": "https://platform.openai.com/api-keys",
+        "note": "Native tool search",
+    },
+    {
+        "id": "google",
+        "label": "Google",
+        "logo": "gemini",
+        "model": "google_genai:gemini-3-flash",
+        "key": "GOOGLE_API_KEY",
+        "package": "langchain_google_genai",
+        "extra": "google",
+        "url": "https://aistudio.google.com/app/apikey",
+        "note": "Portable selector",
+    },
+    {
+        "id": "groq",
+        "label": "Groq",
+        "logo": "groq",
+        "model": "groq:llama-3.3-70b-versatile",
+        "key": "GROQ_API_KEY",
+        "package": "langchain_groq",
+        "extra": "groq",
+        "url": "https://console.groq.com/keys",
+        "note": "Fast open models",
+    },
+    {
+        "id": "xai",
+        "label": "xAI",
+        "logo": "xai",
+        "model": "xai:grok-4",
+        "key": "XAI_API_KEY",
+        "package": "langchain_xai",
+        "extra": "xai",
+        "url": "https://console.x.ai/",
+        "note": "Grok",
+    },
+    {
+        "id": "mistral",
+        "label": "Mistral",
+        "logo": "mistral",
+        "model": "mistralai:mistral-large-latest",
+        "key": "MISTRAL_API_KEY",
+        "package": "langchain_mistralai",
+        "extra": "mistral",
+        "url": "https://console.mistral.ai/api-keys",
+        "note": "Open weights",
+    },
+    {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "logo": "deepseek",
+        "model": "deepseek:deepseek-chat",
+        "key": "DEEPSEEK_API_KEY",
+        "package": "langchain_deepseek",
+        "extra": "deepseek",
+        "url": "https://platform.deepseek.com/api_keys",
+        "note": "Open weights",
+    },
+    {
+        "id": "openrouter",
+        "label": "OpenRouter",
+        "logo": "openrouter",
+        "model": "openai:moonshotai/kimi-k2",
+        "key": "OPENROUTER_API_KEY",
+        "package": "langchain_openai",
+        "extra": "openai",
+        "base_url": "https://openrouter.ai/api/v1",
+        "url": "https://openrouter.ai/keys",
+        "note": "Kimi, GLM, and more",
+    },
+    {
+        "id": "moonshot",
+        "label": "Kimi",
+        "logo": "moonshot",
+        "model": "openai:kimi-k2-0905-preview",
+        "key": "MOONSHOT_API_KEY",
+        "package": "langchain_openai",
+        "extra": "openai",
+        "base_url": "https://api.moonshot.ai/v1",
+        "url": "https://platform.moonshot.ai/",
+        "note": "OpenAI-compatible",
+    },
+    {
+        "id": "zhipu",
+        "label": "GLM",
+        "logo": "zhipu",
+        "model": "openai:glm-4.6",
+        "key": "ZHIPU_API_KEY",
+        "package": "langchain_openai",
+        "extra": "openai",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "url": "https://open.bigmodel.cn/",
+        "note": "OpenAI-compatible",
+    },
+    {
+        "id": "custom",
+        "label": "Custom",
+        "logo": "custom",
+        "model": "",
+        "key": "",
+        "package": "",
+        "extra": "",
+        "url": "",
+        "note": "Your provider, key, and base URL",
+    },
+)
+"""Model provider cards for the wizard. Key names are allowlisted env names; nothing else is written.
+
+OpenAI-compatible presets use the `openai:` prefix with a base URL and their own key env var,
+which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Model ids are examples to edit.
+"""
 
 
 def status(root: Path) -> ActionResult:
@@ -125,6 +266,18 @@ def status(root: Path) -> ActionResult:
     detail: dict[str, JsonValue] = {
         "checks": _checks_json(checks),
         "env": env,
+        "runtime": settings.paid_media_runtime,
+        "model_presets": [dict(p) for p in MODEL_PRESETS],
+        "model_key_env": model_key_env(settings),
+        "model_key_set": bool(
+            model_key_env(settings) and env.get(model_key_env(settings) or "", False)
+        ),
+        "model_base_url": settings.paid_media_model_base_url or "",
+        "studio": {
+            "installed": importlib.util.find_spec("langgraph_cli") is not None,
+            "url": "https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024",
+            "server_url": "http://127.0.0.1:2024",
+        },
         "model": {
             "spec": model.spec,
             "provider": model.provider,
@@ -203,14 +356,37 @@ def _mask_id(value: str) -> str:
     return value if len(value) <= 4 else f"{value[:2]}…{value[-2:]}"
 
 
+PROVIDER_MODULES: dict[str, str] = {
+    "anthropic": "langchain_anthropic",
+    "openai": "langchain_openai",
+    "google_genai": "langchain_google_genai",
+    "groq": "langchain_groq",
+    "xai": "langchain_xai",
+    "mistralai": "langchain_mistralai",
+    "deepseek": "langchain_deepseek",
+    "scripted": "paid_media_agent",
+}
+PROVIDER_DEFAULT_KEYS: dict[str, str] = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google_genai": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "xai": "XAI_API_KEY",
+    "mistralai": "MISTRAL_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
+
+
 def _module_available(provider: str) -> bool:
-    module = {
-        "anthropic": "langchain_anthropic",
-        "openai": "langchain_openai",
-        "google_genai": "langchain_google_genai",
-        "scripted": "paid_media_agent",
-    }.get(provider)
+    module = PROVIDER_MODULES.get(provider)
     return module is not None and importlib.util.find_spec(module) is not None
+
+
+def model_key_env(settings: Settings) -> str | None:
+    """The env var that must hold the key for the configured model."""
+    if settings.paid_media_model_api_key_env:
+        return settings.paid_media_model_api_key_env
+    return PROVIDER_DEFAULT_KEYS.get(settings.model_settings().provider)
 
 
 def config_view(root: Path) -> ActionResult:
@@ -281,11 +457,7 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
             f"provider package for {model.provider} is not installed; run uv sync --extra {model.provider.replace('_genai', '')}",
         )
     env = read_env(root)
-    key_name = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "google_genai": "GOOGLE_API_KEY",
-    }.get(model.provider)
+    key_name = model_key_env(settings)
     if key_name and not env.get(key_name) and not _os_env(key_name):
         return _result(
             "model_test",
@@ -298,7 +470,7 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
         if invoke is None:
             from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
 
-            chat = resolve_model(model)
+            chat = resolve_model(model, api_key_env=settings.paid_media_model_api_key_env)
             reply = str(chat.invoke("Reply with the single word OK.").content)
         else:
             reply = invoke(model.spec)
@@ -790,11 +962,7 @@ def mda_check(root: Path) -> ActionResult:
 
 
 def _provider_key_set(settings: Settings, env: Mapping[str, str]) -> bool:
-    key_name = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "google_genai": "GOOGLE_API_KEY",
-    }.get(settings.model_settings().provider)
+    key_name = model_key_env(settings)
     if key_name is None:
         return True
     return bool(env.get(key_name) or _os_env(key_name))
@@ -841,6 +1009,58 @@ def demo_run(root: Path, *, with_proposal: bool = False) -> ActionResult:
         "fixture demo completed",
         detail,
         command="paid-media-agent demo" + (" --with-proposal" if with_proposal else ""),
+    )
+
+
+MAX_QUESTION_CHARS = 2000
+
+
+def ask_question(root: Path, question: str, *, model: Any | None = None) -> ActionResult:
+    """Run one question through the local runtime with the configured model."""
+    settings = load_settings(root)
+    text = question.strip()
+    if not text or len(text) > MAX_QUESTION_CHARS:
+        return _result("ask", "fail", "question must be 1 to 2000 characters")
+    try:
+        from langchain_core.runnables import RunnableConfig  # noqa: PLC0415
+
+        from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
+        from paid_media_agent.runtime.local import build_local_runtime  # noqa: PLC0415
+
+        chat = (
+            model
+            if model is not None
+            else resolve_model(
+                settings.model_settings(), api_key_env=settings.paid_media_model_api_key_env
+            )
+        )
+        runtime = build_local_runtime(settings, project_root=root, model=chat)
+        config = RunnableConfig(
+            configurable={
+                "thread_id": f"console-{secrets.token_hex(4)}",
+                "caller_ref": "local-user",
+            }
+        )
+        state = asyncio.run(
+            runtime.graph.ainvoke({"messages": [{"role": "user", "content": text}]}, config=config)
+        )
+        answer = state["messages"][-1].content
+        answer_text = answer if isinstance(answer, str) else json.dumps(answer, default=str)
+    except Exception as exc:  # noqa: BLE001 - reported, never raised to the page
+        return _result("ask", "fail", f"run failed: {sanitize_exception(exc)}")
+    if answer_text.startswith("Model call failed"):
+        # The retry middleware turns provider failures into a message; surface them as a failure.
+        return _result("ask", "fail", sanitize_exception(RuntimeError(answer_text)))
+    return _result(
+        "ask",
+        "ok",
+        "answered",
+        {
+            "answer": answer_text[:6000],
+            "selection": runtime.components.metadata.selection.strategy.value,
+            "catalog_revision": runtime.catalog.revision,
+        },
+        command='uv run python examples/ask.py "..."',
     )
 
 

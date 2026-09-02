@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -11,6 +13,15 @@ from paid_media_agent.tools.catalog import AuthorizedToolCatalog, StaticCatalogP
 from paid_media_agent.tools.fixtures import FixtureState, build_fixture_catalog
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _isolated_environment() -> Iterator[None]:
+    """Console actions export .env values into the process; never let that leak across tests."""
+    snapshot = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(snapshot)
 
 
 @pytest.fixture

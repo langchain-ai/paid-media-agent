@@ -253,6 +253,24 @@ def test_slack_and_database_tests_never_leak_and_use_injected_clients(workspace:
     assert result.ok and "pw@" not in actions.as_json(result)
 
 
+def test_saved_provider_key_reaches_the_process_for_model_tests(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    write_env(workspace, {"PAID_MEDIA_MODEL": "openai:gpt-5.5", "OPENAI_API_KEY": "sk-" + "q" * 24})
+    seen: dict[str, str] = {}
+
+    def fake_invoke(spec: str) -> str:
+        seen["spec"] = spec
+        seen["key"] = os.environ.get("OPENAI_API_KEY", "")
+        return "OK"
+
+    result = actions.model_test(workspace, invoke=fake_invoke)
+    assert result.ok, result.summary
+    assert seen["spec"] == "openai:gpt-5.5" and seen["key"] == "sk-" + "q" * 24
+    assert "q" * 24 not in actions.as_json(result)
+
+
 def test_generate_secret_shows_api_token_once_only(workspace: Path) -> None:
     signing = actions.generate_secret(workspace, "PAID_MEDIA_APPROVAL_SIGNING_KEY")
     assert signing.ok and "show_once" not in signing.detail
@@ -287,5 +305,107 @@ def test_process_manager_uses_fixed_templates(
     manager._procs["serve"].wait(timeout=30)  # noqa: SLF001
     view = manager.view("serve")
     assert not view.running and view.returncode == 0 and "hello from serve" in view.log_tail
+    log = workspace / "workspace" / "logs" / "serve.log"
+    log.write_text(log.read_text() + "\x1b[32mgreen\x1b[0m plain\n")
+    assert manager.tail("serve").endswith("green plain"), "ANSI codes are stripped for the page"
     assert os.path.exists(workspace / "workspace" / "logs" / "serve.log")
     manager.stop_all()
+
+
+def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
+    written = write_env(
+        workspace,
+        {
+            "PAID_MEDIA_MODEL": "openai:kimi-k2-0905-preview",
+            "PAID_MEDIA_MODEL_BASE_URL": "https://api.moonshot.ai/v1",
+            "PAID_MEDIA_MODEL_API_KEY_ENV": "MOONSHOT_API_KEY",
+            "MOONSHOT_API_KEY": "sk-moon-" + "m" * 20,
+            "ACME_LLM_API_KEY": "custom-" + "c" * 20,
+        },
+    )
+    assert "ACME_LLM_API_KEY" in written, "any *_API_KEY name is accepted"
+    with pytest.raises(EnvFileError):
+        write_env(workspace, {"ACME_LLM_PASSWORD": "x"})
+    views = {v.name: v for v in masked_env(workspace)}
+    assert views["ACME_LLM_API_KEY"].secret and views["ACME_LLM_API_KEY"].value == "••••••••"
+    result = actions.status(workspace)
+    assert result.detail["model_key_env"] == "MOONSHOT_API_KEY"
+    assert result.detail["model_key_set"] is True
+    assert result.detail["model"]["selection"] == "portable_selector", (
+        "proxy base URL disables native search"
+    )
+    presets = {p["id"]: p for p in result.detail["model_presets"]}
+    assert presets["anthropic"]["recommended"] is True and presets["custom"]["key"] == ""
+    assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
+
+    seen: dict[str, str] = {}
+
+    def fake_invoke(spec: str) -> str:
+        seen["key"] = os.environ.get("MOONSHOT_API_KEY", "")
+        return "OK"
+
+    test = actions.model_test(workspace, invoke=fake_invoke)
+    assert test.ok and seen["key"].startswith("sk-moon-")
+    assert "m" * 20 not in actions.as_json(test)
+
+
+def test_ask_runs_the_local_graph_with_an_injected_model(workspace: Path) -> None:
+    from paid_media_agent.testing.demo_script import build_demo_model
+
+    write_env(workspace, {"PAID_MEDIA_MODEL": "scripted:demo"})
+    result = actions.ask_question(
+        workspace, "Compare the last two weeks.", model=build_demo_model()
+    )
+    assert result.ok, result.summary
+    assert "Comparison window" in result.detail["answer"]
+    assert result.detail["selection"] == "none"
+    assert actions.ask_question(workspace, "   ").status == "fail"
+
+
+def test_graph_factory_compiles_for_langgraph_server(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paid_media_agent.runtime import graph as graph_module
+
+    write_env(
+        workspace,
+        {
+            "PAID_MEDIA_MODEL": "anthropic:claude-sonnet-4-6",
+            "ANTHROPIC_API_KEY": "sk-ant-" + "g" * 30,
+        },
+    )
+    monkeypatch.setattr(graph_module, "project_root", lambda: workspace)
+    compiled = graph_module.make_graph()
+    assert not compiled.checkpointer, "LangGraph Server injects its own persistence"
+    assert "tools" in compiled.get_graph().nodes
+    assert PROCESS_TEMPLATES["studio"][-2:] == ("--port", "2024")
+
+
+def test_blank_env_values_clear_console_exports_but_not_shell_values(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paid_media_agent.admin.envfile import apply_env_file
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "from-shell")
+    write_env(workspace, {"PAID_MEDIA_MODEL_BASE_URL": "https://proxy.example/v1"})
+    apply_env_file(workspace)
+    assert os.environ["PAID_MEDIA_MODEL_BASE_URL"] == "https://proxy.example/v1"
+    write_env(workspace, {"PAID_MEDIA_MODEL_BASE_URL": ""})
+    apply_env_file(workspace)
+    assert "PAID_MEDIA_MODEL_BASE_URL" not in os.environ, "console-exported value is cleared"
+    assert os.environ["ANTHROPIC_API_KEY"] == "from-shell", "shell values survive blank .env lines"
+    assert actions.status(workspace).detail["model"]["selection"] == "provider_native"
+
+
+def test_ask_reports_model_failures_as_failures(workspace: Path) -> None:
+    from langchain_core.messages import AIMessage
+
+    from paid_media_agent.testing.scripted_model import ScriptedChatModel
+
+    write_env(workspace, {"PAID_MEDIA_MODEL": "scripted:demo"})
+    broken = ScriptedChatModel(
+        steps=[lambda _m: AIMessage(content="Model call failed after 3 attempts with X")]
+    )
+    result = actions.ask_question(workspace, "hello", model=broken)
+    assert result.status == "fail" and "Model call failed" in result.summary

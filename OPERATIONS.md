@@ -107,3 +107,25 @@ functions as the CLI subcommands (`admin/actions.py`), so agents can script the 
 processes (`serve`, `slack`, `mda dev`, `mda deploy` with confirmation) with logs under
 `workspace/logs/`, and exposes the kill switch. It is not a hosted admin panel: do not expose the
 port, and prefer deployment secrets over `.env` for MDA and self-hosted production.
+
+## Local LangGraph Server and Studio
+
+`langgraph.json` points LangGraph Server at `paid_media_agent.runtime.graph:make_graph`, which
+builds the shared assembly with the configured model and the fixture or live catalog and compiles
+it without a checkpointer (the server owns persistence). Install the `studio` extra, then:
+
+```bash
+uv run langgraph dev            # http://127.0.0.1:2024, opens Studio
+```
+
+The setup page's "Try it" step starts and stops the same server and links to Studio. `mda dev`
+is the managed equivalent for the MDA path. Neither needs a Pipeboard token: without one the
+fixture accounts are used.
+
+## Model providers
+
+`PAID_MEDIA_MODEL` takes `provider:model`. Native provider packages ship as extras (`anthropic`,
+`openai`, `google`, `groq`, `xai`, `mistral`, `deepseek`). OpenAI-compatible endpoints (OpenRouter,
+Moonshot, Zhipu, your own gateway) use the `openai:` prefix, `PAID_MEDIA_MODEL_BASE_URL`, and a key
+stored under any `*_API_KEY` name declared in `PAID_MEDIA_MODEL_API_KEY_ENV`. A base URL disables
+provider-native tool search; the portable selector is used instead.

@@ -72,3 +72,18 @@ entries except to correct a factual typo with an explicit correction entry.
   browser errors. Screenshots under `docs/screenshots/`.
 - Moved `fastapi` and `uvicorn` into core dependencies because the console is the first command a
   developer runs.
+
+## 2026-09-02 (setup wizard redesign)
+
+- Rebuilt the console as a guided wizard on the CORE 14 tokens with brand marks: welcome with
+  capability visuals and example prompts, provider cards (eleven presets plus custom key names and
+  base URLs), Pipeboard account picker with checkboxes, a "Try it" step (in-page question through
+  the local graph, LangGraph Studio start/stop), and a recommended Managed Deep Agents path.
+- Added `PAID_MEDIA_MODEL_API_KEY_ENV`, custom `*_API_KEY` names in the env allowlist, provider
+  extras, `langgraph.json` with `paid_media_agent.runtime.graph:make_graph`, and the `ask` action.
+- Console exports `.env` values into its process so provider SDKs and child processes see them,
+  and clears values it exported when they are blanked; shell-provided values are never touched.
+- Verified with headless Chromium: eleven provider cards, custom key flow, Studio serving the
+  graph on port 2024, path choice, MDA preflight, dark theme; zero browser errors.
+- No OpenAI key was available in this environment, so the welcome art is procedural (canvas glyph
+  field and inline SVG); generated images can replace it under `admin/static/`.

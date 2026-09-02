@@ -43,6 +43,21 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="Cheaper model for the portable tool selector",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_MODEL_API_KEY_ENV",
+        group="model",
+        secret=False,
+        description="Env var that holds the model key, for providers without a default",
+    ),
+    EnvKeySpec(name="GROQ_API_KEY", group="model", secret=True, description="Groq API key"),
+    EnvKeySpec(name="XAI_API_KEY", group="model", secret=True, description="xAI API key"),
+    EnvKeySpec(name="MISTRAL_API_KEY", group="model", secret=True, description="Mistral API key"),
+    EnvKeySpec(name="DEEPSEEK_API_KEY", group="model", secret=True, description="DeepSeek API key"),
+    EnvKeySpec(name="OPENROUTER_API_KEY", group="model", secret=True, description="OpenRouter key"),
+    EnvKeySpec(
+        name="MOONSHOT_API_KEY", group="model", secret=True, description="Moonshot (Kimi) key"
+    ),
+    EnvKeySpec(name="ZHIPU_API_KEY", group="model", secret=True, description="Zhipu (GLM) key"),
+    EnvKeySpec(
         name="ANTHROPIC_API_KEY", group="model", secret=True, description="Anthropic API key"
     ),
     EnvKeySpec(name="OPENAI_API_KEY", group="model", secret=True, description="OpenAI API key"),
@@ -207,6 +222,17 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
     ),
 )
 ENV_KEY_BY_NAME: dict[str, EnvKeySpec] = {spec.name: spec for spec in ENV_KEYS}
+_CUSTOM_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,40}_API_KEY$")
+"""Any provider key name is allowed as long as it looks like one; it is always a secret."""
+
+
+def key_spec(name: str) -> EnvKeySpec | None:
+    spec = ENV_KEY_BY_NAME.get(name)
+    if spec is not None:
+        return spec
+    if _CUSTOM_KEY_RE.match(name):
+        return EnvKeySpec(name=name, group="model", secret=True, description="Provider API key")
+    return None
 
 
 class EnvKeyView(BaseModel):
@@ -261,7 +287,8 @@ def read_env(root: Path) -> dict[str, str]:
 def masked_env(root: Path) -> list[EnvKeyView]:
     values = read_env(root)
     views: list[EnvKeyView] = []
-    for spec in ENV_KEYS:
+    custom = [key_spec(name) for name in values if name not in ENV_KEY_BY_NAME]
+    for spec in (*ENV_KEYS, *(c for c in custom if c is not None)):
         raw = values.get(spec.name, "")
         is_set = bool(raw.strip())
         shown = "" if not is_set else ("••••••••" if spec.secret else raw)
@@ -282,7 +309,7 @@ def masked_env(root: Path) -> list[EnvKeyView]:
 def _validate(updates: Mapping[str, str]) -> dict[str, str]:
     clean: dict[str, str] = {}
     for key, value in updates.items():
-        if key not in ENV_KEY_BY_NAME:
+        if key_spec(key) is None:
             raise EnvFileError(f"{key} is not a configurable key")
         if not isinstance(value, str) or "\n" in value or "\r" in value or "\x00" in value:
             raise EnvFileError(f"{key} value must be a single line")
@@ -316,6 +343,32 @@ def write_env(root: Path, updates: Mapping[str, str]) -> list[str]:
     if not existed or (path.stat().st_mode & 0o077):
         os.chmod(path, 0o600)
     return list(clean)
+
+
+_EXPORTED_BY_CONSOLE: set[str] = set()
+
+
+def apply_env_file(root: Path) -> list[str]:
+    """Export allowlisted `.env` values into this process so provider SDKs and child processes see them.
+
+    The console exists to manage `.env`, so the file wins over stale process values. Only known
+    keys are exported. A key the console exported earlier and that is now blank in the file is
+    removed again, so clearing a base URL or key in the page takes effect; values the operator set
+    in their own shell are never touched.
+    """
+    exported: list[str] = []
+    values = read_env(root)
+    for key, value in values.items():
+        if key_spec(key) is None:
+            continue
+        if value.strip():
+            os.environ[key] = value
+            _EXPORTED_BY_CONSOLE.add(key)
+            exported.append(key)
+        elif key in _EXPORTED_BY_CONSOLE:
+            os.environ.pop(key, None)
+            _EXPORTED_BY_CONSOLE.discard(key)
+    return exported
 
 
 def unset_env(root: Path, keys: list[str]) -> list[str]:

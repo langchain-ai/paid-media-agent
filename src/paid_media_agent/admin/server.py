@@ -42,6 +42,7 @@ ACTIONS: dict[str, Callable[..., actions.ActionResult]] = {
     ),
     "snapshot_check": lambda root, **_: actions.snapshot_check(root),
     "status": lambda root, **_: actions.status(root),
+    "ask": lambda root, question="", **_: actions.ask_question(root, str(question)),
 }
 
 

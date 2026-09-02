@@ -108,6 +108,8 @@ class Settings(BaseSettings):
     paid_media_model: str = DEFAULT_MODEL_SPEC
     paid_media_model_base_url: str | None = None
     paid_media_tool_selector_model: str | None = None
+    paid_media_model_api_key_env: str | None = None
+    """Env var holding the model API key when the provider does not read its default one."""
     paid_media_runtime: RuntimeName = "local"
     paid_media_log_level: str = "INFO"
     paid_media_workspace_root: Path = Path("workspace")
@@ -146,6 +148,7 @@ class Settings(BaseSettings):
     @field_validator(
         "paid_media_model_base_url",
         "paid_media_tool_selector_model",
+        "paid_media_model_api_key_env",
         "paid_media_live_write_catalog_revision",
         mode="before",
     )

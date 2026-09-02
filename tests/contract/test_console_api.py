@@ -65,7 +65,13 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
         "self_hosted",
         "writes",
     ]
-    assert {p["name"] for p in data["processes"]} == {"serve", "slack", "mda-dev", "mda-deploy"}
+    assert {p["name"] for p in data["processes"]} == {
+        "serve",
+        "slack",
+        "mda-dev",
+        "mda-deploy",
+        "studio",
+    }
     posted = client.post(
         "/api/config",
         headers=headers,

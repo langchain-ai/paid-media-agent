@@ -135,15 +135,25 @@ def _build_services(settings: Settings, runtime: RuntimeProfile) -> AssemblyServ
     return AssemblyServices(dispatcher=dispatcher, proposal_service=service, executor=executor)
 
 
-def resolve_model(config: ModelConfig, override: BaseChatModel | None = None) -> BaseChatModel:
-    """Initialize the configured provider model directly. No gateway, no proxy assumptions."""
+def resolve_model(
+    config: ModelConfig, override: BaseChatModel | None = None, *, api_key_env: str | None = None
+) -> BaseChatModel:
+    """Initialize the configured provider model directly. No gateway, no proxy assumptions.
+
+    `api_key_env` names the environment variable holding the key when the provider does not read
+    its default one (for example an OpenAI-compatible endpoint with its own key).
+    """
     if override is not None:
         return override
+    import os  # noqa: PLC0415
+
     from langchain.chat_models import init_chat_model  # noqa: PLC0415 - optional provider packages
 
     kwargs: dict[str, Any] = {}
     if config.base_url is not None:
         kwargs["base_url"] = str(config.base_url)
+    if api_key_env and os.environ.get(api_key_env):
+        kwargs["api_key"] = os.environ[api_key_env]
     resolved: BaseChatModel = init_chat_model(config.spec, **kwargs)
     return resolved
 
@@ -163,7 +173,9 @@ def build_agent_components(
 ) -> AgentComponents:
     """Compose model, tools, middleware, and interrupt policy. No network, no global state."""
     model_config = settings.model_settings()
-    resolved_model = resolve_model(model_config, model)
+    resolved_model = resolve_model(
+        model_config, model, api_key_env=settings.paid_media_model_api_key_env
+    )
     services = _build_services(settings, runtime)
 
     platform_tools = build_platform_read_tools(catalog, services.dispatcher)
