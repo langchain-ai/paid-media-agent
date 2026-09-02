@@ -127,6 +127,7 @@ def create_console_app(
             ".css": "text/css",
             ".js": "text/javascript",
             ".svg": "image/svg+xml",
+            ".webp": "image/webp",
             ".html": "text/html",
         }.get(path.suffix, "application/octet-stream")
         return FileResponse(path, media_type=media)

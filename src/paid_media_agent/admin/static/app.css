@@ -40,8 +40,9 @@ a:hover { text-decoration: underline; }
 .meta { font-size: 12px; line-height: 16px; font-weight: 500; }
 .caps { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-subtle); }
 
-/* Background art: a quiet glyph field drawn on a canvas; the card stays the focus */
-.art { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.9; }
+/* Background art: generated glyph field (gpt-image-2), one per theme; the card stays the focus */
+body { background: var(--desk) url("/static/art-bg-light.webp") center / cover no-repeat fixed; }
+[data-theme="dark"] body { background-image: url("/static/art-bg-dark.webp"); }
 /* Frame */
 .desk { position: relative; z-index: 1; min-height: 100vh; padding: 20px 24px 32px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
 .topbar { width: min(1280px, 100%); display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
@@ -258,8 +259,10 @@ table.data .mono { color: var(--ink-muted); white-space: nowrap; }
 /* Welcome: capability cards with small illustrations, and example prompts */
 .caps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .cap { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-control); border: 1px solid var(--line); background: var(--muted); }
-.cap .art-tile { height: 64px; border-radius: var(--r-badge); border: 1px solid var(--line); background: var(--panel); display: grid; place-items: center; overflow: hidden; }
+.cap .art-tile { height: 104px; border-radius: var(--r-badge); border: 1px solid var(--line); background: #fbfbfa; display: grid; place-items: center; overflow: hidden; }
 .cap .art-tile svg { width: 100%; height: 100%; }
+.cap .art-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+[data-theme="dark"] .cap .art-tile { background: #fbfbfa; border-color: var(--line-strong); }
 .cap .name { font-size: 13px; line-height: 16px; font-weight: 500; }
 .cap .note { font-size: 12px; line-height: 16px; color: var(--ink-subtle); text-wrap: pretty; }
 .prompts { display: flex; flex-wrap: wrap; gap: 8px; }

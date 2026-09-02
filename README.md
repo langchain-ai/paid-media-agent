@@ -87,6 +87,7 @@ The page binds to localhost, needs the per-run token from the printed link, writ
 local `.env` (mode 0600), and never displays a secret value.
 
 ![Setup welcome](docs/screenshots/setup-welcome.png)
+![Setup welcome, dark theme](docs/screenshots/setup-welcome-dark.png)
 ![Choose a model](docs/screenshots/setup-model.png)
 ![Try it with LangGraph Studio](docs/screenshots/setup-try-studio.png)
 ![Where it lives, dark theme](docs/screenshots/setup-path-dark.png)

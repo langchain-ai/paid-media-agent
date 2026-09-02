@@ -179,7 +179,13 @@
       el("div", { class: "status-line", id: "welcome-status" }),
     ];
   }
-  const cap = (art, name, note) => el("div", { class: "cap" }, [el("div", { class: "art-tile", html: ILLUSTRATIONS[art] }), el("span", { class: "name", text: name }), el("span", { class: "note", text: note })]);
+  const cap = (art, name, note) => {
+    const tile = el("div", { class: "art-tile" });
+    const img = el("img", { src: `/static/art-${art}.webp`, alt: "", decoding: "async" });
+    img.addEventListener("error", () => { tile.innerHTML = ILLUSTRATIONS[art]; });
+    tile.append(img);
+    return el("div", { class: "cap" }, [tile, el("span", { class: "name", text: name }), el("span", { class: "note", text: note })]);
+  };
 
   async function demoInline(button) {
     const line = $("#welcome-status");
@@ -550,7 +556,6 @@
     document.documentElement.setAttribute("data-theme", theme);
     $("#theme-toggle").textContent = theme === "dark" ? "Light" : "Dark";
     try { localStorage.setItem("pma-admin-theme", theme); } catch (_) { /* ignore */ }
-    if (typeof drawArt === "function") drawArt();
   }
 
   // ---- advanced view (dense routes over the same actions)
@@ -776,43 +781,6 @@
     catch (_) { button.textContent = "Select and copy"; }
   }
 
-  // ---- background: a still glyph field, low contrast, redrawn on theme change and resize
-  function drawArt() {
-    const canvas = $("#art");
-    if (!canvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = window.innerWidth, h = window.innerHeight;
-    canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const dark = document.documentElement.getAttribute("data-theme") === "dark";
-    const glyphs = " .·:-=+*#%@";
-    const cell = 14;
-    ctx.font = "500 11px IBM Plex Mono, ui-monospace, monospace";
-    ctx.textBaseline = "top";
-    let seed = 7;
-    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-    const cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
-    const cx = w / 2, cy = h * 0.42, rx = Math.max(w * 0.34, 360), ry = Math.max(h * 0.4, 300);
-    for (let r = 0; r < rows; r += 1) {
-      for (let c = 0; c < cols; c += 1) {
-        const x = c * cell, y = r * cell;
-        const dx = (x - cx) / rx, dy = (y - cy) / ry;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const fade = Math.min(1, Math.max(0, (dist - 0.55) / 0.9));
-        const wave = 0.5 + 0.5 * Math.sin(c * 0.35 + r * 0.22) * Math.cos(r * 0.17 - c * 0.11);
-        const level = Math.floor(Math.min(1, wave * (0.35 + 0.65 * fade) + rnd() * 0.08) * (glyphs.length - 1));
-        if (level <= 0) continue;
-        const alpha = (dark ? 0.16 : 0.13) * (0.4 + 0.6 * fade);
-        ctx.fillStyle = dark ? `rgba(250,250,248,${alpha})` : `rgba(51,51,51,${alpha})`;
-        ctx.fillText(glyphs[level], x, y);
-      }
-    }
-  }
-  let artTimer = 0;
-  window.addEventListener("resize", () => { clearTimeout(artTimer); artTimer = setTimeout(drawArt, 120); });
-
   // ---- boot
   readFragment();
   let theme = "light";
@@ -821,8 +789,6 @@
   $("#theme-toggle").addEventListener("click", () => applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"));
   $("#view-toggle").addEventListener("click", () => { state.view = state.view === "advanced" ? "wizard" : "advanced"; render(); });
   window.addEventListener("hashchange", () => { readFragment(); render(); });
-  document.fonts?.ready?.then(drawArt).catch(() => drawArt());
-  drawArt();
   loadStatus().catch(showFatal);
   setInterval(() => { if (state.processes.some((p) => p.running)) loadStatus().catch(() => {}); }, 4000);
 })();
