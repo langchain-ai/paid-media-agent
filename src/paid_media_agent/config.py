@@ -1,0 +1,191 @@
+"""Typed settings, model configuration, and host-owned account aliases."""
+
+from __future__ import annotations
+
+import tomllib
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Literal
+
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from paid_media_agent.domain.common import Platform
+
+RuntimeName = Literal["local", "mda", "self_hosted"]
+SlackTransport = Literal["socket_mode", "http"]
+
+DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
+
+
+class ModelConfig(BaseModel):
+    """Resolved `provider:model` configuration. No gateway is involved."""
+
+    model_config = ConfigDict(frozen=True)
+
+    provider: str
+    model: str
+    base_url: AnyHttpUrl | None = None
+    tool_selector_model: str | None = None
+
+    @classmethod
+    def parse(
+        cls,
+        spec: str,
+        *,
+        base_url: str | None = None,
+        tool_selector_model: str | None = None,
+    ) -> ModelConfig:
+        """Parse `provider:model`. A bare model name is rejected to keep provider explicit."""
+        provider, sep, model = spec.partition(":")
+        if not sep or not provider.strip() or not model.strip():
+            raise ValueError("PAID_MEDIA_MODEL must look like 'provider:model'")
+        return cls(
+            provider=provider.strip().lower(),
+            model=model.strip(),
+            base_url=AnyHttpUrl(base_url) if base_url else None,
+            tool_selector_model=tool_selector_model or None,
+        )
+
+    @property
+    def spec(self) -> str:
+        return f"{self.provider}:{self.model}"
+
+
+class AccountBinding(BaseModel):
+    """One host-owned mapping from a public alias to a provider account."""
+
+    model_config = ConfigDict(frozen=True)
+
+    alias: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
+    platform: Platform
+    provider_account_id: str = Field(min_length=1)
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+    timezone: str = Field(min_length=1)
+
+
+class AccountRegistry(BaseModel):
+    """Alias registry. The model only ever sees aliases; provider ids stay host-side."""
+
+    model_config = ConfigDict(frozen=True)
+
+    bindings: tuple[AccountBinding, ...] = ()
+
+    def resolve(self, alias: str) -> AccountBinding | None:
+        for binding in self.bindings:
+            if binding.alias == alias:
+                return binding
+        return None
+
+    def aliases(self, platform: Platform | None = None) -> tuple[str, ...]:
+        return tuple(b.alias for b in self.bindings if platform is None or b.platform == platform)
+
+    def provider_ids(self) -> frozenset[str]:
+        return frozenset(b.provider_account_id for b in self.bindings)
+
+    @classmethod
+    def from_toml(cls, path: Path) -> AccountRegistry:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        accounts = data.get("accounts", {})
+        if not isinstance(accounts, Mapping):
+            raise ValueError("accounts config must contain an [accounts] table")
+        bindings = [
+            AccountBinding(alias=alias, **values)
+            for alias, values in accounts.items()
+            if isinstance(values, Mapping)
+        ]
+        aliases = [b.alias for b in bindings]
+        if len(aliases) != len(set(aliases)):
+            raise ValueError("duplicate account alias in accounts config")
+        return cls(bindings=tuple(bindings))
+
+
+class Settings(BaseSettings):
+    """Process configuration read from the environment. Secrets are never printed."""
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    paid_media_model: str = DEFAULT_MODEL_SPEC
+    paid_media_model_base_url: str | None = None
+    paid_media_tool_selector_model: str | None = None
+    paid_media_runtime: RuntimeName = "local"
+    paid_media_log_level: str = "INFO"
+    paid_media_workspace_root: Path = Path("workspace")
+    paid_media_account_config_path: Path = Path("config/accounts.example.toml")
+    paid_media_catalog_ttl_seconds: int = Field(default=900, ge=30)
+    paid_media_max_selected_tools: int = Field(default=6, ge=1, le=40)
+    paid_media_result_offload_chars: int = Field(default=6000, ge=500)
+
+    pipeboard_api_token: SecretStr | None = None
+    pipeboard_google_ads_mcp_url: str = "https://google-ads.mcp.pipeboard.co/"
+    pipeboard_meta_ads_mcp_url: str = "https://meta-ads.mcp.pipeboard.co/"
+    pipeboard_reddit_ads_mcp_url: str = "https://reddit-ads.mcp.pipeboard.co/"
+
+    paid_media_writes_enabled: bool = False
+    paid_media_approver_ids: str = ""
+    paid_media_approval_signing_key: SecretStr | None = None
+    paid_media_approval_ttl_seconds: int = Field(default=900, ge=60, le=86400)
+    paid_media_allow_self_approval: bool = False
+
+    slack_bot_token: SecretStr | None = None
+    slack_app_token: SecretStr | None = None
+    slack_signing_secret: SecretStr | None = None
+    slack_transport: SlackTransport = "socket_mode"
+
+    database_url: SecretStr | None = None
+    paid_media_api_tokens: SecretStr | None = None
+    paid_media_api_host: str = "127.0.0.1"
+    paid_media_api_port: int = Field(default=8080, ge=1, le=65535)
+
+    @field_validator("paid_media_model_base_url", "paid_media_tool_selector_model", mode="before")
+    @classmethod
+    def _blank_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator(
+        "pipeboard_api_token",
+        "paid_media_approval_signing_key",
+        "slack_bot_token",
+        "slack_app_token",
+        "slack_signing_secret",
+        "database_url",
+        "paid_media_api_tokens",
+        mode="before",
+    )
+    @classmethod
+    def _blank_secret_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    def model_settings(self) -> ModelConfig:
+        return ModelConfig.parse(
+            self.paid_media_model,
+            base_url=self.paid_media_model_base_url,
+            tool_selector_model=self.paid_media_tool_selector_model,
+        )
+
+    def approver_refs(self) -> frozenset[str]:
+        return frozenset(
+            part.strip() for part in self.paid_media_approver_ids.split(",") if part.strip()
+        )
+
+    def pipeboard_endpoints(self) -> dict[Platform, str]:
+        return {
+            Platform.GOOGLE_ADS: self.pipeboard_google_ads_mcp_url,
+            Platform.META_ADS: self.pipeboard_meta_ads_mcp_url,
+            Platform.REDDIT_ADS: self.pipeboard_reddit_ads_mcp_url,
+        }
+
+    def api_token_map(self) -> dict[str, str]:
+        """Parse `token:caller_ref,token:caller_ref` into a lookup. Values stay in memory only."""
+        if self.paid_media_api_tokens is None:
+            return {}
+        result: dict[str, str] = {}
+        for pair in self.paid_media_api_tokens.get_secret_value().split(","):
+            token, sep, caller = pair.strip().partition(":")
+            if sep and token and caller:
+                result[token] = caller
+        return result

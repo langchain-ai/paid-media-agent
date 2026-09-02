@@ -1,0 +1,439 @@
+{
+ "account_id": "fixture-reddit-0001",
+ "campaigns": [
+  {
+   "daily_budget": 75.0,
+   "id": "r-301",
+   "name": "Community Targeting - Dev Tools",
+   "status": "ACTIVE"
+  },
+  {
+   "daily_budget": 45.0,
+   "id": "r-302",
+   "name": "Interest - Marketing",
+   "status": "ACTIVE"
+  }
+ ],
+ "currency": "USD",
+ "daily": [
+  {
+   "campaign_id": "r-301",
+   "clicks": 44,
+   "conversions": 0.8,
+   "date": "2026-08-01",
+   "impressions": 4745,
+   "spend": 73.82
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 43,
+   "conversions": 0.7,
+   "date": "2026-08-02",
+   "impressions": 5051,
+   "spend": 70.32
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 44,
+   "conversions": 0.6,
+   "date": "2026-08-03",
+   "impressions": 5272,
+   "spend": 73.84
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 54,
+   "conversions": 1.0,
+   "date": "2026-08-04",
+   "impressions": 5260,
+   "spend": 68.82
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 35,
+   "conversions": 0.6,
+   "date": "2026-08-05",
+   "impressions": 4094,
+   "spend": 61.08
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 47,
+   "conversions": 0.5,
+   "date": "2026-08-06",
+   "impressions": 5131,
+   "spend": 71.32
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 33,
+   "conversions": 0.5,
+   "date": "2026-08-07",
+   "impressions": 4404,
+   "spend": 63.98
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 33,
+   "conversions": 0.5,
+   "date": "2026-08-08",
+   "impressions": 4334,
+   "spend": 60.94
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 57,
+   "conversions": 0.7,
+   "date": "2026-08-09",
+   "impressions": 5677,
+   "spend": 77.57
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 52,
+   "conversions": 0.8,
+   "date": "2026-08-10",
+   "impressions": 5204,
+   "spend": 74.19
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 42,
+   "conversions": 0.7,
+   "date": "2026-08-11",
+   "impressions": 5199,
+   "spend": 74.56
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 37,
+   "conversions": 0.6,
+   "date": "2026-08-12",
+   "impressions": 4879,
+   "spend": 68.93
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 38,
+   "conversions": 0.7,
+   "date": "2026-08-13",
+   "impressions": 4957,
+   "spend": 73.14
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 36,
+   "conversions": 0.5,
+   "date": "2026-08-14",
+   "impressions": 4399,
+   "spend": 62.78
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 46,
+   "conversions": 0.6,
+   "date": "2026-08-15",
+   "impressions": 5461,
+   "spend": 77.34
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 52,
+   "conversions": 0.5,
+   "date": "2026-08-16",
+   "impressions": 5200,
+   "spend": 73.99
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 47,
+   "conversions": 0.7,
+   "date": "2026-08-17",
+   "impressions": 4911,
+   "spend": 77.04
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 40,
+   "conversions": 0.7,
+   "date": "2026-08-18",
+   "impressions": 5255,
+   "spend": 68.67
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 52,
+   "conversions": 0.8,
+   "date": "2026-08-19",
+   "impressions": 6161,
+   "spend": 84.61
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 46,
+   "conversions": 0.6,
+   "date": "2026-08-20",
+   "impressions": 4882,
+   "spend": 65.19
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 37,
+   "conversions": 0.6,
+   "date": "2026-08-21",
+   "impressions": 4480,
+   "spend": 71.05
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 45,
+   "conversions": 0.8,
+   "date": "2026-08-22",
+   "impressions": 5377,
+   "spend": 77.68
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 64,
+   "conversions": 1.2,
+   "date": "2026-08-23",
+   "impressions": 6476,
+   "spend": 86.15
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 42,
+   "conversions": 0.7,
+   "date": "2026-08-24",
+   "impressions": 4816,
+   "spend": 75.3
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 44,
+   "conversions": 0.7,
+   "date": "2026-08-25",
+   "impressions": 5618,
+   "spend": 79.09
+  },
+  {
+   "campaign_id": "r-301",
+   "clicks": 41,
+   "conversions": 0.8,
+   "date": "2026-08-26",
+   "impressions": 4293,
+   "spend": 67.51
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 19,
+   "conversions": 0.2,
+   "date": "2026-08-01",
+   "impressions": 3121,
+   "spend": 35.05
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 23,
+   "conversions": 0.2,
+   "date": "2026-08-02",
+   "impressions": 3596,
+   "spend": 45.34
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 24,
+   "conversions": 0.2,
+   "date": "2026-08-03",
+   "impressions": 3948,
+   "spend": 45.34
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 22,
+   "conversions": 0.3,
+   "date": "2026-08-04",
+   "impressions": 3763,
+   "spend": 45.56
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 22,
+   "conversions": 0.2,
+   "date": "2026-08-05",
+   "impressions": 3752,
+   "spend": 41.79
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 21,
+   "conversions": 0.2,
+   "date": "2026-08-06",
+   "impressions": 2965,
+   "spend": 36.73
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 31,
+   "conversions": 0.3,
+   "date": "2026-08-07",
+   "impressions": 4038,
+   "spend": 43.62
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 28,
+   "conversions": 0.2,
+   "date": "2026-08-08",
+   "impressions": 3530,
+   "spend": 40.43
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 20,
+   "conversions": 0.2,
+   "date": "2026-08-09",
+   "impressions": 3178,
+   "spend": 39.4
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 23,
+   "conversions": 0.2,
+   "date": "2026-08-10",
+   "impressions": 3418,
+   "spend": 42.27
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 24,
+   "conversions": 0.3,
+   "date": "2026-08-11",
+   "impressions": 3117,
+   "spend": 35.62
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 18,
+   "conversions": 0.2,
+   "date": "2026-08-12",
+   "impressions": 2980,
+   "spend": 34.94
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 24,
+   "conversions": 0.2,
+   "date": "2026-08-13",
+   "impressions": 3412,
+   "spend": 37.05
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 22,
+   "conversions": 0.3,
+   "date": "2026-08-14",
+   "impressions": 3367,
+   "spend": 37.41
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 23,
+   "conversions": 0.2,
+   "date": "2026-08-15",
+   "impressions": 3268,
+   "spend": 37.64
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 20,
+   "conversions": 0.3,
+   "date": "2026-08-16",
+   "impressions": 2989,
+   "spend": 37.23
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 19,
+   "conversions": 0.2,
+   "date": "2026-08-17",
+   "impressions": 3126,
+   "spend": 36.56
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 19,
+   "conversions": 0.2,
+   "date": "2026-08-18",
+   "impressions": 3102,
+   "spend": 37.54
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 21,
+   "conversions": 0.2,
+   "date": "2026-08-19",
+   "impressions": 2772,
+   "spend": 33.04
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 16,
+   "conversions": 0.1,
+   "date": "2026-08-20",
+   "impressions": 2688,
+   "spend": 31.63
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 28,
+   "conversions": 0.3,
+   "date": "2026-08-21",
+   "impressions": 3655,
+   "spend": 39.93
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 18,
+   "conversions": 0.2,
+   "date": "2026-08-22",
+   "impressions": 3040,
+   "spend": 33.57
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 20,
+   "conversions": 0.2,
+   "date": "2026-08-23",
+   "impressions": 2749,
+   "spend": 33.37
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 19,
+   "conversions": 0.2,
+   "date": "2026-08-24",
+   "impressions": 3048,
+   "spend": 39.13
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 21,
+   "conversions": 0.2,
+   "date": "2026-08-25",
+   "impressions": 2929,
+   "spend": 35.52
+  },
+  {
+   "campaign_id": "r-302",
+   "clicks": 23,
+   "conversions": 0.3,
+   "date": "2026-08-26",
+   "impressions": 3221,
+   "spend": 39.87
+  }
+ ],
+ "data_complete_through": "2026-08-26",
+ "platform": "reddit_ads",
+ "timezone": "America/New_York"
+}

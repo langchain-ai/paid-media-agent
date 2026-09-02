@@ -1,0 +1,187 @@
+"""Scripted demo: a deterministic investigation through the real graph without a model API."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from datetime import date
+from typing import Any
+
+from langchain_core.messages import AIMessage, BaseMessage
+
+from paid_media_agent.testing.scripted_model import (
+    ScriptedChatModel,
+    Step,
+    all_tool_results,
+    last_tool_results,
+    tool_call_message,
+)
+
+DEMO_CURRENT = (date(2026, 8, 15), date(2026, 8, 28))
+DEMO_PREVIOUS = (date(2026, 8, 1), date(2026, 8, 14))
+DEMO_QUESTION = (
+    "Compare the last two weeks (2026-08-15 to 2026-08-28) with the prior two weeks across all connected "
+    "accounts and tell me what needs attention."
+)
+
+
+def _discover(_: Sequence[BaseMessage]) -> AIMessage:
+    return tool_call_message(
+        "discover_tools", {"query": "campaign performance daily spend conversions"}
+    )
+
+
+def _list_accounts(_: Sequence[BaseMessage]) -> AIMessage:
+    return tool_call_message("list_accounts", {})
+
+
+def _read_all(messages: Sequence[BaseMessage]) -> AIMessage:
+    accounts: dict[str, Any] = next(
+        (r for r in last_tool_results(messages) if "accounts" in r), {"accounts": []}
+    )
+    calls = []
+    for account in accounts["accounts"]:
+        calls.append(
+            {
+                "name": f"{account['platform']}__get_campaign_performance",
+                "args": {
+                    "account_alias": account["alias"],
+                    "start_date": DEMO_PREVIOUS[0].isoformat(),
+                    "end_date": DEMO_CURRENT[1].isoformat(),
+                },
+                "id": f"call_read_{account['alias']}",
+                "type": "tool_call",
+            }
+        )
+    return AIMessage(
+        content="Reading each connected account for the union window.", tool_calls=calls
+    )
+
+
+def _compare(messages: Sequence[BaseMessage]) -> AIMessage:
+    reads = [r for r in last_tool_results(messages) if r.get("kind") == "read_result"]
+    unavailable = [
+        r.get("_tool_name", "unknown")
+        for r in last_tool_results(messages)
+        if r.get("denied") or r.get("error")
+    ]
+    return tool_call_message(
+        "compare_periods",
+        {
+            "artifact_ids": [r["artifact_id"] for r in reads],
+            "current_start": DEMO_CURRENT[0].isoformat(),
+            "current_end": DEMO_CURRENT[1].isoformat(),
+            "previous_start": DEMO_PREVIOUS[0].isoformat(),
+            "previous_end": DEMO_PREVIOUS[1].isoformat(),
+            "unavailable_sources": unavailable,
+        },
+    )
+
+
+def compose_answer(summary: dict[str, Any], reads: Sequence[dict[str, Any]]) -> str:
+    """Deterministic prose assembled from structured results. Every number is quoted, not derived."""
+    lines = [
+        f"Comparison window: {summary['current_window']} vs {summary['previous_window']}.",
+        f"Analysis artifact: {summary['artifact_id']} ({summary['schema_version']}, {summary['analysis_version']}); "
+        f"reconciled={'yes' if summary['reconciled'] else 'NO'}.",
+    ]
+    if summary.get("cross_platform_total"):
+        lines.append(
+            f"Cross-platform spend (compatible sources only): {summary['cross_platform_total']}."
+        )
+    else:
+        lines.append(
+            f"No cross-platform total: {summary.get('total_suppressed_reason') or 'suppressed'}."
+        )
+    for platform in summary["platforms"]:
+        lines.append("")
+        lines.append(
+            f"{platform['platform']} ({platform['account_ref']}): spend {platform['spend_current']} vs "
+            f"{platform['spend_previous']} ({platform['spend_change']}); conversions {platform['conversions_current']} vs "
+            f"{platform['conversions_previous']}; CPA {platform['cpa_current']} vs {platform['cpa_previous']}; "
+            f"ROAS {platform['roas_current']} vs {platform['roas_previous']}."
+        )
+        if platform["missing_fields"]:
+            lines.append(
+                f"  Missing fields (unavailable, not zero): {', '.join(platform['missing_fields'])}."
+            )
+        if platform["quality_flags"]:
+            lines.append(f"  Quality flags: {', '.join(platform['quality_flags'])}.")
+        for item in platform["attention"]:
+            lines.append(f"  Attention: {item}")
+    if summary["unavailable_sources"]:
+        lines.append("")
+        lines.append(f"Unavailable sources: {', '.join(summary['unavailable_sources'])}.")
+    lines.append("")
+    lines.append(
+        "Evidence: "
+        + ", ".join(f"{r['tool']} -> {r['artifact_id']} ({r['actual_window']})" for r in reads)
+        + "."
+    )
+    lines.append(
+        "Interpretation: spend shifts above are platform-attributed delivery facts, not incrementality. "
+        "Any budget change should be proposed as a typed change and approved before execution."
+    )
+    return "\n".join(lines)
+
+
+def _answer(messages: Sequence[BaseMessage]) -> AIMessage:
+    results = all_tool_results(messages)
+    summary = next((r for r in reversed(results) if r.get("kind") == "analysis_summary"), None)
+    reads = [r for r in results if r.get("kind") == "read_result"]
+    if summary is None:
+        failures = [r for r in results if r.get("error") or r.get("denied")]
+        detail = failures[-1] if failures else {}
+        return AIMessage(content=f"The deterministic comparison did not complete: {detail}")
+    return AIMessage(content=compose_answer(summary, reads))
+
+
+def demo_steps() -> list[Step]:
+    return [_discover, _list_accounts, _read_all, _compare, _answer]
+
+
+def build_demo_model(steps: list[Step] | None = None) -> ScriptedChatModel:
+    return ScriptedChatModel(steps=steps or demo_steps())
+
+
+def _propose(messages: Sequence[BaseMessage]) -> AIMessage:  # noqa: ARG001
+    return tool_call_message(
+        "propose_change",
+        {
+            "account_alias": "demo-google",
+            "tool_name": "google_ads__update_campaign_budget",
+            "target_ref": "g-103",
+            "changes": {"daily_budget": 240},
+            "reason": "Performance Max spend fell while CPA rose; reduce daily budget by a reversible step.",
+            "measurement_plan": "Compare CPA and conversions after 7 complete days at the new budget.",
+            "reversal_plan": "Restore the previous daily budget through a new proposal.",
+        },
+    )
+
+
+def _execute(messages: Sequence[BaseMessage]) -> AIMessage:
+    proposal = next((r for r in last_tool_results(messages) if "proposal" in r), None)
+    if proposal is None:
+        return AIMessage(content="The proposal could not be staged.")
+    return tool_call_message("execute_change", {"proposal_id": proposal["proposal"]["proposal_id"]})
+
+
+def _report_receipt(messages: Sequence[BaseMessage]) -> AIMessage:
+    results = last_tool_results(messages)
+    receipt = next((r for r in results if "receipt" in r), None)
+    if receipt is None:
+        return AIMessage(
+            content=f"No receipt was returned: {results[-1] if results else 'no tool result'}"
+        )
+    view = receipt["receipt"]
+    verified = ", ".join(f"{fv['field']}={fv['value']}" for fv in view["verified_state"])
+    return AIMessage(
+        content=(
+            f"Receipt for proposal {view['proposal_id']} revision {view['revision']}: status={view['status']}, "
+            f"mutation_attempted={view['mutation_attempted']}, readback_attempts={view['readback_attempts']}, "
+            f"verified_state=[{verified}], reason={view['reason']}"
+        )
+    )
+
+
+def write_demo_steps() -> list[Step]:
+    return [_propose, _execute, _report_receipt]

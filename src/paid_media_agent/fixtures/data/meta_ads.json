@@ -1,0 +1,785 @@
+{
+ "account_id": "fixture-meta-0001",
+ "campaigns": [
+  {
+   "daily_budget": 350.0,
+   "id": "m-201",
+   "name": "Prospecting - Lookalike 1%",
+   "status": "ACTIVE"
+  },
+  {
+   "daily_budget": 150.0,
+   "id": "m-202",
+   "name": "Retargeting - Site Visitors 30d",
+   "status": "ACTIVE"
+  },
+  {
+   "daily_budget": 90.0,
+   "id": "m-203",
+   "name": "Video Views - Awareness",
+   "status": "PAUSED"
+  }
+ ],
+ "currency": "USD",
+ "daily": [
+  {
+   "campaign_id": "m-201",
+   "clicks": 285,
+   "conversions": 3.8,
+   "date": "2026-08-01",
+   "impressions": 18244,
+   "spend": 372.06,
+   "value": 464.39
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 181,
+   "conversions": 2.7,
+   "date": "2026-08-02",
+   "impressions": 14597,
+   "spend": 322.45,
+   "value": 320.41
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 161,
+   "conversions": 2.2,
+   "date": "2026-08-03",
+   "impressions": 13484,
+   "spend": 302.38,
+   "value": 275.09
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 217,
+   "conversions": 3.6,
+   "date": "2026-08-04",
+   "impressions": 14535,
+   "spend": 322.2,
+   "value": 393.77
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 240,
+   "conversions": 4.6,
+   "date": "2026-08-05",
+   "impressions": 16398,
+   "spend": 358.03,
+   "value": 603.97
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 201,
+   "conversions": 3.8,
+   "date": "2026-08-06",
+   "impressions": 14978,
+   "spend": 316.42,
+   "value": 470.64
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 178,
+   "conversions": 3.6,
+   "date": "2026-08-07",
+   "impressions": 12861,
+   "spend": 311.62,
+   "value": 439.83
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 190,
+   "conversions": 2.8,
+   "date": "2026-08-08",
+   "impressions": 15032,
+   "spend": 324.8,
+   "value": 324.13
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 189,
+   "conversions": 2.6,
+   "date": "2026-08-09",
+   "impressions": 15267,
+   "spend": 361.27,
+   "value": 283.23
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 215,
+   "conversions": 3.5,
+   "date": "2026-08-10",
+   "impressions": 14051,
+   "spend": 307.78,
+   "value": 409.05
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 202,
+   "conversions": 3.7,
+   "date": "2026-08-11",
+   "impressions": 13364,
+   "spend": 309.06,
+   "value": 422.55
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 205,
+   "conversions": 4.4,
+   "date": "2026-08-12",
+   "impressions": 13843,
+   "spend": 291.11,
+   "value": 500.34
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 234,
+   "conversions": 5.3,
+   "date": "2026-08-13",
+   "impressions": 16313,
+   "spend": 334.5,
+   "value": 593.68
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 210,
+   "conversions": 2.7,
+   "date": "2026-08-14",
+   "impressions": 15459,
+   "spend": 377.03,
+   "value": 344.06
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 301,
+   "conversions": 6.9,
+   "date": "2026-08-15",
+   "impressions": 19745,
+   "spend": 400.81,
+   "value": 834.39
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 274,
+   "conversions": 6.3,
+   "date": "2026-08-16",
+   "impressions": 20553,
+   "spend": 435.08,
+   "value": 737.4
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 196,
+   "conversions": 2.9,
+   "date": "2026-08-17",
+   "impressions": 14190,
+   "spend": 344.58,
+   "value": 378.18
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 225,
+   "conversions": 4.1,
+   "date": "2026-08-18",
+   "impressions": 18283,
+   "spend": 430.78,
+   "value": 459.5
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 238,
+   "conversions": 4.1,
+   "date": "2026-08-19",
+   "impressions": 18383,
+   "spend": 384.47,
+   "value": 531.45
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 254,
+   "conversions": 5.4,
+   "date": "2026-08-20",
+   "impressions": 16265,
+   "spend": 373.2,
+   "value": 699.22
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 262,
+   "conversions": 5.6,
+   "date": "2026-08-21",
+   "impressions": 17723,
+   "spend": 400.87,
+   "value": 690.75
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 205,
+   "conversions": 4.3,
+   "date": "2026-08-22",
+   "impressions": 15092,
+   "spend": 349.72,
+   "value": 521.89
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 228,
+   "conversions": 4.4,
+   "date": "2026-08-23",
+   "impressions": 18465,
+   "spend": 385.19,
+   "value": 510.31
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 240,
+   "conversions": 5.5,
+   "date": "2026-08-24",
+   "impressions": 18547,
+   "spend": 386.26,
+   "value": 604.37
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 226,
+   "conversions": 4.2,
+   "date": "2026-08-25",
+   "impressions": 17540,
+   "spend": 386.56,
+   "value": 501.05
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 209,
+   "conversions": 3.5,
+   "date": "2026-08-26",
+   "impressions": 17553,
+   "spend": 373.76,
+   "value": 443.99
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 208,
+   "conversions": 4.2,
+   "date": "2026-08-27",
+   "impressions": 16362,
+   "spend": 338.73,
+   "value": 471.06
+  },
+  {
+   "campaign_id": "m-201",
+   "clicks": 202,
+   "conversions": 4.1,
+   "date": "2026-08-28",
+   "impressions": 16557,
+   "spend": 373.73,
+   "value": 490.05
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 127,
+   "conversions": 7.7,
+   "date": "2026-08-01",
+   "impressions": 4472,
+   "spend": 147.94,
+   "value": 960.52
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 134,
+   "conversions": 9.8,
+   "date": "2026-08-02",
+   "impressions": 4313,
+   "spend": 156.75,
+   "value": 1273.44
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 135,
+   "conversions": 7.1,
+   "date": "2026-08-03",
+   "impressions": 4706,
+   "spend": 151.63,
+   "value": 889.71
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 122,
+   "conversions": 6.6,
+   "date": "2026-08-04",
+   "impressions": 3851,
+   "spend": 133.67,
+   "value": 838.7
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 121,
+   "conversions": 7.5,
+   "date": "2026-08-05",
+   "impressions": 4358,
+   "spend": 136.62,
+   "value": 927.32
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 92,
+   "conversions": 4.7,
+   "date": "2026-08-06",
+   "impressions": 3598,
+   "spend": 130.68,
+   "value": 654.05
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 107,
+   "conversions": 5.0,
+   "date": "2026-08-07",
+   "impressions": 3875,
+   "spend": 140.1,
+   "value": 658.58
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 114,
+   "conversions": 8.3,
+   "date": "2026-08-08",
+   "impressions": 4422,
+   "spend": 137.57,
+   "value": 1024.53
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 119,
+   "conversions": 8.5,
+   "date": "2026-08-09",
+   "impressions": 4937,
+   "spend": 160.27,
+   "value": 1055.42
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 115,
+   "conversions": 5.2,
+   "date": "2026-08-10",
+   "impressions": 3741,
+   "spend": 134.21,
+   "value": 708.21
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 110,
+   "conversions": 4.9,
+   "date": "2026-08-11",
+   "impressions": 4214,
+   "spend": 135.62,
+   "value": 689.89
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 131,
+   "conversions": 9.8,
+   "date": "2026-08-12",
+   "impressions": 4104,
+   "spend": 146.5,
+   "value": 1193.13
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 91,
+   "conversions": 6.2,
+   "date": "2026-08-13",
+   "impressions": 3673,
+   "spend": 119.8,
+   "value": 800.98
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 136,
+   "conversions": 9.7,
+   "date": "2026-08-14",
+   "impressions": 4525,
+   "spend": 148.78,
+   "value": 1286.95
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 100,
+   "conversions": 4.5,
+   "date": "2026-08-15",
+   "impressions": 4040,
+   "spend": 139.52,
+   "value": 626.76
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 96,
+   "conversions": 6.2,
+   "date": "2026-08-16",
+   "impressions": 3660,
+   "spend": 123.83,
+   "value": 811.38
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 119,
+   "conversions": 7.8,
+   "date": "2026-08-17",
+   "impressions": 4455,
+   "spend": 150.43,
+   "value": 1063.65
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 138,
+   "conversions": 10.7,
+   "date": "2026-08-18",
+   "impressions": 4421,
+   "spend": 153.13,
+   "value": 1525.2
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 107,
+   "conversions": 7.7,
+   "date": "2026-08-19",
+   "impressions": 3533,
+   "spend": 120.69,
+   "value": 908.81
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 124,
+   "conversions": 7.6,
+   "date": "2026-08-20",
+   "impressions": 4122,
+   "spend": 131.52,
+   "value": 930.81
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 95,
+   "conversions": 5.5,
+   "date": "2026-08-21",
+   "impressions": 3610,
+   "spend": 132.0,
+   "value": 761.18
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 106,
+   "conversions": 5.7,
+   "date": "2026-08-22",
+   "impressions": 4111,
+   "spend": 139.44,
+   "value": 766.31
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 114,
+   "conversions": 7.2,
+   "date": "2026-08-23",
+   "impressions": 3745,
+   "spend": 133.58,
+   "value": 1023.52
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 115,
+   "conversions": 7.3,
+   "date": "2026-08-24",
+   "impressions": 4219,
+   "spend": 137.28,
+   "value": 1028.49
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 131,
+   "conversions": 5.8,
+   "date": "2026-08-25",
+   "impressions": 4812,
+   "spend": 155.41,
+   "value": 805.3
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 93,
+   "conversions": 4.0,
+   "date": "2026-08-26",
+   "impressions": 3848,
+   "spend": 131.38,
+   "value": 508.62
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 145,
+   "conversions": 9.6,
+   "date": "2026-08-27",
+   "impressions": 4878,
+   "spend": 155.14,
+   "value": 1191.31
+  },
+  {
+   "campaign_id": "m-202",
+   "clicks": 91,
+   "conversions": 5.7,
+   "date": "2026-08-28",
+   "impressions": 3744,
+   "spend": 122.3,
+   "value": 743.15
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 46,
+   "conversions": 0.1,
+   "date": "2026-08-01",
+   "impressions": 8986,
+   "spend": 81.02,
+   "value": 5.57
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 59,
+   "conversions": 0.2,
+   "date": "2026-08-02",
+   "impressions": 9625,
+   "spend": 83.39,
+   "value": 12.26
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 52,
+   "conversions": 0.2,
+   "date": "2026-08-03",
+   "impressions": 9104,
+   "spend": 80.76,
+   "value": 11.44
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 54,
+   "conversions": 0.2,
+   "date": "2026-08-04",
+   "impressions": 8966,
+   "spend": 74.82,
+   "value": 11.51
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 64,
+   "conversions": 0.2,
+   "date": "2026-08-05",
+   "impressions": 9888,
+   "spend": 91.11,
+   "value": 12.96
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 60,
+   "conversions": 0.2,
+   "date": "2026-08-06",
+   "impressions": 8925,
+   "spend": 71.67,
+   "value": 11.07
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 62,
+   "conversions": 0.2,
+   "date": "2026-08-07",
+   "impressions": 11827,
+   "spend": 90.1,
+   "value": 10.99
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 56,
+   "conversions": 0.2,
+   "date": "2026-08-08",
+   "impressions": 8889,
+   "spend": 69.95,
+   "value": 12.32
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 56,
+   "conversions": 0.2,
+   "date": "2026-08-09",
+   "impressions": 9194,
+   "spend": 80.28,
+   "value": 12.35
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 64,
+   "conversions": 0.2,
+   "date": "2026-08-10",
+   "impressions": 10034,
+   "spend": 89.01,
+   "value": 10.97
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 54,
+   "conversions": 0.1,
+   "date": "2026-08-11",
+   "impressions": 9839,
+   "spend": 87.68,
+   "value": 6.2
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 47,
+   "conversions": 0.2,
+   "date": "2026-08-12",
+   "impressions": 9385,
+   "spend": 71.42,
+   "value": 12.62
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 64,
+   "conversions": 0.2,
+   "date": "2026-08-13",
+   "impressions": 9940,
+   "spend": 81.66,
+   "value": 11.13
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 62,
+   "conversions": 0.2,
+   "date": "2026-08-14",
+   "impressions": 10148,
+   "spend": 87.12,
+   "value": 12.97
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 21,
+   "conversions": 0.1,
+   "date": "2026-08-15",
+   "impressions": 4006,
+   "spend": 31.18,
+   "value": 6.2
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 23,
+   "conversions": 0.1,
+   "date": "2026-08-16",
+   "impressions": 4232,
+   "spend": 33.07,
+   "value": 6.35
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 19,
+   "conversions": 0.1,
+   "date": "2026-08-17",
+   "impressions": 3181,
+   "spend": 28.57,
+   "value": 6.14
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 24,
+   "conversions": 0.1,
+   "date": "2026-08-18",
+   "impressions": 3762,
+   "spend": 31.31,
+   "value": 6.04
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 28,
+   "conversions": 0.1,
+   "date": "2026-08-19",
+   "impressions": 4289,
+   "spend": 32.9,
+   "value": 5.72
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 26,
+   "conversions": 0.1,
+   "date": "2026-08-20",
+   "impressions": 4210,
+   "spend": 32.96,
+   "value": 6.5
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 19,
+   "conversions": 0.0,
+   "date": "2026-08-21",
+   "impressions": 3417,
+   "spend": 28.43,
+   "value": 0.0
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 24,
+   "conversions": 0.1,
+   "date": "2026-08-22",
+   "impressions": 4632,
+   "spend": 36.64,
+   "value": 5.84
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 22,
+   "conversions": 0.1,
+   "date": "2026-08-23",
+   "impressions": 4249,
+   "spend": 35.7,
+   "value": 5.7
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 23,
+   "conversions": 0.1,
+   "date": "2026-08-24",
+   "impressions": 3369,
+   "spend": 27.57,
+   "value": 6.28
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 21,
+   "conversions": 0.1,
+   "date": "2026-08-25",
+   "impressions": 3482,
+   "spend": 28.67,
+   "value": 5.94
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 20,
+   "conversions": 0.1,
+   "date": "2026-08-26",
+   "impressions": 3609,
+   "spend": 27.71,
+   "value": 5.96
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 21,
+   "conversions": 0.1,
+   "date": "2026-08-27",
+   "impressions": 4026,
+   "spend": 34.68,
+   "value": 5.98
+  },
+  {
+   "campaign_id": "m-203",
+   "clicks": 25,
+   "conversions": 0.1,
+   "date": "2026-08-28",
+   "impressions": 4096,
+   "spend": 34.81,
+   "value": 6.28
+  }
+ ],
+ "data_complete_through": "2026-08-28",
+ "platform": "meta_ads",
+ "timezone": "America/New_York"
+}

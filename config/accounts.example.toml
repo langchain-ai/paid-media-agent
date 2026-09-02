@@ -1,0 +1,21 @@
+# Account aliases map public, human-readable names to host-owned provider account ids.
+# The model only ever sees the alias. Provider ids never enter prompts, Slack, or artifacts.
+# These ids are fixture examples for the offline demo. Replace them with your own accounts.
+
+[accounts.demo-google]
+platform = "google_ads"
+provider_account_id = "fixture-google-0001"
+currency = "USD"
+timezone = "America/New_York"
+
+[accounts.demo-meta]
+platform = "meta_ads"
+provider_account_id = "fixture-meta-0001"
+currency = "USD"
+timezone = "America/New_York"
+
+[accounts.demo-reddit]
+platform = "reddit_ads"
+provider_account_id = "fixture-reddit-0001"
+currency = "USD"
+timezone = "America/New_York"

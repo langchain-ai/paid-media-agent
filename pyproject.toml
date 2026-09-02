@@ -1,0 +1,81 @@
+[project]
+name = "paid-media-agent"
+version = "0.1.0"
+description = "A portable Deep Agents application for governed paid-media analysis and management."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.7.12,<0.8",
+    "managed-deepagents>=0.6.1,<0.7",
+    "langchain>=1.3.18,<1.4",
+    "langgraph>=1.2.11,<1.3",
+    "langchain-mcp-adapters>=0.3.2,<0.4",
+    # langchain-mcp-adapters 0.3.x currently requires MCP 1.x.
+    "mcp>=1.24,<2",
+    "httpx>=0.28.1,<0.29",
+    "pydantic>=2.13.5,<3",
+    "pydantic-settings>=2.15,<3",
+    "click>=8.2,<9",
+    # LangChain does not validate dict-form JSON schema tool arguments; the host guard does.
+    "jsonschema>=4.23,<5",
+]
+
+[project.scripts]
+paid-media-agent = "paid_media_agent.cli:main"
+
+[project.optional-dependencies]
+anthropic = ["langchain-anthropic>=1.4,<2"]
+openai = ["langchain-openai>=1.1,<2"]
+google = ["langchain-google-genai>=4,<5"]
+slack = ["slack-bolt>=1.30,<2"]
+self-host = [
+    "fastapi>=0.115,<1",
+    "langgraph-checkpoint-postgres>=3,<4",
+    "psycopg[binary,pool]>=3.2,<4",
+    "uvicorn[standard]>=0.35,<1",
+]
+reports = [
+    "jinja2>=3.1,<4",
+    "weasyprint>=68,<69",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17,<2",
+    "pytest>=9,<10",
+    "pytest-asyncio>=1.3,<2",
+    "pytest-cov>=7,<8",
+    "ruff>=0.12,<1",
+]
+
+[build-system]
+requires = ["uv_build>=0.10,<0.11"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "prep"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "TID", "ARG", "S"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "ARG001", "ARG002"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]

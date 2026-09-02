@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ payload.title }}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 32px; font-size: 12px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-top: 22px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th, td { border: 1px solid #d8d8d8; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f2f2f2; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: #666; }
+  .missing { color: #9a3b00; font-weight: 600; }
+  .flag { display: inline-block; background: #fff3e0; border: 1px solid #f0c48a; padding: 1px 5px; margin-right: 4px; border-radius: 3px; font-size: 11px; }
+  .provenance { font-size: 10px; color: #555; }
+</style>
+</head>
+<body>
+<h1>{{ payload.title }}</h1>
+<p class="muted">Report {{ payload.report_id }} · schema {{ payload.schema_version }} · generated {{ payload.provenance.generated_at.isoformat() }}</p>
+
+<h2>Scope</h2>
+<table>
+  <tr><th>Accounts</th><td>{{ payload.scope.accounts | join(", ") }}</td></tr>
+  <tr><th>Platforms</th><td>{{ payload.scope.platforms | map(attribute="value") | join(", ") }}</td></tr>
+  <tr><th>Current window</th><td>{{ payload.scope.current_window }}</td></tr>
+  <tr><th>Comparison window</th><td>{{ payload.scope.previous_window }}</td></tr>
+  <tr><th>Currency</th><td>{{ payload.scope.currency or "mixed / unavailable" }}</td></tr>
+  <tr><th>Source coverage</th><td>{{ payload.scope.source_coverage }}</td></tr>
+</table>
+
+<h2>Executive summary</h2>
+<p>{{ payload.executive_summary }}</p>
+
+<h2>Reconciled scorecard</h2>
+{% if payload.total_suppressed_reason %}
+<p class="missing">Cross-platform total suppressed: {{ payload.total_suppressed_reason }}. Per-platform values are shown below.</p>
+{% endif %}
+<table>
+  <tr><th>Metric</th><th>Definition</th><th>Current</th><th>Previous</th><th>Change</th></tr>
+  {% for row in payload.scorecard %}
+  <tr><td>{{ row.metric }}</td><td class="muted">{{ row.definition }}</td><td class="num">{{ row.current }}</td><td class="num">{{ row.previous }}</td><td class="num">{{ row.change }}</td></tr>
+  {% endfor %}
+</table>
+
+{% for section in payload.platform_sections %}
+<h2>{{ section.platform.value }} · {{ section.account_ref }} ({{ section.currency }})</h2>
+{% if section.quality_flags %}
+<p>{% for flag in section.quality_flags %}<span class="flag">{{ flag }}</span>{% endfor %}</p>
+{% endif %}
+{% if section.missing_fields %}
+<p class="missing">Missing fields (never treated as zero): {{ section.missing_fields | join(", ") }}</p>
+{% endif %}
+<table>
+  <tr><th>Metric</th><th>Current</th><th>Previous</th><th>Change</th></tr>
+  {% for row in section.rows %}
+  <tr><td>{{ row.metric }}</td><td class="num">{{ row.current }}</td><td class="num">{{ row.previous }}</td><td class="num">{{ row.change }}</td></tr>
+  {% endfor %}
+</table>
+{% if section.drivers %}
+<ul>{% for driver in section.drivers %}<li>{{ driver }}</li>{% endfor %}</ul>
+{% endif %}
+{% endfor %}
+
+{% if payload.unavailable_sources %}
+<h2>Unavailable sources</h2>
+<ul>{% for source in payload.unavailable_sources %}<li class="missing">{{ source }}</li>{% endfor %}</ul>
+{% endif %}
+
+<h2>Recommendations</h2>
+{% if not payload.recommendations %}<p class="muted">No recommendations were requested.</p>{% endif %}
+{% for rec in payload.recommendations %}
+<table>
+  <tr><th>Target</th><td>{{ rec.target }}</td></tr>
+  <tr><th>Action</th><td>{{ rec.action }}</td></tr>
+  <tr><th>Evidence</th><td>{{ rec.evidence }}</td></tr>
+  <tr><th>Expected effect</th><td>{{ rec.expected_effect }}</td></tr>
+  <tr><th>Confidence</th><td>{{ rec.confidence }}</td></tr>
+  <tr><th>Measurement</th><td>{{ rec.measurement }}</td></tr>
+  <tr><th>Reversal</th><td>{{ rec.reversal }}</td></tr>
+</table>
+{% endfor %}
+
+<h2>Data quality</h2>
+<ul>{% for item in payload.data_quality %}<li>{{ item }}</li>{% endfor %}</ul>
+
+<h2>Provenance</h2>
+<p class="provenance">Analysis artifact {{ payload.provenance.analysis_artifact_id }} · sources {{ payload.provenance.source_artifacts | join(", ") }} · analysis {{ payload.provenance.analysis_version }} ({{ payload.provenance.analysis_schema_version }}) · report schema {{ payload.provenance.report_schema_version }}</p>
+</body>
+</html>
