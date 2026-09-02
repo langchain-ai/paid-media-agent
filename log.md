@@ -59,3 +59,16 @@ entries except to correct a factual typo with an explicit correction entry.
 - Added `examples/ask.py`, `docs/migration.md`, `sandbox/README.md`, a Slack app manifest example,
   and README sections for writes, the MDA path, and release status.
 - Screenshots are not included: no Slack workspace or model run was available in this session.
+
+## 2026-09-02 (setup console)
+
+- Added `src/paid_media_agent/admin/`: shared host actions, allowlisted `.env` editor, account
+  alias editor, fixed-template process manager, onboarding routes, and a localhost FastAPI console
+  with a per-run token, Host check, CSP, and no secret echo.
+- Added CLI groups `config`, `accounts`, `catalog`, `policy`, `test`, `mda`, `writes`, and
+  `setup`; every action has `--json`.
+- Verified the page end to end with headless Chromium: demo, model form, account discovery and
+  mapping, policy validation, kill switch, MDA preflight, process controls, dark theme; zero
+  browser errors. Screenshots under `docs/screenshots/`.
+- Moved `fastapi` and `uvicorn` into core dependencies because the console is the first command a
+  developer runs.

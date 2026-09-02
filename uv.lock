@@ -1716,6 +1716,7 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "deepagents" },
+    { name = "fastapi" },
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "langchain" },
@@ -1725,6 +1726,7 @@ dependencies = [
     { name = "mcp" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -1742,7 +1744,6 @@ reports = [
     { name = "weasyprint" },
 ]
 self-host = [
-    { name = "fastapi" },
     { name = "langgraph-checkpoint-postgres" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "uvicorn", extra = ["standard"] },
@@ -1764,7 +1765,7 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.2,<9" },
     { name = "deepagents", specifier = ">=0.7.12,<0.8" },
-    { name = "fastapi", marker = "extra == 'self-host'", specifier = ">=0.115,<1" },
+    { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "jinja2", marker = "extra == 'reports'", specifier = ">=3.1,<4" },
     { name = "jsonschema", specifier = ">=4.23,<5" },
@@ -1781,6 +1782,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.5,<3" },
     { name = "pydantic-settings", specifier = ">=2.15,<3" },
     { name = "slack-bolt", marker = "extra == 'slack'", specifier = ">=1.30,<2" },
+    { name = "uvicorn", specifier = ">=0.35,<1" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'self-host'", specifier = ">=0.35,<1" },
     { name = "weasyprint", marker = "extra == 'reports'", specifier = ">=68,<69" },
 ]

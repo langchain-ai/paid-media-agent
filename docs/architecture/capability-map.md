@@ -16,6 +16,7 @@
 | Deliver artifact | Slack/UI/API | host artifact bridge | artifact receipt | unsafe path, type, size, or delivery error |
 | Run on MDA | `agent.py` | shared components + MDA config | managed thread | deployment/config mismatch |
 | Run self-hosted | API/CLI | shared components + Postgres | self-hosted thread | auth, persistence, or adapter mismatch |
+| Onboard and operate | `setup` console or CLI groups | `admin/actions.py` (host-side, no model) | `.env`, `config/accounts.toml`, process logs | doctor failures, invalid key, gate refusal |
 
 Update this table whenever a capability, entry point, state owner, or terminal condition changes.
 

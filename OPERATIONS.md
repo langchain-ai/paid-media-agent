@@ -97,3 +97,13 @@ switch. A live provider additionally needs `PAID_MEDIA_WRITES_ENABLED=true`,
 `PAID_MEDIA_LIVE_WRITE_CANARY_TOOLS`. The reviewed mutation set is the TOML file at
 `PAID_MEDIA_WRITE_POLICY_PATH`; `doctor` reports rows that fail validation. Incident procedure and
 canary steps: [docs/operations/live-write-runbook.md](docs/operations/live-write-runbook.md).
+
+## Setup console
+
+`uv run paid-media-agent setup [--port 8765] [--no-open]` serves `src/paid_media_agent/admin/` on
+127.0.0.1 with a per-run admin token in the URL fragment. Every page action calls the same
+functions as the CLI subcommands (`admin/actions.py`), so agents can script the same steps with
+`--json`. The console writes `.env` and `config/accounts.toml` locally, starts fixed-template
+processes (`serve`, `slack`, `mda dev`, `mda deploy` with confirmation) with logs under
+`workspace/logs/`, and exposes the kill switch. It is not a hosted admin panel: do not expose the
+port, and prefer deployment secrets over `.env` for MDA and self-hosted production.

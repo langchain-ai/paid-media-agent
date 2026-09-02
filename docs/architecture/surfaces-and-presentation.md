@@ -46,3 +46,11 @@ receives read and render capability only. It cannot inherit conversational write
 - API: `surfaces/api/app.py` exposes health, thread messages, proposal read/approve/reject/edit, and
   artifact download behind constant-time bearer token lookup.
 - UI: `surfaces/ui/views.py` maps a run outcome to `OutcomeView` with the same presentation objects.
+
+## Setup console
+
+The console under `admin/` is an operator surface, not an agent surface. It never runs the model
+and never renders agent state; it calls host actions (doctor, config, discovery, tests, process
+control) that the CLI exposes with `--json`. It binds to localhost, requires the per-run token, and
+writes only local files. Deployment secrets for MDA and self-hosted production stay in the
+deployment platform.

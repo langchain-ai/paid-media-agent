@@ -20,4 +20,8 @@ workspace/in/
 workspace/out/
 workspace/analysis/
 artifacts/
-
+# Host-owned local configuration (examples stay tracked)
+config/accounts.toml
+config/write-policy.toml
+workspace/logs/
+workspace/KILL_SWITCH

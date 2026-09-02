@@ -4,6 +4,10 @@
 
 ### Added
 
+- Local setup console (`paid-media-agent setup`): localhost-only, token-protected page over the
+  same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`, `writes`).
+  Routes for the local demo, Pipeboard, Slack, MDA deployment, self-hosting, and write gates.
+
 - Shared Deep Agents assembly with a fixture-backed offline demo (`paid-media-agent demo`).
 - Deny-by-default authorized catalog, host-side read dispatch with schema validation and
   alias-only account scope, provider-native and portable tool selection, invocation guard, result

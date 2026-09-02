@@ -53,8 +53,31 @@ cannot grant a capability or bypass an approval.
 
 ```bash
 uv sync --all-extras --dev
-uv run paid-media-agent demo
+uv run paid-media-agent setup
 ```
+
+`setup` starts a local-only console at `127.0.0.1:8765`, opens it in your browser, and walks you
+through every route: the fixture demo, choosing a model, connecting Pipeboard and mapping accounts,
+Slack, Managed Deep Agents deployment, self-hosting, and the write gates. Each step shows the exact
+CLI command it runs, so a coding agent can do the same work without a browser:
+
+```bash
+uv run paid-media-agent demo --with-proposal        # fixture demo through the real graph
+uv run paid-media-agent doctor --json               # every check, machine-readable
+uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-sonnet-4-6 ANTHROPIC_API_KEY=...
+uv run paid-media-agent test model|pipeboard|slack|db|all --json
+uv run paid-media-agent accounts discover|list|add|remove
+uv run paid-media-agent catalog show --live         # authorized catalog, live or fixture
+uv run paid-media-agent policy validate --live      # reviewed mutation set vs the live schema
+uv run paid-media-agent mda check|dev|deploy --yes  # preflight, local managed run, deploy
+uv run paid-media-agent writes kill-switch on|off   # incident switch
+```
+
+The console binds to localhost, requires a per-run token from the printed link, writes secrets only
+to your local `.env` (mode 0600), and never displays a secret value.
+
+![Setup console, light theme](docs/screenshots/console-local-light.png)
+![Setup console, dark theme](docs/screenshots/console-mda-dark.png)
 
 The demo runs the real Deep Agents graph with a scripted model, a fixture catalog, and synthetic data.
 It needs no network and no secrets. It prints a reconciled two-week comparison across three fixture

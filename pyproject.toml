@@ -31,6 +31,9 @@ dependencies = [
     "click>=8.2,<9",
     # LangChain does not validate dict-form JSON schema tool arguments; the host guard does.
     "jsonschema>=4.23,<5",
+    # The local setup console (`paid-media-agent setup`) is the first thing a developer runs.
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.35,<1",
 ]
 
 [project.urls]
@@ -47,7 +50,6 @@ openai = ["langchain-openai>=1.1,<2"]
 google = ["langchain-google-genai>=4,<5"]
 slack = ["slack-bolt>=1.30,<2"]
 self-host = [
-    "fastapi>=0.115,<1",
     "langgraph-checkpoint-postgres>=3,<4",
     "psycopg[binary,pool]>=3.2,<4",
     "uvicorn[standard]>=0.35,<1",
@@ -88,6 +90,8 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "ARG001", "ARG002"]
+"src/paid_media_agent/admin/server.py" = ["B008"]
+"src/paid_media_agent/surfaces/api/app.py" = ["B008"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
