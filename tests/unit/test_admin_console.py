@@ -106,7 +106,16 @@ def test_status_and_routes_reflect_configuration(
     assert result.action == "status"
     assert result.detail["pipeboard"]["token_set"] is False
     routes = {r.id: r for r in build_routes(result.detail)}
-    assert list(routes) == ["local", "pipeboard", "direct", "slack", "mda", "self_hosted", "writes"]
+    assert list(routes) == [
+        "local",
+        "pipeboard",
+        "direct",
+        "sandbox",
+        "slack",
+        "mda",
+        "self_hosted",
+        "writes",
+    ]
     statuses = {s.id: s.status for s in routes["pipeboard"].steps}
     assert statuses["pb_token"] == "todo" and statuses["pb_test"] == "blocked"
     assert all("--json" in s.cli or s.cli for s in routes["local"].steps)

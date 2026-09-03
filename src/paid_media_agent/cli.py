@@ -352,6 +352,36 @@ def policy_validate(live: bool, as_json: bool) -> None:
 
 
 @main.group()
+def sandbox() -> None:
+    """Build, declare, and probe the LangSmith sandbox the model's files live in."""
+
+
+@sandbox.command("publish")
+@click.option("--name", default="paid-media-agent-sandbox", show_default=True)
+@click.option("--fs-gib", type=int, default=actions.SNAPSHOT_FS_GIB, show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def sandbox_publish(name: str, fs_gib: int, as_json: bool) -> None:
+    """Build sandbox/Dockerfile into a snapshot on LangSmith and declare it."""
+    log = None if as_json else lambda line: click.echo(line.rstrip("\n"))
+    _emit(actions.sandbox_publish(project_root(), name=name, fs_gib=fs_gib, log=log), as_json)
+
+
+@sandbox.command("use")
+@click.argument("name")
+@click.option("--json", "as_json", is_flag=True)
+def sandbox_use(name: str, as_json: bool) -> None:
+    """Declare an existing snapshot in .env and sandbox/__init__.py."""
+    _emit(actions.sandbox_use(project_root(), name), as_json)
+
+
+@sandbox.command("test")
+@click.option("--json", "as_json", is_flag=True)
+def sandbox_test(as_json: bool) -> None:
+    """Open a sandbox from the snapshot, probe it, and delete it."""
+    _emit(actions.sandbox_test(project_root()), as_json)
+
+
+@main.group()
 def test() -> None:
     """Connection tests that never print secret values."""
 

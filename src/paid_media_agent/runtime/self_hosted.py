@@ -25,6 +25,7 @@ from paid_media_agent.runtime.profiles import (
     resolve_write_policy,
     signer_from_settings,
 )
+from paid_media_agent.runtime.sandbox import build_backend
 from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import (
     DEFAULT_LOCAL_POLICY,
@@ -145,6 +146,7 @@ async def build_self_hosted_runtime(
 ) -> SelfHostedRuntime:
     loaded = await load_catalog(settings, project_root=project_root)
     workspace = project_root / settings.paid_media_workspace_root
+    backend = build_backend(settings, project_root=project_root)
     state = FixtureState()
     write_policy, issues = resolve_write_policy(settings, project_root, loaded.provider)
     live = loaded.read_provider is not None and loaded.write_provider is not None
@@ -155,11 +157,12 @@ async def build_self_hosted_runtime(
         name="self_hosted",
         fixture_state=state,
         approval_policy=approval_policy_from_settings(settings),
+        backend=backend,
     )
     overrides: dict[str, Any] = {
         "write_policy": write_policy,
         "write_policy_issues": issues,
-        "artifacts": ArtifactStore(workspace),
+        "artifacts": ArtifactStore(workspace, mirror=backend.mirror),
         "workspace_root": workspace,
         "accounts": load_accounts(settings, project_root),
         "signer": signer_from_settings(settings),

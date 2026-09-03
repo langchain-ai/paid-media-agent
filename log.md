@@ -127,6 +127,40 @@ entries except to correct a factual typo with an explicit correction entry.
   cards' bullet lists, and the Recommended badge became an inline lead-in so it cannot overlap a
   card title.
 
+## 2026-09-02 (sandbox parity)
+
+- Answered "do we need a local Docker container" with the reference's own model: no. MDA's
+  sandbox is a remote LangSmith container and `mda dev` uses the same one as production; the
+  reference's parity gate is the production graph plus the managed sandbox, with the host
+  backend as a dev loop.
+- Added `runtime/sandbox.py` (`build_backend`, `Sandbox`, `WorkspaceMirror`, `SandboxPdfEngine`,
+  `probe_sandbox`) and threaded a `Backend` through profiles, assembly, and the local, LangGraph
+  Server, and self-hosted runtimes. `execute` stays hidden from the model; only host code uses
+  the sandbox shell.
+- MDA evaluates `sandbox/__init__.py` with `ast.literal_eval`, so environment-driven arguments
+  are rejected; `sandbox publish|use` generate the literal declaration and `.env` together.
+- Unit tests cover mount paths, artifact mirroring, in-sandbox PDF rendering, and the probe with
+  an in-memory backend; `tests/integration/test_live_sandbox.py` runs the probe for real when
+  `PAID_MEDIA_LIVE_TESTS=1` and a snapshot are set.
+- Live run with the reference project's sandbox-capable key: `sandbox publish` built
+  `paid-media-agent-sandbox-v2` on LangSmith (id `276702e7-...`), `sandbox test` passed all
+  seven checks in 23 s, LangGraph Server in sandbox mode answered `ls /skills` from the sandbox
+  and rendered a report whose PDF was produced inside the sandbox (this Mac has no Pango), the
+  model listed the mirrored `/workspace` artifacts, `mda build` accepted the generated
+  declaration, and `mda dev` provisioned a per-thread sandbox from the same snapshot with skills,
+  wiki, and instructions mounted.
+- Fixes found by that run: the SDK's `create_snapshot_from_dockerfile` uses its `timeout`
+  argument (default 60 s) as the build command timeout and a 10 s HTTP timeout for the capture
+  call, so both are raised; Dockerfile-built snapshots resolve by id, not by `name:latest`, so
+  the id is pinned in `.env` and in the MDA declaration; the sandbox shell ignores image `PATH`,
+  so WeasyPrint is installed into the system Python; Deep Agents rejects path permissions on a
+  backend that can execute, so path rules apply only to the repository backend; artifact writes
+  inside async tools run in a worker thread to satisfy the dev server's blocking-call guard; and
+  sandboxes are created with `delete_after_stop_seconds` because a killed server never runs its
+  exit handler.
+- One LangSmith key had gateway access without sandbox permissions and another the reverse;
+  `LANGSMITH_GATEWAY_API_KEY` plus `PAID_MEDIA_MODEL_API_KEY_ENV` covers that split.
+
 ## 2026-09-02 (sandbox end-to-end as a new developer)
 
 - Ran the whole path in a fresh copy with the LangSmith Gateway key: `uv sync`, `demo`,
@@ -167,3 +201,9 @@ entries except to correct a factual typo with an explicit correction entry.
   tokens: L-corner ticks, a large display title, a hairline step meter, a spent/remaining-style
   metric pair, and a three-segment capability breakdown. No Agent Chat UI. Secrets still stay in
   `.env` and password fields.
+
+## 2026-09-02 (setup wizard: restore original paper design)
+
+- Reverted the Budget Card restyle. The setup console is back to the paper card, chip stepper,
+  capability art tiles, and rounded controls. No Agent Chat UI. Same localhost token, Host
+  allowlist, CSP, and no secret echo.

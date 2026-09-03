@@ -15,10 +15,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="mark-tile" id="brand-mark" aria-hidden="true"></span>
-        <span class="brand-copy">
-          <span class="brand-name">Paid Media Agent</span>
-          <span class="brand-kicker">Local setup</span>
-        </span>
+        <span class="brand-name">Paid Media Agent</span>
       </div>
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-compact" id="view-toggle" type="button">Advanced</button>
@@ -27,14 +24,8 @@
     </header>
 
     <main class="stage" id="wizard">
-      <section class="frame">
-        <span class="corner tl" aria-hidden="true"></span>
-        <span class="corner tr" aria-hidden="true"></span>
-        <span class="corner bl" aria-hidden="true"></span>
-        <span class="corner br" aria-hidden="true"></span>
-        <nav class="meter" id="progress" aria-label="Setup progress"></nav>
-        <section class="screen" id="screen" aria-live="polite"></section>
-      </section>
+      <nav class="progress" id="progress" aria-label="Setup progress"></nav>
+      <section class="screen-host" id="screen" aria-live="polite"></section>
     </main>
 
     <div class="shell" id="advanced" hidden>

@@ -6,6 +6,7 @@ import secrets
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Protocol
 
 from paid_media_agent.domain.analysis import (
     MetricDelta,
@@ -262,11 +263,36 @@ def pdf_renderer_available() -> tuple[bool, str]:
     return True, "ok"
 
 
+class PdfEngine(Protocol):
+    """Where WeasyPrint runs: this process, or a sandbox that has the native libraries."""
+
+    def available(self) -> tuple[bool, str]: ...
+
+    def write_pdf(self, html: str, *, base_url: str, target: Path) -> None: ...
+
+
+class HostPdfEngine:
+    def available(self) -> tuple[bool, str]:
+        return pdf_renderer_available()
+
+    def write_pdf(self, html: str, *, base_url: str, target: Path) -> None:
+        from weasyprint import HTML  # noqa: PLC0415
+
+        HTML(string=html, base_url=base_url).write_pdf(str(target))
+
+
 class ReportRenderer:
-    def __init__(self, out_dir: Path, templates_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        out_dir: Path,
+        templates_dir: Path | None = None,
+        *,
+        pdf_engine: PdfEngine | None = None,
+    ) -> None:
         self._out = out_dir
         self._out.mkdir(parents=True, exist_ok=True)
         self._templates = templates_dir or Path(__file__).parent / "templates"
+        self._pdf = pdf_engine or HostPdfEngine()
 
     def render_html(self, payload: ReportPayload) -> str:
         from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
@@ -285,12 +311,10 @@ class ReportRenderer:
         pdf_path: Path | None = None
         pdf_error: str | None = None
         if want_pdf:
-            available, detail = pdf_renderer_available()
+            available, detail = self._pdf.available()
             if available:
-                from weasyprint import HTML  # noqa: PLC0415
-
                 pdf_path = self._out / f"{payload.report_id}.pdf"
-                HTML(string=html, base_url=str(self._out)).write_pdf(str(pdf_path))
+                self._pdf.write_pdf(html, base_url=str(self._out), target=pdf_path)
             else:
                 pdf_error = detail
         return RenderedReport(html_path, pdf_path, pdf_error)

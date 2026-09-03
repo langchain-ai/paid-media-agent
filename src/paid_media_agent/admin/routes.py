@@ -83,6 +83,10 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     }
     accounts_path = str(_get(detail, "accounts_path") or "")
     real_accounts = accounts_path.endswith("config/accounts.toml")
+    snapshot = str(env.get("PAID_MEDIA_SANDBOX_SNAPSHOT") or "") if isinstance(env, dict) else ""
+    sandbox_backend = (
+        isinstance(env, dict) and str(env.get("PAID_MEDIA_BACKEND") or "local") == "sandbox"
+    )
 
     local = Route(
         id="local",
@@ -288,6 +292,43 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 action=StepAction(
                     kind="accounts", label="Discover accounts", action="accounts_discover"
                 ),
+            ),
+        ),
+    )
+
+    sandbox_route = Route(
+        id="sandbox",
+        title="Sandbox",
+        tagline="The model's files in a LangSmith sandbox, locally and in production",
+        description="Build the image from sandbox/Dockerfile on LangSmith (no local Docker), point every runtime at it, and prove it can host the agent before you deploy.",
+        steps=(
+            Step(
+                id="sb_publish",
+                title="Publish the snapshot",
+                description="LangSmith builds sandbox/Dockerfile and the result is declared for our runtimes and for MDA.",
+                status="done" if snapshot else "todo",
+                cli="uv run paid-media-agent sandbox publish --name paid-media-agent-sandbox",
+                action=StepAction(kind="command", label="Copy command"),
+            ),
+            Step(
+                id="sb_backend",
+                title="Run against the sandbox",
+                description="langgraph dev, serve, and the console then mount skills and the wiki in the sandbox, mirror artifacts, and render PDFs inside it.",
+                status="done" if sandbox_backend else "optional",
+                cli="uv run paid-media-agent config set PAID_MEDIA_BACKEND=sandbox",
+                action=StepAction(
+                    kind="form",
+                    label="Save",
+                    keys=("PAID_MEDIA_BACKEND", "PAID_MEDIA_SANDBOX_SNAPSHOT"),
+                ),
+            ),
+            Step(
+                id="sb_test",
+                title="Probe the sandbox",
+                description="Opens one sandbox, checks Python, mounts, the workspace, an in-sandbox PDF, and secret hygiene, then deletes it.",
+                status="blocked" if not _get(detail, "mda", "langsmith_key_set") else "todo",
+                cli="uv run paid-media-agent sandbox test --json",
+                action=StepAction(kind="test", label="Probe sandbox", action="sandbox_test"),
             ),
         ),
     )
@@ -535,4 +576,13 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             ),
         ),
     )
-    return [local, pipeboard, direct, slack_route, mda_route, self_route, writes_route]
+    return [
+        local,
+        pipeboard,
+        direct,
+        sandbox_route,
+        slack_route,
+        mda_route,
+        self_route,
+        writes_route,
+    ]

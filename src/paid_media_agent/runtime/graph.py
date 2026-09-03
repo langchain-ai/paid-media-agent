@@ -15,6 +15,7 @@ from langgraph.graph.state import CompiledStateGraph
 from paid_media_agent.config import Settings
 from paid_media_agent.runtime.local import compile_graph
 from paid_media_agent.runtime.mda import build_mda_components
+from paid_media_agent.runtime.sandbox import build_backend
 
 STUDIO_PORT = 2024
 STUDIO_URL = f"https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:{STUDIO_PORT}"
@@ -31,7 +32,8 @@ def project_root() -> Path:
 def _build() -> CompiledStateGraph[Any, Any, Any, Any]:
     root = project_root()
     settings = Settings(_env_file=str(root / ".env"))
-    components = build_mda_components(settings, project_root=root)
+    backend = build_backend(settings, project_root=root)
+    components = build_mda_components(settings, project_root=root, backend=backend)
     return compile_graph(components, project_root=root, checkpointer=None)
 
 

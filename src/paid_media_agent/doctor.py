@@ -259,6 +259,16 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             "WeasyPrint ready" if pdf_ok else f"HTML only; {pdf_detail}",
         )
     )
+    backend = settings.paid_media_backend
+    checks.append(
+        Check(
+            "backend",
+            "ok",
+            "local (repository filesystem)"
+            if backend == "local"
+            else f"sandbox (snapshot {settings.paid_media_sandbox_snapshot or 'platform default'})",
+        )
+    )
     checks.append(
         Check(
             "report_html",

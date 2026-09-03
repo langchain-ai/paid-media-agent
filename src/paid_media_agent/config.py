@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from paid_media_agent.domain.common import Platform
 
 RuntimeName = Literal["local", "mda", "self_hosted"]
+BackendName = Literal["local", "sandbox"]
 SlackTransport = Literal["socket_mode", "http"]
 
 DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
@@ -111,6 +112,11 @@ class Settings(BaseSettings):
     paid_media_model_api_key_env: str | None = None
     """Env var holding the model API key when the provider does not read its default one."""
     paid_media_runtime: RuntimeName = "local"
+    paid_media_backend: BackendName = "local"
+    """Where the model's files live: the repository, or a LangSmith sandbox per process."""
+    paid_media_sandbox_snapshot: str | None = None
+    """Snapshot built from sandbox/Dockerfile. Empty means the platform default image."""
+    paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
     paid_media_log_level: str = "INFO"
     paid_media_workspace_root: Path = Path("workspace")
     paid_media_account_config_path: Path = Path("config/accounts.example.toml")

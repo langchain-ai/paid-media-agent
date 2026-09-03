@@ -61,6 +61,7 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
         "local",
         "pipeboard",
         "direct",
+        "sandbox",
         "slack",
         "mda",
         "self_hosted",

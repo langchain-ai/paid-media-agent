@@ -2,6 +2,14 @@
 
 ## Unreleased (2026-09-01)
 
+### Added (sandbox parity)
+
+- `PAID_MEDIA_BACKEND=sandbox`: the model's filesystem in a LangSmith sandbox built from
+  `sandbox/Dockerfile`, with skills and the wiki at the repository's paths, host artifacts
+  mirrored under `/workspace`, and PDF reports rendered inside the sandbox.
+- `paid-media-agent sandbox publish|use|test` and a console route for building, declaring, and
+  probing the snapshot; `mda check` verifies the MDA declaration matches `.env`.
+
 ### Fixed
 
 - The LangGraph Server graph factory is now async and builds off the event loop; it previously
@@ -26,11 +34,6 @@
   with an in-page question and LangGraph Studio, managed vs self-hosted path) plus an advanced view
   over the same host actions as the CLI (`config`, `accounts`, `catalog`, `policy`, `test`, `mda`,
   `writes`).
-- Setup wizard first-run pass: fixture demo as the welcome primary, featured
-  Anthropic card with More providers, auto-advance after a green test, designed
-  receipts, and three next steps on Done. No Agent Chat UI. The wizard frame
-  follows the Watermelon Budget Card anatomy (corner ticks, display title,
-  thin meter, metric pair, segmented breakdown) in CORE 14 tokens.
 - Setup wizard tuned for engineers: larger reading scale, the runtime facts it actually runs on,
   and the equivalent shell command under every step.
 - Generated onboarding art (gpt-image-2): light and dark glyph-field backgrounds and three

@@ -8,7 +8,7 @@ import re
 import secrets
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -58,11 +58,22 @@ class ArtifactError(Exception):
     pass
 
 
-class ArtifactStore:
-    """Writes JSON artifacts under a workspace root and verifies hashes on read."""
+class FileSink(Protocol):
+    """Receives a copy of every workspace file the host writes (the sandbox mirror)."""
 
-    def __init__(self, root: Path) -> None:
+    def put(self, relative_path: str, data: bytes) -> None: ...
+
+
+class ArtifactStore:
+    """Writes JSON artifacts under a workspace root and verifies hashes on read.
+
+    With a `mirror`, every written file is also copied to the model's filesystem so the paths
+    the model sees are the paths host tools wrote.
+    """
+
+    def __init__(self, root: Path, *, mirror: FileSink | None = None) -> None:
         self.root = root.resolve()
+        self._mirror = mirror
         for sub in ("in", "out", "analysis"):
             (self.root / sub).mkdir(parents=True, exist_ok=True)
 
@@ -120,7 +131,17 @@ class ArtifactStore:
         )
         envelope = {"metadata": metadata.model_dump(mode="json"), "payload": payload}
         path.write_text(json.dumps(envelope, sort_keys=True, default=str), encoding="utf-8")
+        self.publish(path)
         return metadata
+
+    def publish(self, path: Path) -> None:
+        """Mirror a file under the workspace root to the model's filesystem, if one is attached."""
+        if self._mirror is None:
+            return
+        resolved = path.resolve()
+        if self.root not in resolved.parents:
+            raise ArtifactError("artifact path escapes workspace")
+        self._mirror.put(resolved.relative_to(self.root).as_posix(), resolved.read_bytes())
 
     def read(self, artifact_id: str) -> ArtifactRecord:
         if not ARTIFACT_ID_RE.match(artifact_id):

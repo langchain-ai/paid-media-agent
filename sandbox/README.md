@@ -1,25 +1,24 @@
-# Sandbox snapshot
+# Sandbox
 
-`Dockerfile` is the reproducible recipe: Python 3.13, ripgrep, jq, WeasyPrint native libraries,
-and the locked dependencies. It contains no instructions, skills, wiki content, or secrets.
+`Dockerfile` is the reproducible recipe for the model's filesystem in production: Python 3.13,
+ripgrep, jq, WeasyPrint with its native libraries, and Jinja2. It copies no instructions,
+skills, wiki content, or secrets; those are uploaded when a sandbox opens.
 
-```bash
-docker build -f sandbox/Dockerfile -t paid-media-agent-sandbox .
-docker run --rm paid-media-agent-sandbox
-```
-
-To reuse an existing snapshot, run the compatibility contract inside it:
+There is no local container. LangSmith builds the image and runs the sandbox; `mda dev`,
+`langgraph dev`, `serve`, and the console all talk to the same remote sandbox when
+`PAID_MEDIA_BACKEND=sandbox`.
 
 ```bash
-uv run paid-media-agent doctor --snapshot
+uv run paid-media-agent sandbox publish --name paid-media-agent-sandbox   # build + declare
+uv run paid-media-agent sandbox use <existing-snapshot-name>              # declare only
+uv run paid-media-agent sandbox test                                      # open, probe, delete
+uv run paid-media-agent config set PAID_MEDIA_BACKEND=sandbox
 ```
 
-A snapshot is reusable only while that check passes. For MDA, set `PAID_MEDIA_SANDBOX_SNAPSHOT`
-to the snapshot name so `sandbox/__init__.py` declares it.
+`publish` and `use` write the snapshot name to `.env` (read by our runtimes) and generate
+`sandbox/__init__.py` (read statically by Managed Deep Agents, which only accepts a literal).
+`mda check` reports when the two disagree. Without `sandbox/__init__.py`, MDA runs the agent
+without a sandbox, which is enough for reads, analysis, HTML reports, and governed writes.
 
-## Managed Deep Agents
-
-MDA requires `sandbox/__init__.py` to export a named `sandbox` when the file exists, so the
-declaration is opt-in: copy `sandbox/example_sandbox.py` to `sandbox/__init__.py` after the
-snapshot is published. Without it, `mda deploy` runs the agent without a sandbox, which is enough
-for reads, analysis, reports, and governed writes, since provider calls stay host-side.
+`test` proves the snapshot can host the agent: Python, uploaded skills and wiki pages, the
+`/workspace` layout, a PDF rendered inside the sandbox, and no key-like environment values.

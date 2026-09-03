@@ -128,6 +128,31 @@ The setup page's "Try it" step starts and stops the same server and links to Stu
 is the managed equivalent for the MDA path. Neither needs a Pipeboard token: without one the
 fixture accounts are used.
 
+## Sandbox
+
+`PAID_MEDIA_BACKEND` decides where the model's files live. `local` (default) roots the model at
+the repository. `sandbox` opens one LangSmith sandbox per process from the snapshot named by
+`PAID_MEDIA_SANDBOX_SNAPSHOT`: skills and the business wiki are uploaded at the same absolute
+paths (`/skills`, `/docs/business-context`), every artifact host tools write is mirrored under
+`/workspace`, and PDF reports render inside the sandbox, where the native libraries are baked
+in. The model never gets a shell in either mode.
+
+```bash
+uv run paid-media-agent sandbox publish --name paid-media-agent-sandbox   # LangSmith builds sandbox/Dockerfile
+uv run paid-media-agent sandbox test --json                              # open, probe, delete
+uv run paid-media-agent config set PAID_MEDIA_BACKEND=sandbox
+uv run langgraph dev                                                      # now runs against the sandbox
+```
+
+`publish` (or `sandbox use <name>` for an existing snapshot) writes the name to `.env` and
+generates `sandbox/__init__.py`, the literal declaration Managed Deep Agents reads. MDA provisions
+its own sandbox per thread from that file; `mda check` warns when the two disagree. Both the
+build and the probe need a LangSmith key with sandbox permissions; a key without them fails with
+"No matching RBAC permission". If the gateway key is a different key, keep it in
+`LANGSMITH_GATEWAY_API_KEY` and set `PAID_MEDIA_MODEL_API_KEY_ENV=LANGSMITH_GATEWAY_API_KEY`.
+Snapshots built from a Dockerfile resolve by id, which is what `publish` stores. A process
+sandbox is deleted on exit, and by the platform shortly after its idle TTL if the process died.
+
 ## Model providers
 
 `PAID_MEDIA_MODEL` takes `provider:model`. Native provider packages ship as extras (`anthropic`,

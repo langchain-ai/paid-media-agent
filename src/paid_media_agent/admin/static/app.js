@@ -3,8 +3,7 @@
   "use strict";
   const LOGOS = window.PMA_LOGOS || {};
   const state = { token: "", view: "wizard", step: null, routeId: "local", status: null, routes: [], processes: [], config: null,
-    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, moreProviders: false,
-    session: { modelTested: null, catalog: null, preflight: null, slack: null, db: null, answer: null, demo: null, draft: null } };
+    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, session: { modelTested: null, catalog: null, preflight: null, slack: null, db: null, answer: null } };
   const $ = (sel, root = document) => root.querySelector(sel);
   const el = (tag, attrs = {}, children = []) => {
     const node = document.createElement(tag);
@@ -25,11 +24,6 @@
   const facts = (items) => el("div", { class: "facts" }, items.map((t) => el("span", { class: "fact", text: t })));
   const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: command })]);
   const intro = (logoName, title, note, actions = null, cls = "") => el("div", { class: "intro" }, [logo(logoName, cls), el("div", {}, [el("span", { class: "name", text: title }), el("span", { class: "note", text: note }), actions])]);
-  const receipt = (tone, title, body) => el("div", { class: "receipt", "data-tone": tone }, [
-    el("div", { class: "receipt-kicker" }, [badge(tone, (tone || "info").toUpperCase()), el("span", { class: "receipt-title", text: title })]),
-    body ? el("p", { class: "receipt-body", text: body }) : null,
-  ]);
-  const quiet = (text, onclick) => el("button", { class: "link-quiet", type: "button", onclick, text });
 
   // ---- fragment: #token=...&view=...&step=...&route=...
   function readFragment() {
@@ -120,32 +114,16 @@
     if (!known.includes(state.step)) state.step = firstOpenStep();
     writeFragment();
     renderProgress();
-    renderScreen(false);
+    renderScreen();
   }
 
   function renderProgress() {
     const nav = $("#progress");
     nav.replaceChildren();
-    const steps = stepList();
-    const currentIdx = Math.max(0, steps.findIndex((s) => s.id === state.step));
-    const track = el("div", { class: "meter-track" });
-    for (const [index, step] of steps.entries()) {
-      const current = step.id === state.step;
-      const ahead = !step.done && !current && index > currentIdx;
-      track.append(el("button", {
-        class: "chip", type: "button", "aria-current": current ? "step" : null,
-        "aria-label": step.label,
-        "data-done": step.done ? "true" : "false", "data-ahead": ahead ? "true" : "false",
-        onclick: () => go(step.id),
-      }, [el("span", { class: "seg", "aria-hidden": "true" }), el("span", { class: "chip-label", text: step.label })]));
+    for (const step of stepList()) {
+      const chip = el("button", { class: "chip", type: "button", "aria-current": step.id === state.step ? "step" : null, "data-done": step.done ? "true" : "false", onclick: () => go(step.id) }, [check(step.done), el("span", { text: step.label })]);
+      nav.append(chip);
     }
-    nav.append(
-      el("div", { class: "meter-head" }, [
-        el("span", { class: "kicker", text: "Setup" }),
-        el("span", { class: "step-switch", text: `${currentIdx + 1} of ${steps.length} · ${steps[currentIdx]?.label || ""}` }),
-      ]),
-      track,
-    );
   }
 
   let screenToken = 0;
@@ -161,23 +139,19 @@
     const host = $("#screen");
     const token = ++screenToken;
     const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
-    const nodes = [].concat(build()).filter(Boolean);
-    const swap = () => {
-      if (token !== screenToken) return;
-      host.replaceChildren(...nodes);
-      if (animate) {
-        host.setAttribute("data-enter", "");
-        requestAnimationFrame(() => requestAnimationFrame(() => host.removeAttribute("data-enter")));
-      }
-    };
-    if (animate && host.childElementCount) {
-      host.setAttribute("data-exit", "");
-      setTimeout(() => { host.removeAttribute("data-exit"); swap(); }, 90);
-    } else swap();
+    const next = el("section", { class: "screen", "data-enter": animate ? "" : null }, build());
+    const current = host.firstElementChild;
+    const swap = () => { if (token !== screenToken) return; host.replaceChildren(next); requestAnimationFrame(() => requestAnimationFrame(() => next.removeAttribute("data-enter"))); };
+    if (current && animate) { current.setAttribute("data-exit", ""); setTimeout(swap, 110); } else swap();
   }
   const refreshScreen = () => { renderProgress(); renderScreen(false); };
 
   // ---- screens
+  const ILLUSTRATIONS = {
+    analyze: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="bar" x="18" y="34" width="14" height="22" rx="2"/><rect class="bar" x="40" y="22" width="14" height="34" rx="2"/><rect class="bar hi" x="62" y="12" width="14" height="44" rx="2"/><rect class="bar" x="84" y="28" width="14" height="28" rx="2"/><rect class="bar" x="106" y="38" width="14" height="18" rx="2"/><path class="ln" d="M140 44 L156 30 L170 36 L186 16"/><rect class="txt" x="140" y="52" width="46" height="3" rx="1.5"/></svg>',
+    approve: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="ln" x="14" y="10" width="172" height="44" rx="8"/><rect class="txt" x="26" y="20" width="70" height="4" rx="2"/><rect class="txt" x="26" y="30" width="46" height="3" rx="1.5"/><rect class="txt" x="26" y="38" width="58" height="3" rx="1.5"/><rect class="ok" x="118" y="26" width="30" height="14" rx="7"/><path class="okink" d="M128 33.5l2.6 2.6 5-5" stroke="var(--positive)" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect class="txt" x="154" y="26" width="24" height="14" rx="7"/></svg>',
+    report: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="ln" x="60" y="6" width="80" height="58" rx="6"/><rect class="txt" x="70" y="16" width="40" height="4" rx="2"/><rect class="txt" x="70" y="26" width="60" height="3" rx="1.5"/><rect class="txt" x="70" y="33" width="52" height="3" rx="1.5"/><rect class="bar hi" x="70" y="42" width="24" height="12" rx="2"/><rect class="bar" x="98" y="46" width="14" height="8" rx="2"/><rect class="bar" x="116" y="44" width="14" height="10" rx="2"/></svg>',
+  };
   const EXAMPLES = [
     "Compare the last 14 days with the prior 14 days.",
     "Where is spend rising while CPA gets worse?",
@@ -185,83 +159,46 @@
   ];
 
   function screenWelcome() {
-    const demo = state.session.demo;
-    const start = () => go(firstOpenStep() === "done" ? "model" : firstOpenStep());
-    const actions = demo && demo.status === "ok"
-      ? [el("button", { class: "btn btn-primary btn-block", type: "button", text: "Start setup", onclick: start })]
-      : [
-        el("button", { class: "btn btn-primary btn-block", type: "button", text: "Run the fixture demo", onclick: (ev) => demoInline(ev.currentTarget) }),
-        el("button", { class: "link-quiet", type: "button", text: "Start setup", onclick: start }),
-      ];
     return [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Paid Media Agent" }),
-        el("p", { class: "hero-sub", text: "Run it locally with fixture data. Connect a model and ad accounts when you want live reads. Every write still waits for a signed approval." }),
+        el("p", { class: "hero-sub", text: "One Deep Agents core over your ad accounts. The model chooses evidence and explains it; code owns the arithmetic, the tool authorization, and every provider mutation behind a signed approval." }),
       ]),
-      el("div", { class: "pair" }, [
-        stat("Reads", "Fixture data"),
-        stat("Writes", "Need approval"),
-      ]),
-      el("div", { class: "break" }, [
-        el("span", { class: "kicker", text: "Capabilities" }),
-        el("div", { class: "break-track", "aria-hidden": "true" }, [
-          el("span", { class: "break-seg", "data-tone": "info" }),
-          el("span", { class: "break-seg", "data-tone": "positive" }),
-          el("span", { class: "break-seg", "data-tone": "primary" }),
-        ]),
-        el("div", { class: "cap-row" }, [
-          cap("Analyze", "Period comparison in Decimal, per platform."),
-          cap("Change", "One mutation, bounded readback, honest receipt."),
-          cap("Report", "HTML and PDF from a versioned payload."),
-        ]),
+      facts(["deepagents + langgraph", "pipeboard mcp", "deny-by-default tools", "hitl approvals"]),
+      el("div", { class: "caps-grid stagger" }, [
+        cap("analyze", "Analyze", "Period comparison in Decimal, per platform, with missing metrics kept missing and totals suppressed when sources disagree."),
+        cap("approve", "Change", "Typed ChangeSet, digest-bound approval, one mutation attempt, bounded readback, honest receipt."),
+        cap("report", "Report", "Versioned payload rendered by code to HTML and PDF; every value reconciles to a source artifact."),
       ]),
       el("div", { class: "form" }, [
-        el("span", { class: "kicker", text: "Ask it things like" }),
+        el("span", { class: "mini", text: "Ask it things like" }),
         el("div", { class: "prompts" }, EXAMPLES.slice(0, 2).map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { state.session.draft = q; go("try"); } }))),
       ]),
-      demo ? receipt(demo.status, demo.title, demo.body) : el("div", { class: "status-line", id: "welcome-status" }),
-      el("div", { class: "actions stack" }, actions),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn btn-primary", type: "button", text: "Start setup", onclick: () => go(firstOpenStep() === "done" ? "model" : firstOpenStep()) }),
+        el("button", { class: "btn btn-outline", type: "button", text: "Run the fixture demo", onclick: (ev) => demoInline(ev.currentTarget) }),
+      ]),
       cli("paid-media-agent demo --with-proposal"),
+      el("div", { class: "status-line", id: "welcome-status" }),
     ];
   }
 
-  const cap = (name, note) => el("div", { class: "cap" }, [
-    el("span", { class: "name", text: name }),
-    el("span", { class: "note", text: note }),
-  ]);
-  const stat = (label, value) => el("div", { class: "stat" }, [
-    el("span", { class: "kicker", text: label }),
-    el("span", { class: "stat-value", text: value }),
-  ]);
+  const cap = (art, name, note) => {
+    const tile = el("div", { class: "art-tile" });
+    const img = el("img", { src: `/static/art-${art}.webp`, alt: "", decoding: "async" });
+    img.addEventListener("error", () => { tile.innerHTML = ILLUSTRATIONS[art]; });
+    tile.append(img);
+    return el("div", { class: "cap" }, [tile, el("span", { class: "name", text: name }), el("span", { class: "note", text: note })]);
+  };
 
   async function demoInline(button) {
     const line = $("#welcome-status");
     await busy(button, async () => {
-      if (line) setLine(line, "info", "Running the fixture demo through the real graph…");
+      setLine(line, "info", "Running the fixture demo through the real graph…");
       const result = await runAction("demo_run", { with_proposal: true });
-      const status = result.detail?.receipt?.status;
-      state.session.demo = {
-        status: result.status,
-        title: result.status === "ok" ? "Demo finished" : (result.summary || "Demo failed"),
-        body: status
-          ? `Analysis reconciled. A fake budget change was approved and verified (${status}).`
-          : result.summary,
-      };
-      refreshScreen();
+      const receipt = result.detail?.receipt?.status;
+      setLine(line, result.status, receipt ? `Demo finished. Analysis reconciled and a fake budget change was approved and verified (${receipt}).` : result.summary);
     });
-  }
-
-  function providerCard(p, { featured = false } = {}) {
-    const lead = featured || p.id === "anthropic";
-    return el("button", {
-      class: `option${featured ? " lead" : " compact"}`, type: "button",
-      "aria-pressed": state.picked === p.id ? "true" : "false",
-      onclick: () => { state.picked = p.id; state.session.modelTested = null; if (p.id !== "anthropic") state.moreProviders = true; refreshScreen(); },
-    }, [
-      el("div", { class: "row" }, [logo(p.logo, p.logo === "langchain" ? "lc" : ""), el("span", { class: "name", text: p.label })]),
-      el("span", { class: "note", text: p.note }),
-      lead ? el("span", { class: "flag" }, [badge("info", "Recommended")]) : null,
-    ]);
   }
 
   function screenModel() {
@@ -269,31 +206,21 @@
     const s = derive();
     const presets = d.model_presets || [];
     const currentSpec = d.model?.spec || "";
-    const featured = presets.find((p) => p.id === "anthropic") || presets.find((p) => p.recommended) || presets[0];
-    const rest = presets.filter((p) => p !== featured);
     if (!state.picked) {
       const byModel = presets.find((p) => p.id !== "custom" && currentSpec && p.model === currentSpec);
       const byKey = presets.find((p) => p.id !== "custom" && d.model_key_env && p.key === d.model_key_env && currentSpec.startsWith(p.model.split(":")[0] + ":"));
-      state.picked = (byModel || byKey)?.id || (s.modelDone ? "custom" : (featured?.id || "anthropic"));
+      state.picked = (byModel || byKey)?.id || (s.modelDone ? "custom" : null);
     }
-    if (state.picked && featured && state.picked !== featured.id) state.moreProviders = true;
-    const picker = el("div", { class: "provider-picker" }, [
-      featured ? el("div", { class: "options lead stagger" }, [providerCard(featured, { featured: true })]) : null,
-      rest.length ? el("button", {
-        class: "more-toggle", type: "button", "aria-expanded": state.moreProviders ? "true" : "false",
-        onclick: () => { state.moreProviders = !state.moreProviders; refreshScreen(); },
-        text: state.moreProviders ? "Fewer providers" : `More providers (${rest.length})`,
-      }) : null,
-      state.moreProviders && rest.length ? el("div", { class: "options stagger" }, rest.map((p) => providerCard(p))) : null,
-    ]);
+    const cards = el("div", { class: "options stagger" }, presets.map((p) => el("button", { class: "option compact", type: "button", "aria-pressed": state.picked === p.id ? "true" : "false", onclick: () => { state.picked = p.id; state.session.modelTested = null; refreshScreen(); } }, [
+      el("div", { class: "row" }, [logo(p.logo, p.logo === "langchain" ? "lc" : ""), el("span", { class: "name", text: p.label })]),
+      el("span", { class: "note" }, [el("span", { text: p.note }), p.recommended ? badge("info", "Recommended") : null]),
+    ])));
     const nodes = [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Model" }),
-        el("p", { class: "hero-sub", text: s.modelDone
-          ? `${currentSpec} is saved in .env. Anthropic and OpenAI use native tool search; everything else uses the portable selector.`
-          : "Pick a provider, paste a key, we test one call. The key stays in .env on this machine." }),
+        el("p", { class: "hero-sub", text: s.modelDone ? `${currentSpec} is configured. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector.` : "PAID_MEDIA_MODEL takes provider:model. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector with a bounded tool set." }),
       ]),
-      picker,
+      cards,
     ];
     const preset = presets.find((p) => p.id === state.picked);
     if (preset) {
@@ -306,7 +233,7 @@
       const baseInput = el("input", { class: "input", id: "w-base", value: preset.base_url || (isCustom ? d.model_base_url || "" : ""), placeholder: "https://api.example.com/v1 (optional)", spellcheck: "false" });
       const form = el("form", { class: "form" }, [
         el("div", { class: "field-row" }, [
-          el("div", { class: "field" }, [el("label", { for: "w-model", text: "Model" }), modelInput, el("span", { class: "hint", text: "provider:model. Edit the id to what your account allows." })]),
+          el("div", { class: "field" }, [el("label", { for: "w-model", text: "Model" }), modelInput, el("span", { class: "hint", text: "provider:model. Edit the model id to what your account allows." })]),
           el("div", { class: "field" }, [el("label", { for: "w-key", text: "API key" }), keyInput, el("span", { class: "hint" }, [el("span", { text: "Stored as " }), el("code", { class: "mono", text: isCustom ? "the name you choose" : preset.key })])]),
         ]),
         el("div", { class: "field-row" }, [
@@ -319,15 +246,7 @@
       const line = el("div", { class: "status-line", id: "model-status" });
       if (state.session.modelTested) setLine(line, state.session.modelTested.status, state.session.modelTested.text);
       const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test" });
-      form.append(
-        line,
-        el("div", { class: "actions" }, [
-          save,
-          el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("pipeboard") }),
-          quiet("Skip for now", () => go("pipeboard")),
-        ]),
-        cli("paid-media-agent test model"),
-      );
+      form.append(line, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("pipeboard") })]), cli("paid-media-agent test model"));
       form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(save, async () => {
         const keyName = (isCustom ? keyNameInput.value : preset.key).trim();
         if (!/^[A-Z][A-Z0-9_]{1,40}_API_KEY$/.test(keyName)) { setLine(line, "fail", "Key name must look like MY_PROVIDER_API_KEY."); return; }
@@ -338,10 +257,11 @@
         setLine(line, "info", "Saved. Testing the model…");
         const test = await runAction("model_test");
         state.session.modelTested = { status: test.status, text: test.status === "ok" ? `${test.summary}. Tool selection: ${test.detail.selection}.` : test.summary };
-        if (test.status === "ok") state.step = "pipeboard";
         await loadStatus();
       }); });
       nodes.push(form);
+    } else {
+      nodes.push(el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Skip", onclick: () => go("pipeboard") })]));
     }
     return nodes;
   }
@@ -351,9 +271,9 @@
     const s = derive();
     const nodes = [el("div", { class: "hero" }, [
       el("h1", { class: "hero-title", text: "Ad accounts" }),
-      el("p", { class: "hero-sub", text: "Connect Pipeboard when you have live accounts. Until then the fixture catalog works." }),
+      el("p", { class: "hero-sub", text: "Pipeboard owns the platform OAuth and exposes each one as a Streamable HTTP MCP server. The host loads that catalog, classifies every tool, and denies anything without a read-only hint." }),
     ])];
-    const introNode = intro("pipeboard", "Pipeboard", "Google, Meta, and Reddit logins live there. Create a scoped read-only token and paste it here.",
+    const introNode = intro("pipeboard", "Pipeboard", "Handles the Google, Meta, and Reddit logins. Connect them there, create a scoped read-only token, and paste it here.",
       el("div", { class: "actions" }, [el("a", { class: "btn btn-outline btn-compact", href: "https://pipeboard.co/api-tokens", target: "_blank", rel: "noopener", text: "Open Pipeboard" })]));
     const tokenInput = el("input", { class: "input", id: "w-token", type: "password", placeholder: s.tokenSet ? "Token already set. Paste to replace." : "Pipeboard API token", autocomplete: "off" });
     const connect = el("button", { class: "btn btn-primary", type: "submit", text: s.tokenSet ? "Reconnect" : "Connect" });
@@ -374,17 +294,9 @@
       runAction("accounts_discover").then((disc) => { state.discovered = disc.detail.accounts || []; refreshScreen(); }).catch(() => {});
     }
     if (state.discovered && state.discovered.length) nodes.push(accountsPicker());
-    else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `No token yet. Reads use the fixture aliases: ${(d.accounts || []).map((a) => a.alias).join(", ") || "demo accounts"}.` }));
-    nodes.push(el("p", { class: "sub" }, [
-      el("span", { text: "LinkedIn Ads, X Ads, and OpenAI Ads are not on Pipeboard. " }),
-      el("a", { href: "#", text: "Direct platforms", onclick: (ev) => { ev.preventDefault(); state.view = "advanced"; state.routeId = "direct"; render(); } }),
-      el("span", { text: " takes their credentials and adds them to the same catalog." }),
-    ]));
+    else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `No token yet, so reads resolve against the fixture catalog: ${(d.accounts || []).map((a) => a.alias).join(", ")}.` }));
     nodes.push(
-      el("div", { class: "actions" }, [
-        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") }),
-        quiet("Skip for now", () => go("try")),
-      ]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]),
       cli("paid-media-agent accounts discover"),
     );
     return nodes;
@@ -427,7 +339,6 @@
       const disc = await runAction("accounts_discover");
       state.discovered = disc.detail.accounts || [];
       setLine(line, "ok", `${ok} account${ok === 1 ? "" : "s"} mapped.`);
-      if (ok > 0) state.step = "try";
       await loadStatus();
     }));
     return el("div", { class: "form" }, [el("h2", { class: "section-title", text: "Choose the accounts to use" }), list, line, el("div", { class: "actions" }, [map])]);
@@ -443,10 +354,7 @@
     question.value = state.session.draft || EXAMPLES[0];
     const ask = el("button", { class: "btn btn-primary", type: "submit", text: "Ask", disabled: s.modelDone ? null : true });
     const line = el("div", { class: "status-line", id: "ask-status" });
-    const answerBox = el("div", { class: "answer", hidden: state.session.answer ? null : true }, [
-      el("div", { class: "receipt-kicker" }, [badge("ok", "OK"), el("span", { class: "receipt-title", text: "Answer" })]),
-      el("pre", { class: "answer-body", text: state.session.answer || "" }),
-    ]);
+    const answerBox = el("div", { class: "answer", hidden: state.session.answer ? null : true, text: state.session.answer || "" });
     const form = el("form", { class: "form" }, [
       el("div", { class: "field" }, [el("label", { for: "w-q", text: "Ask the agent" }), question]),
       el("div", { class: "prompts" }, EXAMPLES.map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { question.value = q; } }))),
@@ -458,14 +366,12 @@
       const result = await runAction("ask", { question: question.value });
       if (!result.ok) { setLine(line, "fail", result.summary); return; }
       state.session.answer = result.detail.answer;
-      answerBox.hidden = false;
-      const body = answerBox.querySelector(".answer-body");
-      if (body) body.textContent = result.detail.answer;
+      answerBox.hidden = false; answerBox.textContent = result.detail.answer;
       setLine(line, "ok", `Answered with ${d.model?.spec} (${result.detail.selection} tool selection).`);
       renderProgress();
     }); });
     const studioBlock = el("div", { class: "block" }, [
-      intro("langchain", "LangGraph Studio", "Optional. Starts a local server on 127.0.0.1:2024 so you can watch tool calls and the approval interrupt.",
+      intro("langchain", "LangGraph Studio", "Starts a local LangGraph Server for this agent and opens Studio, where you can watch every tool call and approval interrupt.",
         el("div", { class: "actions" }, [
           ...(studio.installed ? [processButton("studio", "Start Studio", true, false, !s.modelDone), el("a", { class: "btn btn-outline", href: studio.url, target: "_blank", rel: "noopener", text: "Open Studio" })] : [el("code", { class: "mono", text: "uv sync --extra studio" }), el("span", { class: "mini", text: "installs the local server" })]),
         ]), "lc"),
@@ -474,7 +380,7 @@
     return [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Try it" }),
-        el("p", { class: "hero-sub", text: "One question through the same compiled graph your deploy will run." }),
+        el("p", { class: "hero-sub", text: "The question runs through the same compiled graph the deployment uses. Studio serves it on 127.0.0.1:2024 so you can step through tool calls, offloaded artifacts, and the approval interrupt." }),
       ]),
       form,
       studioBlock,
@@ -506,20 +412,19 @@
     const choose = async (button, runtime) => busy(button, async () => { await saveConfig({ PAID_MEDIA_RUNTIME: runtime }); await loadStatus(); go(runtime === "mda" ? "mda" : "selfhost"); });
     const card = (id, logoNode, title, note, bullets, pressed, recommended) => el("button", { class: "option", type: "button", "aria-pressed": pressed ? "true" : "false", onclick: (ev) => choose(ev.currentTarget, id) }, [
       el("div", { class: "row" }, [logoNode, el("span", { class: "name", text: title })]),
-      el("span", { class: "note", text: note }),
+      el("span", { class: "note" }, [recommended ? el("b", { class: "rec", text: "Recommended · " }) : null, el("span", { text: note })]),
       el("ul", {}, bullets.map((b) => el("li", {}, [tick(), el("span", { text: b })]))),
-      recommended ? el("span", { class: "pick" }, [badge("info", "Recommended")]) : null,
     ]);
     return [
       el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Where it lives" }),
-        el("p", { class: "hero-sub", text: "Same agent either way. Managed hosts threads and Slack. Self-host keeps Postgres and the Slack app yours." }),
+        el("h1", { class: "hero-title", text: "Runtime" }),
+        el("p", { class: "hero-sub", text: "Both compile the same AgentComponents. Managed supplies the backend, threads, and Slack app; self-hosting gives you Postgres, your own Slack app, and the FastAPI boundary." }),
       ]),
       el("div", { class: "options two stagger" }, [
         card("mda", logo("langchain", "lc"), "Managed Deep Agents", "One command deploy on LangSmith Cloud.", ["mda dev runs it locally with Studio", "Slack app provisioned on first deploy", "Managed threads, sandbox, and schedules", "Secrets forwarded from your .env"], s.runtime === "mda", true),
         card("self_hosted", logo("slack"), "Self-host with Slack", "Your Postgres, your Slack app, your API.", ["Block Kit review cards with edits", "Socket Mode, no public URL needed", "Full control of data and auth"], s.runtime === "self_hosted", false),
       ]),
-      el("div", { class: "actions" }, [quiet("Stay local", () => go("done"))]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Stay local", onclick: () => go("done") })]),
     ];
   }
 
@@ -546,7 +451,7 @@
     }); });
     const nodes = [el("div", { class: "hero" }, [
       el("h1", { class: "hero-title", text: "Managed Deep Agents" }),
-      el("p", { class: "hero-sub", text: "Deploy compiles agent.py, skills, and the Slack channel. Non-reserved .env values become deployment secrets." }),
+      el("p", { class: "hero-sub", text: "agent.py, instructions.md, skills/, and channels/slack.py are the project files. Deploy compiles them, forwards non-reserved .env values as deployment secrets, and provisions the Slack app on first run." }),
     ]), form];
     if (preflight) {
       nodes.push(el("ul", { class: "checklist" }, items.map(([label, done]) => el("li", { "data-done": done ? "true" : "false" }, [check(!!done), el("span", { text: label })]))));
@@ -620,7 +525,7 @@
     return [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Slack and storage" }),
-        el("p", { class: "hero-sub", text: "Socket Mode needs no public URL. Postgres keeps threads and receipts across restarts; skip it to stay in memory." }),
+        el("p", { class: "hero-sub", text: "Socket Mode needs no public URL. Postgres holds checkpoints, proposals, approval claims, and receipts; without it the runtime keeps them in memory." }),
       ]),
       slackForm,
       el("div", { class: "block" }, [dbForm]),
@@ -660,29 +565,14 @@
   function screenDone() {
     const s = derive();
     const d = state.status.detail;
-    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Where it lives", s.runtime !== "local", s.runtime === "mda" ? "Managed Deep Agents" : s.runtime === "self_hosted" ? "Self-hosted" : "local"], ["Slack", s.slackDone, s.slackDone ? d.slack?.transport : "not connected"]];
-    const doctor = el("button", { class: "btn btn-outline btn-block", type: "button", text: "Run doctor" });
-    const doctorLine = el("div", { class: "status-line", id: "done-doctor" });
-    doctor.addEventListener("click", () => busy(doctor, async () => {
-      const result = await runAction("status");
-      setLine(doctorLine, result.status, result.summary || "Doctor finished.");
-    }));
+    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Runtime", s.runtime !== "local", s.runtime === "mda" ? "Managed Deep Agents" : s.runtime === "self_hosted" ? "Self-hosted" : "local"], ["Slack", s.slackDone, s.slackDone ? d.slack?.transport : "not connected"]];
     return [
       el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "You're set" }),
-        el("p", { class: "hero-sub", text: "Local setup is on this machine. Advanced holds the catalog, write policy, and running processes." }),
-      ]),
-      el("div", { class: "pair" }, [
-        stat("Model", s.modelDone ? (d.model?.spec || "Saved") : "Not set"),
-        stat("Accounts", s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "Fixture data"),
+        el("h1", { class: "hero-title", text: "Configured" }),
+        el("p", { class: "hero-sub", text: "The advanced console holds the authorized catalog, the reviewed mutation policy, the write gates, and the running processes." }),
       ]),
       el("ul", { class: "checklist stagger" }, items.map(([label, done, meta]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label }), el("span", { class: "sub mono", text: meta || "" })]))),
-      doctorLine,
-      el("div", { class: "actions stack" }, [
-        el("button", { class: "btn btn-primary btn-block", type: "button", text: "Open Advanced", onclick: () => { state.view = "advanced"; render(); } }),
-        doctor,
-        el("button", { class: "btn btn-line btn-block", type: "button", text: s.runtime === "mda" ? "Back to deploy" : "Where it lives", onclick: () => go(s.runtime === "mda" ? "mda" : s.runtime === "self_hosted" ? "selfhost" : "path") }),
-      ]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } })]),
       cli("paid-media-agent doctor"),
     ];
   }
@@ -911,7 +801,6 @@
       const detail = { ...result.detail };
       for (const k of ["answer", "receipt_message"]) if (detail[k]) { box.append(el("pre", { class: "result-detail mono", text: detail[k] })); delete detail[k]; }
       for (const k of ["api_token_show_once", "show_once"]) if (detail[k]) { box.append(el("div", { class: "kv" }, [el("dt", { text: "Token (shown once)" }), el("dd", { text: detail[k] })])); delete detail[k]; }
-      if (detail.usage) { box.append(el("div", { class: "kv" }, [el("dt", { text: "Use as" }), el("dd", { text: detail.usage })])); delete detail.usage; }
       const flat = Object.entries(detail).filter(([, v]) => ["string", "number", "boolean"].includes(typeof v));
       if (flat.length) box.append(el("dl", { class: "kv" }, flat.flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: String(v) })])));
       const nested = Object.fromEntries(Object.entries(detail).filter(([, v]) => v && typeof v === "object"));

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -53,4 +54,5 @@ class ResultOffloadMiddleware(AgentMiddleware[Any, Any, Any]):
     async def awrap_tool_call(
         self, request: ToolCallRequest, handler: Any
     ) -> ToolMessage | Command[Any]:
-        return self._offload(request, await handler(request))
+        # The artifact write touches disk and, in sandbox mode, the network: keep it off the loop.
+        return await asyncio.to_thread(self._offload, request, await handler(request))

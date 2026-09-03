@@ -16,6 +16,7 @@ from langgraph.graph.state import CompiledStateGraph
 from paid_media_agent.assembly import AgentComponents, build_agent_components
 from paid_media_agent.config import Settings
 from paid_media_agent.runtime.profiles import RuntimeProfile, fixture_profile
+from paid_media_agent.runtime.sandbox import Backend
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog, StaticCatalogProvider
 from paid_media_agent.tools.fixtures import FixtureState, build_fixture_catalog
 
@@ -54,14 +55,17 @@ def compile_graph(
 
     Pass `checkpointer=None` for LangGraph Server, which injects its own persistence.
     """
-    backend = FilesystemBackend(root_dir=project_root, virtual_mode=True)
+    backend = components.backend or FilesystemBackend(root_dir=project_root, virtual_mode=True)
+    # Path rules protect the repository. A sandbox holds no secrets or tooling, is the isolation
+    # boundary itself, and Deep Agents rejects path rules on backends that can execute commands.
+    permissions = None if hasattr(backend, "execute") else filesystem_permissions()
     return create_deep_agent(
         components.model,
         list(components.tools),
         system_prompt=components.system_prompt,
         middleware=list(components.middleware),
         skills=list(components.skills),
-        permissions=filesystem_permissions(),
+        permissions=permissions,
         backend=backend,
         interrupt_on=dict(components.interrupt_on) or None,
         response_format=components.response_format,
@@ -81,6 +85,7 @@ def build_local_runtime(
     checkpointer: BaseCheckpointSaver[Any] | None = None,
     fixture_state: FixtureState | None = None,
     workspace_root: Path | None = None,
+    backend: Backend | None = None,
 ) -> LocalRuntime:
     resolved_catalog = catalog or build_fixture_catalog()
     provider = catalog_provider or StaticCatalogProvider(resolved_catalog)
@@ -90,6 +95,7 @@ def build_local_runtime(
         catalog_provider=provider,
         fixture_state=fixture_state,
         workspace_root=workspace_root,
+        backend=backend,
     )
     components = build_agent_components(
         settings=settings, runtime=resolved_profile, catalog=resolved_catalog, model=model

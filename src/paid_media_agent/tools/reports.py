@@ -13,6 +13,7 @@ from paid_media_agent.domain.reports import NARRATIVE_MAX, Recommendation
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.reports.bridge import ArtifactBridge, BridgeError
 from paid_media_agent.reports.render import (
+    PdfEngine,
     ReportRenderer,
     build_report_payload,
     reconcile_report,
@@ -32,7 +33,9 @@ class RenderReportArgs(BaseModel):
     recommendations: list[Recommendation] = Field(default_factory=list)
 
 
-def run_render_report(artifacts: ArtifactStore, args: RenderReportArgs) -> dict[str, Any]:
+def run_render_report(
+    artifacts: ArtifactStore, args: RenderReportArgs, *, pdf_engine: PdfEngine | None = None
+) -> dict[str, Any]:
     record = artifacts.read(args.analysis_artifact_id)
     if record.metadata.kind != "analysis":
         raise ArtifactError("artifact is not an analysis artifact")
@@ -48,12 +51,14 @@ def run_render_report(artifacts: ArtifactStore, args: RenderReportArgs) -> dict[
     if problems:
         raise ArtifactError("report reconciliation failed: " + "; ".join(problems))
     out_dir = artifacts.root / "out"
-    renderer = ReportRenderer(out_dir)
+    renderer = ReportRenderer(out_dir, pdf_engine=pdf_engine)
     rendered = renderer.render(payload)
     bridge = ArtifactBridge(out_dir)
     receipts = [bridge.validate(rendered.html_path)]
+    artifacts.publish(rendered.html_path)
     if rendered.pdf_path is not None:
         receipts.append(bridge.validate(rendered.pdf_path))
+        artifacts.publish(rendered.pdf_path)
     payload_meta = artifacts.write_json(
         "report",
         payload.model_dump(mode="json"),
@@ -73,11 +78,13 @@ def run_render_report(artifacts: ArtifactStore, args: RenderReportArgs) -> dict[
     }
 
 
-def build_render_report_tool(artifacts: ArtifactStore) -> BaseTool:
+def build_render_report_tool(
+    artifacts: ArtifactStore, *, pdf_engine: PdfEngine | None = None
+) -> BaseTool:
     def _run(**kwargs: Any) -> str:
         try:
             args = RenderReportArgs.model_validate(kwargs)
-            return json.dumps(run_render_report(artifacts, args))
+            return json.dumps(run_render_report(artifacts, args, pdf_engine=pdf_engine))
         except (ArtifactError, BridgeError, ValidationError, ValueError) as exc:
             return json.dumps({"error": True, "detail": sanitize_exception(exc)})
 

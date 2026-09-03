@@ -277,6 +277,20 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         secret=True,
         description="Gateway key override when it differs from LANGSMITH_API_KEY",
     ),
+    EnvKeySpec(
+        name="PAID_MEDIA_BACKEND",
+        group="sandbox",
+        secret=False,
+        description="Where the model's files live: local (repository) or sandbox (LangSmith)",
+        example="local",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_SANDBOX_SNAPSHOT",
+        group="sandbox",
+        secret=False,
+        description="Snapshot name built from sandbox/Dockerfile",
+        example="paid-media-agent-sandbox",
+    ),
 )
 ENV_KEY_BY_NAME: dict[str, EnvKeySpec] = {spec.name: spec for spec in ENV_KEYS}
 _CUSTOM_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,40}_API_KEY$")

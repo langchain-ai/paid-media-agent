@@ -49,6 +49,10 @@ schema against the same host-owned authorized catalog.
 The profiles share business logic and tool policy. A surface adapter may render differently, but it
 cannot grant a capability or bypass an approval.
 
+Independently of the profile, `PAID_MEDIA_BACKEND=sandbox` moves the model's filesystem into a
+LangSmith sandbox built from `sandbox/Dockerfile`, with the same paths as the repository, so local
+runs use the same world as production. See [sandbox/README.md](sandbox/README.md).
+
 ## Quick start
 
 ```bash
@@ -58,15 +62,14 @@ uv run paid-media-agent setup
 
 `setup` opens a local-only onboarding page and walks you through it in a few minutes:
 
-1. **Welcome.** Run the fixture demo through the real graph, or start setup. No ad account required.
-2. **Model.** The LangSmith Gateway is the featured card (one key, every provider, a trace per
-   call); Anthropic and other providers sit behind More providers. Paste a key, test one call,
-   and the wizard advances on success. Keys stay in your local `.env`.
-3. **Ad accounts.** Paste a scoped Pipeboard token, load the live catalog, and tick the accounts
-   the agent may read. The model only ever sees the aliases you assign. Skip to keep fixture data.
-4. **Try it.** Ask a question in the page, or start LangGraph Studio to watch the graph run, tool
+1. **Model.** Pick a provider card (LangSmith Gateway recommended; Anthropic, OpenAI, Google, Groq,
+   xAI, Mistral, DeepSeek, OpenRouter, Kimi, GLM, or a custom endpoint), paste the key, and test
+   one call. Keys are stored under the name you choose in your local `.env`.
+2. **Ad accounts.** Paste a scoped Pipeboard token, load the live catalog, and tick the accounts
+   the agent may read. The model only ever sees the aliases you assign.
+3. **Try it.** Ask a question in the page, or start LangGraph Studio to watch the graph run, tool
    by tool, including the approval interrupt.
-5. **Where it lives.** Managed Deep Agents (recommended: `mda dev` locally, one command deploy,
+4. **Where it lives.** Managed Deep Agents (recommended: `mda dev` locally, one command deploy,
    Slack provisioned) or self-host with your own Slack app and Postgres.
 
 Every step shows the CLI command it runs, so a coding agent can do the same without a browser:

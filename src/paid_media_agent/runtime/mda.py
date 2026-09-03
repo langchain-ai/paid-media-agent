@@ -16,6 +16,7 @@ from paid_media_agent.runtime.profiles import (
     fixture_profile,
     resolve_write_policy,
 )
+from paid_media_agent.runtime.sandbox import Backend
 from paid_media_agent.runtime.self_hosted import load_catalog
 
 
@@ -39,8 +40,14 @@ def build_mda_components(
     *,
     project_root: Path,
     loop: Callable[[Coroutine[Any, Any, Any]], Any] = run_coroutine,
+    backend: Backend | None = None,
 ) -> AgentComponents:
-    """Build components for the managed runtime. Live catalog only when a token is configured."""
+    """Build components for the managed runtime. Live catalog only when a token is configured.
+
+    `backend` is for hosts that run this assembly themselves (LangGraph Server). Managed Deep
+    Agents provisions its own per-thread sandbox from `sandbox/__init__.py`, so `agent.py`
+    leaves it unset.
+    """
     loaded = loop(load_catalog(settings, project_root=project_root))
     write_policy, issues = resolve_write_policy(settings, project_root, loaded.provider)
     profile = fixture_profile(
@@ -49,6 +56,7 @@ def build_mda_components(
         catalog_provider=loaded.provider,
         name="mda",
         approval_policy=approval_policy_from_settings(settings),
+        backend=backend,
     )
     overrides: dict[str, Any] = {"write_policy": write_policy, "write_policy_issues": issues}
     if loaded.read_provider is not None and loaded.write_provider is not None:

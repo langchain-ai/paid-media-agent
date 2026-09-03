@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from deepagents.backends.protocol import BackendProtocol
 from langchain.agents.middleware import AgentMiddleware, InterruptOnConfig, ModelRetryMiddleware
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -90,6 +91,8 @@ class AgentComponents:
     response_format: type[BaseModel] | None
     system_prompt: str
     skills: tuple[str, ...]
+    backend: BackendProtocol | None
+    """The model's filesystem; None means the repository (see runtime.sandbox)."""
     metadata: AssemblyMetadata
     proposal_service: ProposalService
     write_executor: WriteExecutor
@@ -185,7 +188,7 @@ def build_agent_components(
         build_list_accounts_tool(runtime.accounts),
         build_discover_tools_tool(runtime.catalog_provider),
         build_compare_periods_tool(runtime.artifacts),
-        build_render_report_tool(runtime.artifacts),
+        build_render_report_tool(runtime.artifacts, pdf_engine=runtime.pdf_engine),
     ]
     write_tools: list[BaseTool] = []
     if runtime.run_mode == "conversation":
@@ -253,6 +256,7 @@ def build_agent_components(
         response_format=None,
         system_prompt=prompt,
         skills=("/skills/",),
+        backend=runtime.backend.model_fs if runtime.backend is not None else None,
         metadata=metadata,
         proposal_service=services.proposal_service,
         write_executor=services.executor,
