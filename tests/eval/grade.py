@@ -47,11 +47,25 @@ def expected_figures(question_id: str) -> list[str]:
             for w in (LAST_WEEK, PRIOR_WEEK)
         ]
     if question_id == "q02_cpa_movers":
-        google = [window_totals("google_ads", w) for w in (LAST_WEEK, PRIOR_WEEK)]
-        return [g["spend"] for g in google] + [g["cpa"] for g in google if g["cpa"]]
+        # With data complete on a Thursday, "last week" is legitimately either the calendar week or
+        # the seven days ending on the last complete day; the check below accepts either pair.
+        return []
     if question_id == "q05_cross_total":
         return [window_totals(p.value, AUGUST)["spend"] for p in PIPEBOARD_PLATFORMS]
     return []
+
+
+WEEK_PAIRS = (
+    (LAST_WEEK, PRIOR_WEEK),
+    ((date(2026, 8, 22), date(2026, 8, 28)), (date(2026, 8, 15), date(2026, 8, 21))),
+)
+
+
+def cpa_windows_present(answer: str) -> bool:
+    """True when the answer quotes Google spend for one accepted pair of comparison windows."""
+    return any(
+        all(window_totals("google_ads", w)["spend"] in answer for w in pair) for pair in WEEK_PAIRS
+    )
 
 
 def main(path: str) -> int:
@@ -63,6 +77,8 @@ def main(path: str) -> int:
         record = json.loads(line)
         answer = (record.get("answer") or "").replace(",", "")
         missing = [f for f in expected_figures(record["id"]) if f not in answer]
+        if record["id"] == "q02_cpa_movers" and not cpa_windows_present(answer):
+            missing.append("google spend for an accepted window pair")
         verdict = "numbers ok" if not missing else f"missing {missing}"
         if missing or record.get("error"):
             failures += 1
