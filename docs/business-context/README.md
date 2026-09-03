@@ -13,6 +13,14 @@ every company has the same goals, attribution model, sales cycle, or risk tolera
 6. [Write safety](write-safety.md)
 7. [Sources](sources.md)
 
+Read when the question calls for it:
+
+- [Benchmarks](benchmarks.md) when asked whether a figure is good.
+- [Anomalies and significance](anomaly-and-significance.md) for spikes, drops, and flagged days.
+- [Bidding and budget](bidding-and-budget.md) for pacing and budget or bid changes.
+- [Platform playbooks](platform-playbooks.md) for platform-specific grains and caveats.
+- [Answer style](answer-style.md) before writing the final answer.
+
 Use [hot.md](hot.md) for current public capability notes and [open-questions.md](open-questions.md)
 for unresolved doctrine. Append material changes to [log.md](log.md).
 

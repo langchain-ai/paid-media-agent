@@ -1,53 +1,60 @@
 # Operations
 
-## Local prerequisites
+## Prerequisites
 
-- Python 3.11 or newer
-- `uv`
-- a tool-calling model provider key for live model runs
-- Docker only for snapshot and production-parity checks
-- a Pipeboard token only for live platform reads
+- Python 3.11 or newer and `uv`
+- a tool-calling model key for live model runs (the fixture demo needs none)
+- a Pipeboard token only for live platform reads; direct-platform credentials only for LinkedIn,
+  X, and OpenAI Ads
 - Slack bot and app tokens only for the rich Slack adapter
 
-Start with fixtures. Live credentials are never required to run the default test suite.
+Start with fixtures. Live credentials are never required for the default test suite.
 
 ## Setup
 
 ```bash
-cp .env.example .env
-uv sync --all-extras --dev
+uv sync --all-extras --dev      # `uv sync` alone is enough for the fixture demo
+uv run paid-media-agent setup   # or edit .env by hand; the console seeds it from .env.example
 ```
 
 Keep `.env` local. Do not place secrets in TOML, YAML, fixtures, example commands, screenshots, or
 trace exports.
 
-## Runtime commands
+## Command reference
 
-Every `paid-media-agent` command exports the allowlisted values of the project `.env` into its
-own process first, so provider SDKs that read their key from the environment work without a
-manual `export`. Values already set in your shell win over the file. `serve` takes `--host` and
-`--port` (defaults `PAID_MEDIA_API_HOST` / `PAID_MEDIA_API_PORT`); the bearer a client sends is
-the part of `PAID_MEDIA_API_TOKENS` before `:caller`.
+Every `paid-media-agent` command exports the allowlisted values of the project `.env` into its own
+process first, so provider SDKs that read their key from the environment work without a manual
+`export`. Values already set in your shell win over the file. Every command has `--json` where a
+machine reads it, and the setup console runs the same actions.
 
-The implementation must expose these stable commands:
+| Command | What it does |
+|---|---|
+| `uv run paid-media-agent setup [--port] [--no-open]` | Local onboarding console over the actions below |
+| `uv run paid-media-agent demo [--with-proposal]` | Fixture run through the real graph, optionally with a governed write |
+| `uv run paid-media-agent doctor [--snapshot]` | Configuration, packages, catalog, Slack, PDF, persistence checks; `--snapshot` runs the sandbox contract |
+| `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate signing keys and API tokens |
+| `uv run paid-media-agent test model\|pipeboard\|slack\|db\|all` | Connection tests that never print secret values |
+| `uv run paid-media-agent accounts discover\|list\|add\|remove` | Host-side account discovery and alias mapping (six platforms) |
+| `uv run paid-media-agent catalog show [--live]` | The authorized tool catalog: reads, admitted mutations, denied tools |
+| `uv run paid-media-agent policy validate [--live]` | Validate the write policy against the fixture or live catalog |
+| `uv run paid-media-agent ask "question"` | One question through the local runtime with the configured model |
+| `uv run paid-media-agent report --cadence weekly\|monthly [--end DATE]` | Deterministic cross-platform report, HTML and PDF |
+| `uv run paid-media-agent serve [--host] [--port]` | Self-hosted API; mounts the signed Slack HTTP transport when `SLACK_TRANSPORT=http` |
+| `uv run paid-media-agent slack` | Rich Slack adapter in Socket Mode |
+| `uv run paid-media-agent mda check\|dev\|deploy [--yes]` | Managed Deep Agents preflight, local managed run, hosted deploy |
+| `uv run paid-media-agent sandbox publish\|use\|test` | Build, declare, and probe the LangSmith sandbox snapshot |
+| `uv run paid-media-agent writes kill-switch on\|off` | Incident switch for live writes |
+| `uv run langgraph dev` | LangGraph Server and Studio for the same graph (needs the `studio` extra) |
 
-```bash
-uv run paid-media-agent demo
-uv run paid-media-agent doctor
-uv run paid-media-agent serve
-mda dev
-```
-
-`doctor` checks configuration shape, provider package availability, Pipeboard configuration, account
-alias resolution, write disablement, Slack transport configuration, report rendering, and
-persistence without printing secret values. `doctor --snapshot` runs the sandbox compatibility
-contract from [docs/architecture/sandbox-and-snapshots.md](docs/architecture/sandbox-and-snapshots.md).
+`serve` reads `PAID_MEDIA_API_HOST` and `PAID_MEDIA_API_PORT` by default; the bearer a client sends
+is the part of `PAID_MEDIA_API_TOKENS` before `:caller`.
 
 Optional native dependencies:
 
 - PDF reports use WeasyPrint, which needs Pango and Cairo system libraries (`brew install pango` on
   macOS, `libpango-1.0-0 libcairo2` on Debian). Without them reports render as HTML only and
-  `doctor` reports `report_pdf` as a warning. `sandbox/Dockerfile` bakes them into the snapshot.
+  `doctor` reports `report_pdf` as a warning; with `PAID_MEDIA_BACKEND=sandbox` the PDF renders
+  inside the sandbox instead.
 - The self-hosted API needs the `self-host` extra and `PAID_MEDIA_API_TOKENS` (`token:caller,...`).
   Durable state needs `DATABASE_URL`; without it the profile keeps state in memory.
 

@@ -7,7 +7,7 @@
 - Verified LangChain provider tool search and portable LLM tool selector middleware.
 - Verified OpenAI and Anthropic deferred tool-search documentation.
 - Verified Pipeboard's public MCP integration surface and Slack Socket Mode/Block Kit contracts.
-- Verified Claude Fable 5.1 prompting guidance used by `IMPLEMENTATION_PROMPT.md`.
+- Verified Claude Fable 5.1 prompting guidance used by `docs/history/IMPLEMENTATION_PROMPT.md`.
 
 ## 2026-09-01 (implementation)
 

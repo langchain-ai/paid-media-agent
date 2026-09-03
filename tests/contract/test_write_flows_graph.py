@@ -140,7 +140,7 @@ async def test_expired_claim_is_rejected(settings: Settings, project_root: Path)
     service = runtime.components.proposal_service
     record = service.proposals.list_for_thread("t-1")[0]
     service.approve(record.changeset.proposal_id, approver_ref="reviewer-1")
-    runtime.components.write_executor._clock = lambda: datetime.now(UTC) + timedelta(seconds=120)  # noqa: SLF001
+    runtime.components.write_executor._clock = lambda: datetime.now(UTC) + timedelta(seconds=120)
     final = await resume(runtime, cfg)
     receipt = _last_tool(final)["receipt"]
     assert receipt["status"] == "rejected" and "approval_expired" in receipt["reason"]

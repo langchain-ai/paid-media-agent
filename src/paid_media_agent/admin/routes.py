@@ -74,7 +74,12 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     model_ready = bool(model.get("package_installed")) and bool(_get(detail, "model_key_set"))
     direct_keys = {
         "linkedin": ("LINKEDIN_ACCESS_TOKEN",),
-        "x": ("X_ADS_CONSUMER_KEY", "X_ADS_ACCESS_TOKEN"),
+        "x": (
+            "X_ADS_CONSUMER_KEY",
+            "X_ADS_CONSUMER_SECRET",
+            "X_ADS_ACCESS_TOKEN",
+            "X_ADS_ACCESS_TOKEN_SECRET",
+        ),
         "openai_ads": ("OPENAI_ADS_API_KEY",),
     }
     direct_set = {

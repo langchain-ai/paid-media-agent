@@ -14,7 +14,6 @@ from langgraph.types import Command
 from paid_media_agent.config import Settings
 from paid_media_agent.runtime.local import LocalRuntime, build_local_runtime
 from paid_media_agent.runtime.profiles import RuntimeProfile, fixture_profile
-from paid_media_agent.testing.demo_script import demo_steps, write_demo_steps
 from paid_media_agent.testing.scripted_model import (
     ScriptedChatModel,
     Step,
@@ -108,6 +107,3 @@ async def resume(
         Command(resume={"decisions": [{"type": decision}]}), config=cfg
     )
     return dict(state)
-
-
-__all__ = ["demo_steps", "write_demo_steps"]

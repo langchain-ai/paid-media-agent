@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from collections.abc import Sequence
 from datetime import date
 from typing import Any
@@ -36,11 +35,34 @@ from paid_media_agent.tools.providers import (
     ReadProvider,
 )
 
-logger = logging.getLogger(__name__)
-
 ACCOUNT_ALIAS_ARG = "account_alias"
 PROVIDER_RESULT_SCHEMA_VERSION = "provider-result/1"
 DEFAULT_READ_TIMEOUT_SECONDS = 60.0
+
+
+_ENTITY_HINTS: tuple[tuple[str, EntityType], ...] = (
+    ("keyword", EntityType.KEYWORD),
+    ("creative", EntityType.CREATIVE),
+    ("ad_group", EntityType.AD_GROUP),
+    ("adset", EntityType.AD_GROUP),
+    ("line_item", EntityType.AD_GROUP),
+    ("ad_performance", EntityType.AD),
+)
+
+
+def entity_type_for(tool_name: str, declared: JsonValue | None = None) -> EntityType:
+    """Grain of a performance read: the provider's declaration wins, else the tool name says."""
+    if isinstance(declared, str):
+        try:
+            return EntityType(declared)
+        except ValueError:
+            pass
+    lowered = tool_name.lower()
+    return next((kind for hint, kind in _ENTITY_HINTS if hint in lowered), EntityType.CAMPAIGN)
+
+
+AUDIT_LIMIT = 500
+"""Reads kept in the in-memory audit trail; the demo prints it, long-running servers do not."""
 
 
 class ReadDenied(Exception):
@@ -179,6 +201,7 @@ class ReadDispatcher:
             raise ProviderTimeout("provider read timed out") from exc
         # Normalization plus the artifact write (disk, and the sandbox mirror) stay off the loop.
         summary = await asyncio.to_thread(self._store, entry, catalog, alias, scoped, result)
+        del self.audit[:-AUDIT_LIMIT]
         self.audit.append(
             {
                 "tool": entry.qualified_name,
@@ -217,7 +240,7 @@ class ReadDispatcher:
                     currency=result.currency or binding.currency,
                     timezone=result.timezone or binding.timezone,
                     rows=[r for r in rows if isinstance(r, dict)],
-                    entity_type=EntityType.CAMPAIGN,
+                    entity_type=entity_type_for(entry.name, result.payload.get("entity_type")),
                     entity_names={
                         str(k): str(v)
                         for k, v in (result.payload.get("entity_names") or {}).items()
@@ -243,7 +266,7 @@ class ReadDispatcher:
                 row_count=len(normalized),
                 platform=entry.platform.value,
                 account_ref=alias,
-                entity_type=EntityType.CAMPAIGN.value,
+                entity_type=entity_type_for(entry.name, result.payload.get("entity_type")).value,
                 requested_window=requested_window,
                 actual_window=actual_window,
                 quality_flags=tuple(sorted(flags)),

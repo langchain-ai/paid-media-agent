@@ -16,7 +16,6 @@ from langchain.agents.middleware import (
 )
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
 
 from paid_media_agent.config import ModelConfig, Settings
 from paid_media_agent.middleware.authorization import (
@@ -35,8 +34,8 @@ from paid_media_agent.middleware.tool_selection import (
     plan_selection,
 )
 from paid_media_agent.runtime.profiles import RuntimeProfile
-from paid_media_agent.tools.analysis import COMPARE_PERIODS_TOOL, build_compare_periods_tool
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog
+from paid_media_agent.tools.compare_periods import COMPARE_PERIODS_TOOL, build_compare_periods_tool
 from paid_media_agent.tools.discovery import (
     DISCOVER_TOOLS_TOOL,
     LIST_ACCOUNTS_TOOL,
@@ -46,6 +45,7 @@ from paid_media_agent.tools.discovery import (
 from paid_media_agent.tools.reads import ReadDispatcher, build_platform_read_tools
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL, build_render_report_tool
 from paid_media_agent.tools.summary import SUMMARIZE_WINDOW_TOOL, build_summarize_window_tool
+from paid_media_agent.tools.write_tools import build_execute_interrupt, build_write_tools
 from paid_media_agent.tools.writes import (
     DISCOVER_WRITE_OPERATIONS_TOOL,
     EXECUTE_CHANGE_TOOL,
@@ -53,8 +53,6 @@ from paid_media_agent.tools.writes import (
     PROPOSE_CHANGE_TOOL,
     ProposalService,
     WriteExecutor,
-    build_execute_interrupt,
-    build_write_tools,
 )
 
 # Deep Agents filesystem tools the model keeps for skills, wiki pages, and workspace notes.
@@ -96,7 +94,6 @@ class AgentComponents:
     tools: tuple[BaseTool, ...]
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...]
     interrupt_on: Mapping[str, InterruptOnConfig]
-    response_format: type[BaseModel] | None
     system_prompt: str
     skills: tuple[str, ...]
     backend: BackendProtocol | None
@@ -111,9 +108,9 @@ class AgentComponents:
 class AssemblyServices:
     """Host services created once per assembly so surfaces can reuse the same objects."""
 
-    dispatcher: ReadDispatcher
+    read_dispatcher: ReadDispatcher
     proposal_service: ProposalService
-    executor: WriteExecutor
+    write_executor: WriteExecutor
 
 
 def _build_services(settings: Settings, runtime: RuntimeProfile) -> AssemblyServices:
@@ -145,7 +142,9 @@ def _build_services(settings: Settings, runtime: RuntimeProfile) -> AssemblyServ
         read_provider=runtime.read_provider,
         gate=runtime.write_gate(settings),
     )
-    return AssemblyServices(dispatcher=dispatcher, proposal_service=service, executor=executor)
+    return AssemblyServices(
+        read_dispatcher=dispatcher, proposal_service=service, write_executor=executor
+    )
 
 
 def resolve_model(
@@ -155,7 +154,7 @@ def resolve_model(
     api_key_env: str | None = None,
     timeout_seconds: int = 120,
 ) -> BaseChatModel:
-    """Initialize the configured provider model directly. No gateway, no proxy assumptions.
+    """Initialize the configured provider model. No implicit gateway: `langsmith:` specs opt in.
 
     `api_key_env` names the environment variable holding the key when the provider does not read
     its default one (for example an OpenAI-compatible endpoint with its own key). Every request
@@ -163,9 +162,9 @@ def resolve_model(
     """
     if override is not None:
         return override
-    import os  # noqa: PLC0415
+    import os
 
-    from langchain.chat_models import init_chat_model  # noqa: PLC0415 - optional provider packages
+    from langchain.chat_models import init_chat_model
 
     kwargs: dict[str, Any] = {"timeout": timeout_seconds, "max_retries": 2}
     if config.base_url is not None:
@@ -199,7 +198,7 @@ def build_agent_components(
     )
     services = _build_services(settings, runtime)
 
-    platform_tools = build_platform_read_tools(catalog, services.dispatcher)
+    platform_tools = build_platform_read_tools(catalog, services.read_dispatcher)
     core_tools: list[BaseTool] = [
         build_list_accounts_tool(runtime.accounts),
         build_discover_tools_tool(runtime.catalog_provider),
@@ -209,13 +208,11 @@ def build_agent_components(
     ]
     write_tools: list[BaseTool] = []
     if runtime.run_mode == "conversation":
-        write_tools = build_write_tools(services.proposal_service, services.executor)
+        write_tools = build_write_tools(services.proposal_service, services.write_executor)
     tools: tuple[BaseTool, ...] = (*core_tools, *write_tools, *platform_tools)
 
     allowed = frozenset({*FILESYSTEM_TOOLS, *(t.name for t in tools)})
-    surface = ToolSurfacePolicy(
-        allowed_tool_names=allowed, hidden_tool_names=HIDDEN_BUILTIN_TOOLS, mode=runtime.run_mode
-    )
+    surface = ToolSurfacePolicy(allowed_tool_names=allowed, hidden_tool_names=HIDDEN_BUILTIN_TOOLS)
     plan = plan_selection(model_config, max_tools=settings.paid_media_max_selected_tools)
     selection = build_selection_middleware(
         plan,
@@ -267,7 +264,7 @@ def build_agent_components(
         denied_entry_count=len(catalog.denied_entries()),
         tool_names=tuple(t.name for t in tools),
         run_mode=runtime.run_mode,
-        write_gate=services.executor.gate.describe(),
+        write_gate=services.write_executor.gate.describe(),
         write_policy_issues=tuple(
             f"{i.tool_name}: {i.reason}" for i in runtime.write_policy_issues
         ),
@@ -277,14 +274,13 @@ def build_agent_components(
         tools=tools,
         middleware=middleware,
         interrupt_on=interrupt_on,
-        response_format=None,
         system_prompt=prompt,
         skills=("/skills/",),
         backend=runtime.backend.model_fs if runtime.backend is not None else None,
         metadata=metadata,
         proposal_service=services.proposal_service,
-        write_executor=services.executor,
-        read_dispatcher=services.dispatcher,
+        write_executor=services.write_executor,
+        read_dispatcher=services.read_dispatcher,
     )
 
 

@@ -66,6 +66,23 @@ def linkedin_raw_tools() -> list[RawTool]:
         ),
         RawTool(
             platform=Platform.LINKEDIN_ADS.value,
+            name="get_creative_performance",
+            description=(
+                "Daily creative-level analytics from adAnalytics (pivot CREATIVE) with the parent "
+                "campaign, for an inclusive date range."
+            ),
+            input_schema=_schema(
+                {
+                    "start_date": {"type": "string", "format": "date"},
+                    "end_date": {"type": "string", "format": "date"},
+                },
+                ["start_date", "end_date"],
+            ),
+            annotations=read,
+            source_endpoint=ENDPOINT,
+        ),
+        RawTool(
+            platform=Platform.LINKEDIN_ADS.value,
             name="get_campaign_performance",
             description=(
                 "Daily campaign analytics from adAnalytics (impressions, clicks, cost in account currency, "
@@ -245,10 +262,12 @@ class LinkedInReadProvider:
                     if status is None or el.get("status") == status
                 ]
                 return ProviderResult(payload={"campaigns": campaigns})
-            if entry.name == "get_campaign_performance":
+            if entry.name in ("get_campaign_performance", "get_creative_performance"):
+                creative = entry.name == "get_creative_performance"
+                pivot_name = "CREATIVE" if creative else "CAMPAIGN"
                 start, end = require_window(arguments.get("start_date"), arguments.get("end_date"))
                 query = (
-                    "q=analytics&pivot=CAMPAIGN&timeGranularity=DAILY"
+                    f"q=analytics&pivot={pivot_name}&timeGranularity=DAILY"
                     f"&accounts=List(urn%3Ali%3AsponsoredAccount%3A{account})"
                     f"&{_date_range(start, end)}&fields={_ANALYTICS_FIELDS}"
                 )
@@ -284,11 +303,18 @@ class LinkedInReadProvider:
                     pivot = (el.get("pivotValues") or [None])[0]
                     if day is None or not isinstance(pivot, str):
                         continue
+                    entity_id = pivot.rsplit(":", 1)[-1]
                     rows.append(
                         {
                             "date": day.isoformat(),
-                            "campaign_id": pivot.rsplit(":", 1)[-1],
-                            "campaign_name": names.get(pivot, pivot),
+                            **(
+                                {"creative_id": entity_id, "creative_name": f"creative {entity_id}"}
+                                if creative
+                                else {
+                                    "campaign_id": entity_id,
+                                    "campaign_name": names.get(pivot, pivot),
+                                }
+                            ),
                             "spend": el.get("costInLocalCurrency"),
                             "impressions": el.get("impressions"),
                             "clicks": el.get("clicks"),
@@ -296,6 +322,10 @@ class LinkedInReadProvider:
                         }
                     )
                 return ProviderResult(
-                    payload={"rows": rows, "attribution": "linkedin_external_website_conversions"}
+                    payload={
+                        "rows": rows,
+                        "entity_type": "creative" if creative else "campaign",
+                        "attribution": "linkedin_external_website_conversions",
+                    }
                 )
         raise ProviderError("linkedin read tool not implemented")

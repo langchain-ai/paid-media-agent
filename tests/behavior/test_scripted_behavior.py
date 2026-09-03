@@ -1,4 +1,4 @@
-"""Source-blind behavioral checks run with the scripted model through the real graph."""
+"""Behavior checks run with the scripted model through the real graph."""
 
 from __future__ import annotations
 

@@ -71,7 +71,7 @@ class AgentRunner:
             raise ThreadAccessDenied("thread belongs to another caller")
         return RunnableConfig(configurable={"thread_id": thread_id, "caller_ref": caller_ref})
 
-    def _latest_proposal(self, thread_id: str) -> ProposalView | None:
+    def latest_proposal(self, thread_id: str) -> ProposalView | None:
         records = self._service.proposals.list_for_thread(thread_id)
         return ProposalView.from_record(records[-1]) if records else None
 
@@ -82,7 +82,7 @@ class AgentRunner:
         text = ""
         if messages:
             text = _content_text(messages[-1].content)
-        proposal = self._latest_proposal(thread_id)
+        proposal = self.latest_proposal(thread_id)
         receipt = None
         if proposal is not None:
             stored = self._receipts.get(proposal.proposal_id)

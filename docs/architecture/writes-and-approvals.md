@@ -49,10 +49,10 @@ attempts to bypass the dispatcher.
   after submission is reconciled by readback: matched after-state is `verified`, matched before-state
   is `failed`, anything else is `unknown`. No mutation is ever retried.
 - `WriteGate` admits fakes unconditionally and refuses live providers while
-  `PAID_MEDIA_WRITES_ENABLED` is false or the Slice 6 canary is unreleased. No runtime profile
-  constructs a live write provider today.
+  `PAID_MEDIA_WRITES_ENABLED` is false or the live-write release gates are not met (see
+  `docs/operations/live-write-runbook.md`).
 
-## Slice 6 notes (2026-09-01)
+## Live-write notes
 
 - The reviewed mutation set is data: `WritePolicyFile` rows in `config/write-policy.example.toml`.
   `validate_against(catalog)` keeps only admitted rows whose tool is a MUTATION entry with the

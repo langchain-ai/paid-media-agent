@@ -7,26 +7,18 @@ the shared assembly: fixture catalog without a Pipeboard token, live catalog wit
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from typing import Any
 
 from langgraph.graph.state import CompiledStateGraph
 
-from paid_media_agent.config import Settings
+from paid_media_agent.config import Settings, project_root
 from paid_media_agent.runtime.local import compile_graph
 from paid_media_agent.runtime.mda import build_mda_components
 from paid_media_agent.runtime.sandbox import build_backend
 
 STUDIO_PORT = 2024
 STUDIO_URL = f"https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:{STUDIO_PORT}"
-
-
-def project_root() -> Path:
-    here = Path(__file__).resolve()
-    for candidate in here.parents:
-        if (candidate / "instructions.md").exists() and (candidate / "skills").is_dir():
-            return candidate
-    return Path.cwd()
+"""The one place the Studio port lives; the console and process templates import it."""
 
 
 def _build() -> CompiledStateGraph[Any, Any, Any, Any]:
@@ -47,7 +39,7 @@ async def make_graph() -> CompiledStateGraph[Any, Any, Any, Any]:
     the catalog and skill loading run in a worker thread. One process serves one configuration,
     so the compiled graph is built once and reused across runs.
     """
-    global _graph  # noqa: PLW0603 - process-wide cache for a long-lived server
+    global _graph
     if _graph is None:
         _graph = await asyncio.to_thread(_build)
     return _graph

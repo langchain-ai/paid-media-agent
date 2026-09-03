@@ -68,7 +68,6 @@ def compile_graph(
         permissions=permissions,
         backend=backend,
         interrupt_on=dict(components.interrupt_on) or None,
-        response_format=components.response_format,
         checkpointer=checkpointer,
         name=name,
     )

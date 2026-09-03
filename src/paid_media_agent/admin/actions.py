@@ -19,6 +19,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from paid_media_agent.admin.accounts_file import (
+    WRITABLE_ACCOUNTS_FILE,
     AccountsFileError,
     active_accounts_path,
     add_account,
@@ -33,12 +34,19 @@ from paid_media_agent.admin.envfile import (
     read_env,
     write_env,
 )
+from paid_media_agent.admin.model_presets import (
+    MODEL_PRESETS,
+    _module_available,
+    model_key_env,
+)
 from paid_media_agent.config import AccountBinding, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.middleware.tool_selection import capabilities_for, plan_selection
+from paid_media_agent.runtime.graph import STUDIO_PORT, STUDIO_URL
 from paid_media_agent.runtime.profiles import load_write_policy_file
+from paid_media_agent.surfaces.runner import _content_text
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog
 from paid_media_agent.tools.fixtures import build_fixture_catalog, load_fixture_dataset
 
@@ -105,151 +113,6 @@ def catalog_summary(catalog: AuthorizedToolCatalog) -> dict[str, JsonValue]:
     }
 
 
-MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
-    {
-        "id": "langsmith",
-        "label": "LangSmith Gateway",
-        "model": "anthropic/claude-sonnet-4-6",
-        "key": "LANGSMITH_API_KEY",
-        "url": "https://smith.langchain.com/settings",
-        "note": "One key, every provider, traced",
-        "package": "",
-        "recommended": True,
-        "logo": "langchain",
-    },
-    {
-        "id": "anthropic",
-        "label": "Anthropic",
-        "logo": "anthropic",
-        "model": "anthropic:claude-sonnet-4-6",
-        "key": "ANTHROPIC_API_KEY",
-        "package": "",
-        "extra": "anthropic",
-        "url": "https://console.anthropic.com/settings/keys",
-        "note": "Native tool search",
-        "recommended": False,
-    },
-    {
-        "id": "openai",
-        "label": "OpenAI",
-        "logo": "openai",
-        "model": "openai:gpt-5.5",
-        "key": "OPENAI_API_KEY",
-        "package": "",
-        "extra": "openai",
-        "url": "https://platform.openai.com/api-keys",
-        "note": "Native tool search",
-    },
-    {
-        "id": "google",
-        "label": "Google",
-        "logo": "gemini",
-        "model": "google_genai:gemini-3-flash",
-        "key": "GOOGLE_API_KEY",
-        "package": "langchain_google_genai",
-        "extra": "google",
-        "url": "https://aistudio.google.com/app/apikey",
-        "note": "Portable selector",
-    },
-    {
-        "id": "groq",
-        "label": "Groq",
-        "logo": "groq",
-        "model": "groq:llama-3.3-70b-versatile",
-        "key": "GROQ_API_KEY",
-        "package": "langchain_groq",
-        "extra": "groq",
-        "url": "https://console.groq.com/keys",
-        "note": "Fast open models",
-    },
-    {
-        "id": "xai",
-        "label": "xAI",
-        "logo": "xai",
-        "model": "xai:grok-4",
-        "key": "XAI_API_KEY",
-        "package": "langchain_xai",
-        "extra": "xai",
-        "url": "https://console.x.ai/",
-        "note": "Grok",
-    },
-    {
-        "id": "mistral",
-        "label": "Mistral",
-        "logo": "mistral",
-        "model": "mistralai:mistral-large-latest",
-        "key": "MISTRAL_API_KEY",
-        "package": "langchain_mistralai",
-        "extra": "mistral",
-        "url": "https://console.mistral.ai/api-keys",
-        "note": "Open weights",
-    },
-    {
-        "id": "deepseek",
-        "label": "DeepSeek",
-        "logo": "deepseek",
-        "model": "deepseek:deepseek-chat",
-        "key": "DEEPSEEK_API_KEY",
-        "package": "langchain_deepseek",
-        "extra": "deepseek",
-        "url": "https://platform.deepseek.com/api_keys",
-        "note": "Open weights",
-    },
-    {
-        "id": "openrouter",
-        "label": "OpenRouter",
-        "logo": "openrouter",
-        "model": "openai:moonshotai/kimi-k2",
-        "key": "OPENROUTER_API_KEY",
-        "package": "langchain_openai",
-        "extra": "openai",
-        "base_url": "https://openrouter.ai/api/v1",
-        "url": "https://openrouter.ai/keys",
-        "note": "Kimi, GLM, and more",
-    },
-    {
-        "id": "moonshot",
-        "label": "Kimi",
-        "logo": "moonshot",
-        "model": "openai:kimi-k2-0905-preview",
-        "key": "MOONSHOT_API_KEY",
-        "package": "langchain_openai",
-        "extra": "openai",
-        "base_url": "https://api.moonshot.ai/v1",
-        "url": "https://platform.moonshot.ai/",
-        "note": "OpenAI-compatible",
-    },
-    {
-        "id": "zhipu",
-        "label": "GLM",
-        "logo": "zhipu",
-        "model": "openai:glm-4.6",
-        "key": "ZHIPU_API_KEY",
-        "package": "langchain_openai",
-        "extra": "openai",
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "url": "https://open.bigmodel.cn/",
-        "note": "OpenAI-compatible",
-    },
-    {
-        "id": "custom",
-        "label": "Custom",
-        "logo": "custom",
-        "model": "",
-        "key": "",
-        "package": "",
-        "extra": "",
-        "url": "",
-        "note": "Your provider, key, and base URL",
-    },
-)
-"""Model provider cards for the wizard. Key names are allowlisted env names; nothing else is written.
-
-OpenAI-compatible presets use the `openai:` prefix with a base URL and their own key env var,
-which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Model ids are examples to edit.
-"""
-
-
 def status(root: Path) -> ActionResult:
     settings = load_settings(root)
     checks = run_doctor(settings, project_root=root)
@@ -286,8 +149,8 @@ def status(root: Path) -> ActionResult:
         "model_base_url": settings.paid_media_model_base_url or "",
         "studio": {
             "installed": importlib.util.find_spec("langgraph_cli") is not None,
-            "url": "https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024",
-            "server_url": "http://127.0.0.1:2024",
+            "url": STUDIO_URL,
+            "server_url": f"http://127.0.0.1:{STUDIO_PORT}",
         },
         "model": {
             "spec": model.spec,
@@ -310,7 +173,7 @@ def status(root: Path) -> ActionResult:
         "accounts_path": str(active_accounts_path(settings, root).relative_to(root))
         if active_accounts_path(settings, root).is_relative_to(root)
         else str(active_accounts_path(settings, root)),
-        "accounts_writable_path": str(WRITABLE_REL),
+        "accounts_writable_path": str(WRITABLE_ACCOUNTS_FILE),
         "catalog": catalog_summary(fixture),
         "writes": {
             "enabled": settings.paid_media_writes_enabled,
@@ -360,46 +223,8 @@ def status(root: Path) -> ActionResult:
     )
 
 
-WRITABLE_REL = Path("config/accounts.toml")
-
-
 def _mask_id(value: str) -> str:
     return value if len(value) <= 4 else f"{value[:2]}…{value[-2:]}"
-
-
-PROVIDER_MODULES: dict[str, str] = {
-    "anthropic": "langchain_anthropic",
-    "openai": "langchain_openai",
-    "google_genai": "langchain_google_genai",
-    "groq": "langchain_groq",
-    "xai": "langchain_xai",
-    "mistralai": "langchain_mistralai",
-    "deepseek": "langchain_deepseek",
-    "langsmith": "langchain_openai",
-    "scripted": "paid_media_agent",
-}
-PROVIDER_DEFAULT_KEYS: dict[str, str] = {
-    "langsmith": "LANGSMITH_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google_genai": "GOOGLE_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "xai": "XAI_API_KEY",
-    "mistralai": "MISTRAL_API_KEY",
-    "deepseek": "DEEPSEEK_API_KEY",
-}
-
-
-def _module_available(provider: str) -> bool:
-    module = PROVIDER_MODULES.get(provider)
-    return module is not None and importlib.util.find_spec(module) is not None
-
-
-def model_key_env(settings: Settings) -> str | None:
-    """The env var that must hold the key for the configured model."""
-    if settings.paid_media_model_api_key_env:
-        return settings.paid_media_model_api_key_env
-    return PROVIDER_DEFAULT_KEYS.get(settings.model_settings().provider)
 
 
 def config_view(root: Path) -> ActionResult:
@@ -483,7 +308,7 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
     started = time.monotonic()
     try:
         if invoke is None:
-            from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
+            from paid_media_agent.assembly import resolve_model
 
             chat = resolve_model(
                 model,
@@ -493,7 +318,7 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
             reply = _content_text(chat.invoke("Reply with the single word OK.").content)
         else:
             reply = invoke(model.spec)
-    except Exception as exc:  # noqa: BLE001 - reported, never raised to the page
+    except Exception as exc:
         return _result(
             "model_test",
             "fail",
@@ -516,20 +341,8 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
     )
 
 
-def _content_text(content: Any) -> str:
-    """Model content is a string or a list of blocks; keep only the text either way."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = [
-            b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"
-        ]
-        return " ".join(p for p in parts if p)
-    return str(content)
-
-
 def _os_env(name: str) -> str | None:
-    import os  # noqa: PLC0415
+    import os
 
     return os.environ.get(name)
 
@@ -543,11 +356,8 @@ class LiveCatalog(BaseModel):
     loader: Any
 
 
-LiveLoader = Callable[[Settings, Path], "asyncio.Future[LiveCatalog] | Any"]
-
-
 async def _load_live(settings: Settings, root: Path) -> LiveCatalog:
-    from paid_media_agent.runtime.self_hosted import load_catalog  # noqa: PLC0415
+    from paid_media_agent.runtime.self_hosted import load_catalog
 
     loaded = await load_catalog(settings, project_root=root)
     return LiveCatalog(catalog=loaded.catalog, loader=loaded.provider)
@@ -567,7 +377,7 @@ def pipeboard_test(
         )
     try:
         live = asyncio.run(_load_live(settings, root)) if loader is None else loader(settings, root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _result("pipeboard_test", "fail", f"catalog load failed: {sanitize_exception(exc)}")
     summary = catalog_summary(live.catalog)
     empty = (
@@ -668,12 +478,12 @@ def accounts_discover(
         )
     try:
         live = asyncio.run(_load_live(settings, root)) if loader is None else loader(settings, root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _result(
             "accounts_discover", "fail", f"catalog load failed: {sanitize_exception(exc)}"
         )
-    from paid_media_agent.tools.direct import direct_read_providers  # noqa: PLC0415
-    from paid_media_agent.tools.pipeboard import invoke_mcp_tool  # noqa: PLC0415
+    from paid_media_agent.tools.direct import direct_read_providers
+    from paid_media_agent.tools.pipeboard import invoke_mcp_tool
 
     direct_providers = direct_read_providers(settings)
     rows: list[dict[str, str]] = []
@@ -699,7 +509,7 @@ def accounts_discover(
                 if tool is None:
                     continue
                 payload = asyncio.run(invoke_mcp_tool(tool, {}, timeout=60))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             errors.append(f"{entry.qualified_name}: {sanitize_exception(exc)}")
             continue
         used.append(entry.qualified_name)
@@ -759,12 +569,12 @@ def accounts_add(
     except (ValueError, AccountsFileError) as exc:
         return _result("accounts_add", "fail", sanitize_exception(exc))
     if active_accounts_path(settings, root) != target:
-        write_env(root, {"PAID_MEDIA_ACCOUNT_CONFIG_PATH": str(WRITABLE_REL)})
+        write_env(root, {"PAID_MEDIA_ACCOUNT_CONFIG_PATH": str(WRITABLE_ACCOUNTS_FILE)})
     return _result(
         "accounts_add",
         "ok",
         f"alias {alias} mapped ({len(registry.bindings)} total)",
-        {"aliases": list(registry.aliases()), "path": str(WRITABLE_REL)},
+        {"aliases": list(registry.aliases()), "path": str(WRITABLE_ACCOUNTS_FILE)},
         command=f"paid-media-agent accounts add {alias} --platform {platform} --id <provider-id> --currency {currency} --timezone {timezone}",
     )
 
@@ -802,7 +612,7 @@ def catalog_show(
                 if loader is None
                 else loader(settings, root)
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return _result(
                 "catalog_show", "fail", f"catalog load failed: {sanitize_exception(exc)}"
             )
@@ -852,7 +662,7 @@ def policy_validate(
                 if loader is None
                 else loader(settings, root)
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return _result(
                 "policy_validate", "fail", f"catalog load failed: {sanitize_exception(exc)}"
             )
@@ -888,7 +698,7 @@ def slack_test(root: Path, *, client_factory: Callable[[str], Any] | None = None
         return _result("slack_test", "fail", "slack extra not installed; run uv sync --extra slack")
     try:
         if client_factory is None:
-            from slack_sdk import WebClient  # noqa: PLC0415
+            from slack_sdk import WebClient
 
             client_factory = lambda token: WebClient(token=token)  # noqa: E731
         bot = client_factory(settings.slack_bot_token.get_secret_value()).auth_test()
@@ -912,7 +722,7 @@ def slack_test(root: Path, *, client_factory: Callable[[str], Any] | None = None
                 "SLACK_SIGNING_SECRET is required for the HTTP transport",
                 detail,
             )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _result(
             "slack_test", "fail", f"Slack rejected the credentials: {sanitize_exception(exc)}"
         )
@@ -939,7 +749,7 @@ def database_test(root: Path, *, connect: Callable[[str], Any] | None = None) ->
         )
     try:
         if connect is None:
-            import psycopg  # noqa: PLC0415
+            import psycopg
 
             with psycopg.connect(
                 settings.database_url.get_secret_value(), connect_timeout=10
@@ -947,7 +757,7 @@ def database_test(root: Path, *, connect: Callable[[str], Any] | None = None) ->
                 version = conn.execute("SELECT version()").fetchone()
         else:
             version = connect(settings.database_url.get_secret_value())
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _result("database_test", "fail", f"connection failed: {sanitize_exception(exc)}")
     return _result(
         "database_test",
@@ -1017,7 +827,7 @@ def _provider_key_set(settings: Settings, env: Mapping[str, str]) -> bool:
 def _agent_import_smoke(root: Path) -> str:
     """Import agent.py in a subprocess so a broken entry cannot take the console down."""
     try:
-        completed = subprocess.run(  # noqa: S603 - fixed interpreter and script, no user input
+        completed = subprocess.run(
             [sys.executable, "-c", "import agent; print(agent.agent.config['name'])"],
             cwd=root,
             capture_output=True,
@@ -1033,12 +843,12 @@ def _agent_import_smoke(root: Path) -> str:
 
 
 def demo_run(root: Path, *, with_proposal: bool = False) -> ActionResult:
-    from paid_media_agent.cli import run_demo  # noqa: PLC0415
+    from paid_media_agent.testing.demo_script import run_demo
 
     settings = Settings(paid_media_model="scripted:demo", paid_media_allow_self_approval=True)
     try:
         result = asyncio.run(run_demo(settings, with_proposal=with_proposal, root=root))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _result("demo_run", "fail", f"demo failed: {sanitize_exception(exc)}")
     detail: dict[str, JsonValue] = {
         "answer": result["answer"],
@@ -1068,10 +878,10 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
     if not text or len(text) > MAX_QUESTION_CHARS:
         return _result("ask", "fail", "question must be 1 to 2000 characters")
     try:
-        from langchain_core.runnables import RunnableConfig  # noqa: PLC0415
+        from langchain_core.runnables import RunnableConfig
 
-        from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
-        from paid_media_agent.runtime.local import build_local_runtime  # noqa: PLC0415
+        from paid_media_agent.assembly import resolve_model
+        from paid_media_agent.runtime.local import build_local_runtime
 
         chat = (
             model
@@ -1082,7 +892,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
                 timeout_seconds=settings.paid_media_model_timeout_seconds,
             )
         )
-        from paid_media_agent.runtime.sandbox import build_backend  # noqa: PLC0415
+        from paid_media_agent.runtime.sandbox import build_backend
 
         runtime = build_local_runtime(
             settings,
@@ -1100,7 +910,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
             runtime.graph.ainvoke({"messages": [{"role": "user", "content": text}]}, config=config)
         )
         answer_text = _content_text(state["messages"][-1].content)
-    except Exception as exc:  # noqa: BLE001 - reported, never raised to the page
+    except Exception as exc:
         return _result("ask", "fail", f"run failed: {sanitize_exception(exc)}")
     if answer_text.startswith("Model call failed"):
         # The retry middleware turns provider failures into a message; surface them as a failure.
@@ -1177,7 +987,7 @@ MDA reads this file statically, so the snapshot name must be a literal. Our own 
 
 from managed_deepagents import define_sandbox
 
-sandbox = define_sandbox({argument}, idle_ttl_seconds=1800)
+sandbox = define_sandbox({argument}, idle_ttl_seconds={idle_ttl})
 '''
 SNAPSHOT_FS_GIB = 32
 """Snapshot filesystem size; the platform base image alone needs 16 GiB."""
@@ -1192,14 +1002,18 @@ def sandbox_use(root: Path, name: str) -> ActionResult:
 
     `name` is a snapshot id (preferred, immutable) or a snapshot name.
     """
-    from paid_media_agent.runtime.sandbox import snapshot_reference  # noqa: PLC0415
+    from paid_media_agent.runtime.sandbox import snapshot_reference
 
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", name):
         return _result("sandbox_use", "fail", "snapshot must be alphanumeric with . _ -")
     ((key, value),) = snapshot_reference(name).items()
     write_env(root, {"PAID_MEDIA_SANDBOX_SNAPSHOT": name})
     (root / "sandbox" / "__init__.py").write_text(
-        SANDBOX_DECLARATION.format(argument=f"{key}={value!r}"), encoding="utf-8"
+        SANDBOX_DECLARATION.format(
+            argument=f"{key}={value!r}",
+            idle_ttl=load_settings(root).paid_media_sandbox_idle_ttl_seconds,
+        ),
+        encoding="utf-8",
     )
     return _result(
         "sandbox_use",
@@ -1222,10 +1036,9 @@ def sandbox_publish(
     LangSmith builds the image; no local Docker is involved. The build context holds only the
     Dockerfile, never `.env`, skills, or wiki pages.
     """
-    import shutil  # noqa: PLC0415
-    import tempfile  # noqa: PLC0415
+    import tempfile
 
-    from langsmith.sandbox import SandboxClient  # noqa: PLC0415
+    from langsmith.sandbox import SandboxClient
 
     dockerfile = root / "sandbox" / "Dockerfile"
     if not dockerfile.exists():
@@ -1243,7 +1056,7 @@ def sandbox_publish(
                 timeout=SNAPSHOT_BUILD_TIMEOUT,
             )
         snapshot = client.wait_for_snapshot(snapshot.id, timeout=SNAPSHOT_BUILD_TIMEOUT)
-    except Exception as exc:  # noqa: BLE001 - the SDK also surfaces raw transport timeouts
+    except Exception as exc:
         return _result(
             "sandbox_publish", "fail", f"snapshot build failed: {sanitize_exception(exc)}"
         )
@@ -1264,7 +1077,7 @@ def sandbox_publish(
 
 def sandbox_test(root: Path) -> ActionResult:
     """Open one sandbox from the configured snapshot, run the probe, and delete it."""
-    from paid_media_agent.runtime.sandbox import (  # noqa: PLC0415
+    from paid_media_agent.runtime.sandbox import (
         SandboxError,
         open_sandbox,
         probe_sandbox,

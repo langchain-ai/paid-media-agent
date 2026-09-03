@@ -35,9 +35,6 @@ class InMemoryApprovalRepository:
     def save(self, claim: ApprovalClaim) -> None:
         self._claims[claim.claim_id] = claim
 
-    def get(self, claim_id: UUID) -> ApprovalClaim | None:
-        return self._claims.get(claim_id)
-
     def latest_unused(self, proposal_id: UUID, revision: int) -> ApprovalClaim | None:
         candidates = [
             c

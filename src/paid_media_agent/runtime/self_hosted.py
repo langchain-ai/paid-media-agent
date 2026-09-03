@@ -64,7 +64,7 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
     Direct adapters (LinkedIn, X, OpenAI Ads) join the same catalog whenever their credentials
     are configured. The reviewed write-policy file decides which live mutations are admitted.
     """
-    from paid_media_agent.tools.direct import (  # noqa: PLC0415
+    from paid_media_agent.tools.direct import (
         CompositeReadProvider,
         direct_raw_tools,
         direct_read_providers,
@@ -82,8 +82,8 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
                 write_provider=None,
             )
         # Fixture catalog for the Pipeboard platforms plus live direct platforms.
-        from paid_media_agent.tools.catalog import build_authorized_catalog  # noqa: PLC0415
-        from paid_media_agent.tools.fixtures import (  # noqa: PLC0415
+        from paid_media_agent.tools.catalog import build_authorized_catalog
+        from paid_media_agent.tools.fixtures import (
             FIXTURE_LOCAL_POLICY,
             FixtureReadProvider,
             fixture_raw_tools,
@@ -100,7 +100,7 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
             read_provider=CompositeReadProvider(FixtureReadProvider(), direct_providers),
             write_provider=None,
         )
-    from paid_media_agent.tools.pipeboard import (  # noqa: PLC0415
+    from paid_media_agent.tools.pipeboard import (
         PipeboardCatalogLoader,
         PipeboardReadProvider,
         PipeboardWriteProvider,
@@ -125,9 +125,9 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
 
 
 def _postgres_checkpointer(conn_string: str) -> BaseCheckpointSaver[Any]:
-    from langgraph.checkpoint.postgres import PostgresSaver  # noqa: PLC0415
-    from psycopg import Connection  # noqa: PLC0415
-    from psycopg.rows import dict_row  # noqa: PLC0415
+    from langgraph.checkpoint.postgres import PostgresSaver
+    from psycopg import Connection
+    from psycopg.rows import dict_row
 
     connection = Connection.connect(
         conn_string, autocommit=True, prepare_threshold=0, row_factory=dict_row
@@ -177,7 +177,7 @@ async def build_self_hosted_runtime(
     else:
         overrides.update(write_provider=FakeWriteProvider(state), write_provider_is_fake=True)
     if settings.database_url is not None:
-        from paid_media_agent.persistence.postgres import PostgresRepositories  # noqa: PLC0415
+        from paid_media_agent.persistence.postgres import PostgresRepositories
 
         repos = PostgresRepositories(settings.database_url.get_secret_value())
         repos.setup()

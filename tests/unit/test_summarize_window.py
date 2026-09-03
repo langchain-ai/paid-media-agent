@@ -8,8 +8,8 @@ from pathlib import Path
 
 from paid_media_agent.domain.common import Platform
 from paid_media_agent.domain.metrics import EntityType, MetricWindow, PerformanceRow
-from paid_media_agent.tools.analysis import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.artifacts import ArtifactStore
+from paid_media_agent.tools.compare_periods import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.compute import ComputeError
 from paid_media_agent.tools.normalize import ROWS_SCHEMA_VERSION, rows_to_payload
 from paid_media_agent.tools.summary import SummarizeWindowArgs, run_summarize_window

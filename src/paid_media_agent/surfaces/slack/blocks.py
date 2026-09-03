@@ -7,7 +7,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from paid_media_agent.domain.presentation import (
-    ProgressView,
     ProposalView,
     ReceiptView,
     ReportSummary,
@@ -19,7 +18,6 @@ BLOCK_LIMIT = 50
 ACTION_APPROVE = "pma_approve"
 ACTION_REJECT = "pma_reject"
 ACTION_EDIT = "pma_edit"
-ACTION_CANCEL = "pma_cancel"
 
 
 class SlackMessage(BaseModel):
@@ -33,7 +31,7 @@ def escape_mrkdwn(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def bounded(text: str, limit: int = SECTION_TEXT_LIMIT) -> str:
+def bounded_mrkdwn(text: str, limit: int = SECTION_TEXT_LIMIT) -> str:
     escaped = escape_mrkdwn(text)
     if len(escaped) <= limit:
         return escaped
@@ -41,7 +39,7 @@ def bounded(text: str, limit: int = SECTION_TEXT_LIMIT) -> str:
 
 
 def _section(text: str) -> dict[str, Any]:
-    return {"type": "section", "text": {"type": "mrkdwn", "text": bounded(text)}}
+    return {"type": "section", "text": {"type": "mrkdwn", "text": bounded_mrkdwn(text)}}
 
 
 def _header(text: str) -> dict[str, Any]:
@@ -56,7 +54,7 @@ def _header(text: str) -> dict[str, Any]:
 
 
 def _context(text: str) -> dict[str, Any]:
-    return {"type": "context", "elements": [{"type": "mrkdwn", "text": bounded(text, 2000)}]}
+    return {"type": "context", "elements": [{"type": "mrkdwn", "text": bounded_mrkdwn(text, 2000)}]}
 
 
 def _button(label: str, action_id: str, value: str, style: str | None = None) -> dict[str, Any]:
@@ -79,18 +77,6 @@ def render_answer(text: str) -> SlackMessage:
     """Plain model answer. One section per paragraph, bounded."""
     paragraphs = [p for p in text.split("\n\n") if p.strip()] or [text]
     blocks = [_section(p) for p in paragraphs[: BLOCK_LIMIT - 1]]
-    return _finish(text, blocks)
-
-
-def render_progress(view: ProgressView) -> SlackMessage:
-    lines = [
-        f"• {a.tool_name}: {a.status}" + (f" — {a.detail}" if a.detail else "")
-        for a in view.activity
-    ]
-    text = f"Status: {view.status}" + (f"\n{view.message}" if view.message else "")
-    blocks = [_section(text)]
-    if lines:
-        blocks.append(_context("\n".join(lines[-10:])))
     return _finish(text, blocks)
 
 

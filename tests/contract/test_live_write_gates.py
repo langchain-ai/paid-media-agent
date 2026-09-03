@@ -1,4 +1,4 @@
-"""Slice 6: the live path is unreachable without every operator gate, and fakes stay honest."""
+"""The live write path is unreachable without every operator gate, and fakes stay honest."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from paid_media_agent.runtime.profiles import fixture_profile
 from paid_media_agent.testing.scripted_model import tool_call_message
 from paid_media_agent.tools.catalog import CatalogEntry, StaticCatalogProvider
 from paid_media_agent.tools.fixtures import FakeWriteProvider, FixtureState, build_fixture_catalog
-from paid_media_agent.tools.writes import WriteOperation, WritePolicy
+from paid_media_agent.tools.write_policy import WriteOperation, WritePolicy
 from tests.contract.helpers import (
     build_runtime,
     config,
@@ -175,7 +175,7 @@ async def test_policy_change_after_proposal_is_rejected(
     cfg = config()
     record = await _stage_and_approve(runtime, cfg)
     executor = runtime.components.write_executor
-    current = executor._write_policy.get(record.changeset.tool_name)  # noqa: SLF001
+    current = executor._write_policy.get(record.changeset.tool_name)
     assert current is not None
     altered = WriteOperation(
         **{
@@ -189,7 +189,7 @@ async def test_policy_change_after_proposal_is_rejected(
             altered if op.tool_name == altered.tool_name else op
             for op in executor._write_policy.operations
         )
-    )  # noqa: SLF001
+    )
     receipt = _last_tool(await resume(runtime, cfg))["receipt"]
     assert receipt["status"] == "rejected" and "stale_policy" in receipt["reason"]
     assert provider.mutation_calls == []

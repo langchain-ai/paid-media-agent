@@ -12,7 +12,7 @@ from pathlib import Path
 
 from paid_media_agent.config import Settings
 from paid_media_agent.middleware.tool_selection import (
-    INTEGRATION_PACKAGES,
+    PROVIDER_DISTRIBUTIONS,
     capabilities_for,
     plan_selection,
 )
@@ -57,7 +57,7 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
         checks.append(
             Check("model", "ok", f"{model.spec}; selection={plan.strategy.value} ({plan.reason})")
         )
-        package = INTEGRATION_PACKAGES.get(model.provider, caps.integration_package)
+        package = PROVIDER_DISTRIBUTIONS.get(model.provider, caps.integration_package)
         if package and package != "paid-media-agent":
             module = package.replace("-", "_")
             status = "ok" if _module_available(module) else "fail"
@@ -141,9 +141,9 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
         Check(
             "writes",
             "ok" if not settings.paid_media_writes_enabled else "warn",
-            "disabled (expected for v1)"
+            "disabled (default)"
             if not settings.paid_media_writes_enabled
-            else "flag is true; live writes still require the Slice 6 release",
+            else "flag is true; live writes still need the release gates in docs/operations/live-write-runbook.md",
         )
     )
     try:
@@ -249,7 +249,7 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             )
         )
 
-    from paid_media_agent.reports.render import pdf_renderer_available  # noqa: PLC0415
+    from paid_media_agent.reports.render import pdf_renderer_available
 
     pdf_ok, pdf_detail = pdf_renderer_available()
     checks.append(
@@ -333,7 +333,7 @@ def run_snapshot_checks(project_root: Path) -> list[Check]:
             else "home SSH directory is readable from this process",
         )
     )
-    from paid_media_agent.reports.render import pdf_renderer_available  # noqa: PLC0415
+    from paid_media_agent.reports.render import pdf_renderer_available
 
     pdf_ok, pdf_detail = pdf_renderer_available()
     checks.append(
@@ -357,10 +357,3 @@ def format_checks(checks: list[Check]) -> str:
     width = max(len(c.name) for c in checks)
     lines = [f"{c.status.upper():<5} {c.name:<{width}}  {c.detail}" for c in checks]
     return "\n".join(lines)
-
-
-def import_optional(module: str) -> object | None:
-    try:
-        return importlib.import_module(module)
-    except Exception:  # noqa: BLE001
-        return None

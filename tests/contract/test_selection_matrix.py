@@ -17,7 +17,7 @@ from paid_media_agent.tools.catalog import StaticCatalogProvider
 from paid_media_agent.tools.fixtures import build_fixture_catalog
 from tests.contract.helpers import config
 
-PLATFORM_TOOL_COUNT = 9  # 3 platforms x 3 authorized reads
+PLATFORM_TOOL_COUNT = len(build_fixture_catalog().read_entries())
 
 
 def _settings(base: Settings, model_spec: str, selector: str | None = None) -> Settings:

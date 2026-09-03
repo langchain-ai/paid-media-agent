@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from paid_media_agent.domain.common import Platform, RiskLevel
 from paid_media_agent.domain.proposals import (
@@ -115,21 +115,3 @@ class ReportSummary(BaseModel):
     artifact_paths: tuple[str, ...]
     reconciled: bool
     generated_at: datetime
-
-
-class ToolActivity(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    tool_name: str
-    status: str
-    detail: str = ""
-
-
-class ProgressView(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    version: str = PRESENTATION_VERSION
-    thread_id: str
-    status: str
-    activity: tuple[ToolActivity, ...] = Field(default_factory=tuple)
-    message: str = ""

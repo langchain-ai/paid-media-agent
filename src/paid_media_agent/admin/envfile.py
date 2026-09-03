@@ -266,16 +266,10 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="LangSmith key for mda dev, mda deploy, and the LLM Gateway",
     ),
     EnvKeySpec(
-        name="LANGSMITH_GATEWAY",
-        group="model",
-        secret=False,
-        description="Route provider SDKs through the LangSmith Gateway (true or a gateway URL)",
-    ),
-    EnvKeySpec(
         name="LANGSMITH_GATEWAY_API_KEY",
         group="model",
         secret=True,
-        description="Gateway key override when it differs from LANGSMITH_API_KEY",
+        description="Second LangSmith key for the gateway; point PAID_MEDIA_MODEL_API_KEY_ENV at it",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_TIMEOUT_SECONDS",
@@ -290,6 +284,34 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         secret=False,
         description="Model calls per run before the agent stops",
         example="40",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_WORKSPACE_ROOT",
+        group="runtime",
+        secret=False,
+        description="Workspace directory for artifacts and reports",
+        example="workspace",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_MAX_SELECTED_TOOLS",
+        group="model",
+        secret=False,
+        description="Platform tools the selector may bind per turn",
+        example="6",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_RESULT_OFFLOAD_CHARS",
+        group="model",
+        secret=False,
+        description="Tool results longer than this become workspace artifacts",
+        example="6000",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_SANDBOX_IDLE_TTL_SECONDS",
+        group="sandbox",
+        secret=False,
+        description="Idle seconds before a sandbox stops",
+        example="1800",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_BACKEND",
@@ -454,7 +476,3 @@ def apply_env_file(root: Path) -> list[str]:
             os.environ.pop(key, None)
             _EXPORTED_BY_CONSOLE.discard(key)
     return exported
-
-
-def unset_env(root: Path, keys: list[str]) -> list[str]:
-    return write_env(root, dict.fromkeys(keys, ""))

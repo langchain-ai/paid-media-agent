@@ -9,25 +9,14 @@ import asyncio
 import json
 import logging
 import sys
-from pathlib import Path
 from typing import Any
 
 import click
-from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command
 
 from paid_media_agent.admin import actions
-from paid_media_agent.config import Settings
-from paid_media_agent.domain.presentation import ProposalView
-
-
-def project_root() -> Path:
-    """The checkout root: instructions.md and skills/ live here."""
-    here = Path.cwd()
-    for candidate in (here, *here.parents):
-        if (candidate / "instructions.md").exists() and (candidate / "skills").is_dir():
-            return candidate
-    return here
+from paid_media_agent.config import Settings, project_root
+from paid_media_agent.domain.common import Platform
+from paid_media_agent.testing.demo_script import run_demo
 
 
 def _configure_logging(settings: Settings) -> None:
@@ -56,7 +45,7 @@ def main() -> None:
     allowlisted values are exported into this process before the command runs, so provider SDKs
     that read their key from the environment work without a manual `export`.
     """
-    from paid_media_agent.admin.envfile import apply_env_file  # noqa: PLC0415
+    from paid_media_agent.admin.envfile import apply_env_file
 
     apply_env_file(project_root())
 
@@ -69,7 +58,7 @@ def main() -> None:
 @click.option("--no-open", is_flag=True, help="Do not open the browser automatically.")
 def setup(port: int, no_open: bool) -> None:
     """Start the local setup console and open it in the browser."""
-    from paid_media_agent.admin.server import run_console  # noqa: PLC0415
+    from paid_media_agent.admin.server import run_console
 
     run_console(project_root(), port=port, open_browser=not no_open)
 
@@ -107,68 +96,6 @@ def demo(with_proposal: bool, as_json: bool) -> None:
     )
 
 
-async def run_demo(
-    settings: Settings, *, with_proposal: bool, root: Path | None = None
-) -> dict[str, Any]:
-    from paid_media_agent.runtime.local import build_local_runtime  # noqa: PLC0415
-    from paid_media_agent.testing.demo_script import (  # noqa: PLC0415
-        DEMO_QUESTION,
-        build_demo_model,
-        demo_steps,
-        write_demo_steps,
-    )
-
-    root = root or project_root()
-    steps = demo_steps() + (write_demo_steps() if with_proposal else [])
-    model = build_demo_model(steps)
-    runtime = build_local_runtime(settings, project_root=root, model=model)
-    config: RunnableConfig = {
-        "configurable": {"thread_id": "demo-thread", "caller_ref": "local-user"}
-    }
-    state = await runtime.graph.ainvoke(
-        {"messages": [{"role": "user", "content": DEMO_QUESTION}]}, config=config
-    )
-    answer = state["messages"][-1].content
-    result: dict[str, Any] = {
-        "answer": answer,
-        "audit": runtime.components.read_dispatcher.audit,
-        "catalog_revision": runtime.catalog.revision,
-        "selection": runtime.components.metadata.selection.strategy.value,
-    }
-    if not with_proposal:
-        return result
-    state = await runtime.graph.ainvoke(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Reduce the Performance Max daily budget to 240 and execute it.",
-                }
-            ]
-        },
-        config=config,
-    )
-    snapshot = runtime.graph.get_state(config)
-    if not snapshot.interrupts:
-        result["receipt_message"] = state["messages"][-1].content
-        result["proposal"] = None
-        return result
-    service = runtime.components.proposal_service
-    records = service.proposals.list_for_thread("demo-thread")
-    record = records[-1]
-    view = ProposalView.from_record(record)
-    result["proposal"] = view.model_dump(mode="json")
-    # The demo operator approves through the host service, which creates the signed claim.
-    service.approve(record.changeset.proposal_id, approver_ref="local-user")
-    state = await runtime.graph.ainvoke(
-        Command(resume={"decisions": [{"type": "approve"}]}), config=config
-    )
-    result["receipt_message"] = state["messages"][-1].content
-    receipt = runtime.profile.receipts.get(record.changeset.proposal_id)
-    result["receipt"] = receipt.model_dump(mode="json") if receipt else None
-    return result
-
-
 @main.command()
 @click.option(
     "--snapshot", is_flag=True, help="Run the sandbox snapshot compatibility contract instead."
@@ -176,7 +103,7 @@ async def run_demo(
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def doctor(snapshot: bool, as_json: bool) -> None:
     """Diagnose configuration without printing secret values."""
-    from paid_media_agent.doctor import (  # noqa: PLC0415
+    from paid_media_agent.doctor import (
         format_checks,
         run_doctor,
         run_snapshot_checks,
@@ -275,9 +202,7 @@ def accounts_list(as_json: bool) -> None:
 
 @accounts.command("add")
 @click.argument("alias")
-@click.option(
-    "--platform", required=True, type=click.Choice(["google_ads", "meta_ads", "reddit_ads"])
-)
+@click.option("--platform", required=True, type=click.Choice([p.value for p in Platform]))
 @click.option(
     "--id",
     "provider_account_id",
@@ -419,7 +344,6 @@ def test_all(as_json: bool) -> None:
         actions.pipeboard_test(root),
         actions.slack_test(root),
         actions.database_test(root),
-        actions.mda_check(root),
     ]
     if as_json:
         click.echo(json.dumps([r.model_dump(mode="json") for r in results], indent=2, default=str))
@@ -447,9 +371,9 @@ def mda_check(as_json: bool) -> None:
 @mda.command("dev")
 def mda_dev() -> None:
     """Run `mda dev` in the foreground."""
-    import subprocess  # noqa: PLC0415
+    import subprocess
 
-    from paid_media_agent.admin.processes import PROCESS_TEMPLATES  # noqa: PLC0415
+    from paid_media_agent.admin.processes import PROCESS_TEMPLATES
 
     raise SystemExit(subprocess.call(PROCESS_TEMPLATES["mda-dev"], cwd=project_root()))  # noqa: S603
 
@@ -460,9 +384,9 @@ def mda_dev() -> None:
 )
 def mda_deploy(yes: bool) -> None:
     """Run `mda deploy .` after preflight and explicit confirmation."""
-    import subprocess  # noqa: PLC0415
+    import subprocess
 
-    from paid_media_agent.admin.processes import PROCESS_TEMPLATES  # noqa: PLC0415
+    from paid_media_agent.admin.processes import PROCESS_TEMPLATES
 
     root = project_root()
     check = actions.mda_check(root)
@@ -527,10 +451,10 @@ def report(
     cadence: str, end_date: str | None, aliases: tuple[str, ...], no_render: bool, as_json: bool
 ) -> None:
     """Run the deterministic cross-platform report: reads, comparison, and rendering, no model."""
-    from datetime import date, timedelta  # noqa: PLC0415
+    from datetime import date, timedelta
 
-    from paid_media_agent.reports.cadence import run_cadence_report  # noqa: PLC0415
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime  # noqa: PLC0415
+    from paid_media_agent.reports.cadence import run_cadence_report
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
 
     settings = Settings()
     _configure_logging(settings)
@@ -610,10 +534,10 @@ def serve(host: str | None, port: int | None) -> None:
     if port is not None:
         settings = settings.model_copy(update={"paid_media_api_port": port})
     _configure_logging(settings)
-    import uvicorn  # noqa: PLC0415
+    import uvicorn
 
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime  # noqa: PLC0415
-    from paid_media_agent.surfaces.api.app import create_app  # noqa: PLC0415
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.surfaces.api.app import create_app
 
     runtime = asyncio.run(build_self_hosted_runtime(settings, project_root=project_root()))
     app = create_app(runtime)
@@ -625,8 +549,8 @@ def slack() -> None:
     """Run the rich Slack adapter in Socket Mode against the local or self-hosted runtime."""
     settings = Settings()
     _configure_logging(settings)
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime  # noqa: PLC0415
-    from paid_media_agent.surfaces.slack.socket_mode import run_socket_mode  # noqa: PLC0415
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.surfaces.slack.socket_mode import run_socket_mode
 
     runtime = asyncio.run(build_self_hosted_runtime(settings, project_root=project_root()))
     run_socket_mode(settings, runtime)

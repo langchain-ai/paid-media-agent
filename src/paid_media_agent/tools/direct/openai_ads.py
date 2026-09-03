@@ -60,6 +60,20 @@ def openai_ads_raw_tools() -> list[RawTool]:
         ),
         RawTool(
             platform=Platform.OPENAI_ADS.value,
+            name="get_ad_group_performance",
+            description="Daily ad group insights with the parent campaign id for an inclusive date range.",
+            input_schema=_schema(
+                {
+                    "start_date": {"type": "string", "format": "date"},
+                    "end_date": {"type": "string", "format": "date"},
+                },
+                ["start_date", "end_date"],
+            ),
+            annotations=read,
+            source_endpoint=ENDPOINT,
+        ),
+        RawTool(
+            platform=Platform.OPENAI_ADS.value,
             name="get_campaign_performance",
             description="Daily campaign insights (spend, impressions, clicks, conversions, value) for an inclusive date range.",
             input_schema=_schema(
@@ -146,10 +160,11 @@ class OpenAIAdsReadProvider:
                     if isinstance(c, dict) and (status is None or c.get("status") == status)
                 ]
                 return ProviderResult(payload={"campaigns": listed, "account_id": account_id})
-            if entry.name == "get_campaign_performance":
+            if entry.name in ("get_campaign_performance", "get_ad_group_performance"):
+                ad_groups = entry.name == "get_ad_group_performance"
                 start, end = require_window(arguments.get("start_date"), arguments.get("end_date"))
                 params: dict[str, str | list[str]] = {
-                    "aggregation_level": "campaign",
+                    "aggregation_level": "ad_group" if ad_groups else "campaign",
                     "time_granularity": "day",
                     "time_ranges[]": f"{start.isoformat()}..{end.isoformat()}",
                     "limit": "2000",
@@ -173,6 +188,14 @@ class OpenAIAdsReadProvider:
                             "date": day[:10],
                             "campaign_id": str(item.get("campaign_id") or item.get("id") or ""),
                             "campaign_name": item.get("campaign_name") or item.get("name") or "",
+                            **(
+                                {
+                                    "ad_group_id": str(item.get("ad_group_id") or ""),
+                                    "ad_group_name": item.get("ad_group_name") or "",
+                                }
+                                if ad_groups
+                                else {}
+                            ),
                             "spend": item.get("spend"),
                             "impressions": item.get("impressions"),
                             "clicks": item.get("clicks"),
@@ -181,6 +204,10 @@ class OpenAIAdsReadProvider:
                         }
                     )
                 return ProviderResult(
-                    payload={"rows": rows, "attribution": "openai_ads_reported_conversions"}
+                    payload={
+                        "rows": rows,
+                        "entity_type": "ad_group" if ad_groups else "campaign",
+                        "attribution": "openai_ads_reported_conversions",
+                    }
                 )
         raise ProviderError("openai ads read tool not implemented")

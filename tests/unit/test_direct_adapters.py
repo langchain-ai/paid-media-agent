@@ -55,7 +55,6 @@ def test_direct_tools_classify_as_reads_with_account_scope() -> None:
 
 def test_settings_direct_platforms_require_complete_credentials(tmp_path: Any) -> None:
     settings = Settings(_env_file=None, linkedin_access_token="tok", x_ads_consumer_key="k")  # type: ignore[call-arg]
-    assert settings.direct_platforms() == (Platform.LINKEDIN_ADS,)
     assert configured_direct_platforms(settings) == (Platform.LINKEDIN_ADS,)
     assert {t.platform for t in direct_raw_tools(settings)} == {"linkedin_ads"}
 
@@ -343,3 +342,128 @@ def test_errors_never_carry_credentials() -> None:
         raise_for_status(response, context="linkedin")
     assert "secret-token-value" not in str(info.value) and "401" in str(info.value)
     assert json.dumps(str(info.value))
+
+
+async def test_linkedin_creative_grain_pivots_the_same_analytics_call() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path == "/rest/adAnalytics":
+            return httpx.Response(
+                200,
+                json={
+                    "elements": [
+                        {
+                            "dateRange": {"start": {"year": 2026, "month": 8, "day": 2}},
+                            "pivotValues": ["urn:li:sponsoredCreative:9001"],
+                            "impressions": 300,
+                            "clicks": 9,
+                            "costInLocalCurrency": "12.25",
+                            "externalWebsiteConversions": 1,
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(200, json={"elements": []})
+
+    provider = LinkedInReadProvider(access_token=SecretStr("t"), client_factory=_factory(handler))
+    entry = _catalog().get("linkedin_ads__get_creative_performance")
+    assert entry is not None
+    result = await provider.call_read(
+        entry, {"account_id": "123", "start_date": "2026-08-01", "end_date": "2026-08-07"}
+    )
+    assert "pivot=CREATIVE" in str(next(r.url for r in seen if r.url.path == "/rest/adAnalytics"))
+    assert result.payload["entity_type"] == "creative"
+    row = result.payload["rows"][0]
+    assert (row["creative_id"], row["spend"], row["conversions"]) == ("9001", "12.25", 1)
+
+
+async def test_x_ad_group_grain_uses_line_items() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path.endswith("/line_items"):
+            return httpx.Response(
+                200, json={"data": [{"id": "li1", "name": "Group 1", "campaign_id": "c1"}]}
+            )
+        if request.url.path.endswith("/campaigns"):
+            return httpx.Response(200, json={"data": [{"id": "c1", "name": "Camp"}]})
+        if "/stats/" in request.url.path:
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "id": "li1",
+                            "id_data": [
+                                {
+                                    "metrics": {
+                                        "impressions": [10, 20],
+                                        "clicks": [1, 2],
+                                        "billed_charge_local_micro": [1_000_000, 2_000_000],
+                                    }
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(404)
+
+    provider = XAdsReadProvider(
+        consumer_key="ck",
+        consumer_secret=SecretStr("cs"),
+        access_token=SecretStr("at"),
+        access_token_secret=SecretStr("as"),
+        client_factory=_factory(handler),
+    )
+    entry = _catalog().get("x_ads__get_ad_group_performance")
+    assert entry is not None
+    result = await provider.call_read(
+        entry, {"account_id": "acc", "start_date": "2026-08-01", "end_date": "2026-08-02"}
+    )
+    stats = next(r for r in seen if "/stats/" in r.url.path)
+    assert stats.url.params["entity"] == "LINE_ITEM" and stats.url.params["entity_ids"] == "li1"
+    assert result.payload["entity_type"] == "ad_group"
+    first = result.payload["rows"][0]
+    assert (first["line_item_id"], first["campaign_id"], first["spend_micros"]) == (
+        "li1",
+        "c1",
+        1_000_000.0,
+    )
+
+
+async def test_openai_ads_ad_group_grain_aggregates_by_ad_group() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "date": "2026-08-01",
+                        "campaign_id": "c1",
+                        "ad_group_id": "g1",
+                        "ad_group_name": "Group",
+                        "spend": "5.5",
+                        "impressions": 100,
+                        "clicks": 4,
+                        "conversions": 1,
+                    }
+                ]
+            },
+        )
+
+    provider = OpenAIAdsReadProvider(api_key=SecretStr("k"), client_factory=_factory(handler))
+    entry = _catalog().get("openai_ads__get_ad_group_performance")
+    assert entry is not None
+    result = await provider.call_read(
+        entry, {"account_id": "a1", "start_date": "2026-08-01", "end_date": "2026-08-07"}
+    )
+    assert seen[0].url.params["aggregation_level"] == "ad_group"
+    assert result.payload["entity_type"] == "ad_group"
+    assert result.payload["rows"][0]["ad_group_id"] == "g1"

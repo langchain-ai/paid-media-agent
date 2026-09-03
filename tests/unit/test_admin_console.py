@@ -312,7 +312,7 @@ def test_process_manager_uses_fixed_templates(
         manager.start("mda-deploy")  # confirmation required
     view = manager.start("serve")
     assert view.command == "uv run paid-media-agent serve"
-    manager._procs["serve"].wait(timeout=30)  # noqa: SLF001
+    manager._procs["serve"].wait(timeout=30)
     view = manager.view("serve")
     assert not view.running and view.returncode == 0 and "hello from serve" in view.log_tail
     log = workspace / "workspace" / "logs" / "serve.log"

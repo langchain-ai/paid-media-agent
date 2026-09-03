@@ -15,31 +15,10 @@ from paid_media_agent.tools.direct.openai_ads import OpenAIAdsReadProvider, open
 from paid_media_agent.tools.direct.x_ads import XAdsReadProvider, x_ads_raw_tools
 from paid_media_agent.tools.providers import ProviderError, ProviderResult, ReadProvider
 
-DIRECT_PLATFORMS: tuple[Platform, ...] = (
-    Platform.LINKEDIN_ADS,
-    Platform.X_ADS,
-    Platform.OPENAI_ADS,
-)
-
 
 def configured_direct_platforms(settings: Settings) -> tuple[Platform, ...]:
-    """Platforms whose direct credentials are present. Unconfigured ones stay out of the catalog."""
-    configured: list[Platform] = []
-    if settings.linkedin_access_token is not None:
-        configured.append(Platform.LINKEDIN_ADS)
-    if all(
-        v is not None
-        for v in (
-            settings.x_ads_consumer_key,
-            settings.x_ads_consumer_secret,
-            settings.x_ads_access_token,
-            settings.x_ads_access_token_secret,
-        )
-    ):
-        configured.append(Platform.X_ADS)
-    if settings.openai_ads_api_key is not None:
-        configured.append(Platform.OPENAI_ADS)
-    return tuple(configured)
+    """Direct platforms with complete credentials; the settings object owns the rule."""
+    return settings.direct_platforms()
 
 
 def direct_raw_tools(settings: Settings) -> list[RawTool]:
@@ -85,7 +64,6 @@ class CompositeReadProvider:
 
 
 __all__ = [
-    "DIRECT_PLATFORMS",
     "CompositeReadProvider",
     "configured_direct_platforms",
     "direct_raw_tools",

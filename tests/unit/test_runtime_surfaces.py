@@ -35,7 +35,7 @@ def test_current_date_is_appended_per_model_call() -> None:
     class Request:
         system_message = SystemMessage(content="Base instructions.")
 
-        def override(self, **overrides):  # noqa: ANN003, ANN202 - test double
+        def override(self, **overrides):
             seen.append(overrides["system_message"])
             return self
 

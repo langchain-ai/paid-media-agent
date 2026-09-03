@@ -12,6 +12,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
+from paid_media_agent.runtime.graph import STUDIO_PORT
+
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
@@ -19,7 +21,15 @@ PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
     "slack": (sys.executable, "-m", "paid_media_agent.cli", "slack"),
     "mda-dev": (sys.executable, "-m", "managed_deepagents", "dev"),
     "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy", "."),
-    "studio": (sys.executable, "-m", "langgraph_cli", "dev", "--no-browser", "--port", "2024"),
+    "studio": (
+        sys.executable,
+        "-m",
+        "langgraph_cli",
+        "dev",
+        "--no-browser",
+        "--port",
+        str(STUDIO_PORT),
+    ),
 }
 CONFIRM_REQUIRED: frozenset[str] = frozenset({"mda-deploy"})
 """Outward-facing processes that need an explicit confirmation before they start."""

@@ -55,48 +55,31 @@ runs use the same world as production. See [sandbox/README.md](sandbox/README.md
 
 ## Quick start
 
+Needs Python 3.11 or newer and [uv](https://docs.astral.sh/uv/). No ad account or model key is
+required for the first command.
+
 ```bash
 uv sync --all-extras --dev
-uv run paid-media-agent setup
+uv run paid-media-agent demo --with-proposal   # fixture data through the real graph, including an approval
+uv run paid-media-agent setup                  # local page: model, ad accounts, try it, where it lives
 ```
 
-`setup` opens a local-only onboarding page and walks you through it in a few minutes:
-
-1. **Model.** Pick a provider card (LangSmith Gateway recommended; Anthropic, OpenAI, Google, Groq,
-   xAI, Mistral, DeepSeek, OpenRouter, Kimi, GLM, or a custom endpoint), paste the key, and test
-   one call. Keys are stored under the name you choose in your local `.env`.
-2. **Ad accounts.** Paste a scoped Pipeboard token, load the live catalog, and tick the accounts
-   the agent may read. The model only ever sees the aliases you assign.
-3. **Try it.** Ask a question in the page, or start LangGraph Studio to watch the graph run, tool
-   by tool, including the approval interrupt.
-4. **Where it lives.** Managed Deep Agents (recommended: `mda dev` locally, one command deploy,
-   Slack provisioned) or self-host with your own Slack app and Postgres.
-
-Every step shows the CLI command it runs, so a coding agent can do the same without a browser:
+`setup` opens a local-only onboarding page (127.0.0.1, per-run token, writes only your `.env`):
+pick a model provider and test one call, paste a scoped Pipeboard token and tick the accounts the
+agent may read, ask a question or open LangGraph Studio, then choose Managed Deep Agents or
+self-hosting. Every step shows the CLI command it runs, so a coding agent can do the same without
+a browser. The full command reference is in [OPERATIONS.md](OPERATIONS.md#command-reference).
 
 ```bash
-uv run paid-media-agent demo --with-proposal        # fixture demo through the real graph
-uv run paid-media-agent doctor --json               # every check, machine-readable
-uv run paid-media-agent config set PAID_MEDIA_MODEL=langsmith:anthropic/claude-sonnet-4-6 LANGSMITH_API_KEY=...
-uv run paid-media-agent test model|pipeboard|slack|db|all --json
-uv run paid-media-agent accounts discover|list|add|remove
+uv run paid-media-agent doctor --json           # every check, machine-readable
 uv run paid-media-agent ask "How did spend move week over week?"
-uv run paid-media-agent report --cadence weekly       # deterministic HTML/PDF report
-uv run langgraph dev                                # local LangGraph Server + Studio
-uv run paid-media-agent serve                       # self-hosted API
-uv run paid-media-agent slack                       # rich Slack adapter (Socket Mode)
-uv run paid-media-agent mda check|dev|deploy --yes  # managed path
-uv run paid-media-agent writes kill-switch on|off   # incident switch
+uv run paid-media-agent report --cadence weekly # deterministic HTML and PDF report
+uv run langgraph dev                            # LangGraph Server and Studio (studio extra)
+uv run paid-media-agent serve                   # self-hosted API, plus signed Slack HTTP when configured
+uv run paid-media-agent mda dev                 # managed run, same graph
 ```
 
-The page binds to localhost, needs the per-run token from the printed link, writes only to your
-local `.env` (mode 0600), and never displays a secret value.
-
 ![Setup welcome](docs/screenshots/setup-welcome.png)
-![Setup welcome, dark theme](docs/screenshots/setup-welcome-dark.png)
-![Choose a model](docs/screenshots/setup-model.png)
-![Try it with LangGraph Studio](docs/screenshots/setup-try-studio.png)
-![Where it lives, dark theme](docs/screenshots/setup-path-dark.png)
 
 ## Platform coverage
 
@@ -129,8 +112,8 @@ visible as unavailable and suppresses the cross-platform total.
 
 `agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, `channels/slack.py`,
 `identity.py` (the LangSmith identity Slack ingress requires), `schedules/` (weekly and monthly
-reports), and `sandbox/example_sandbox.py` (opt-in; MDA needs a named `sandbox` export when the
-file exists) are the managed project files. With a LangSmith API key in `.env`:
+reports), and the generated `sandbox/__init__.py` (written by `paid-media-agent sandbox publish|use`)
+are the managed project files. With a LangSmith API key in `.env`:
 
 ```bash
 uv run mda dev        # local managed run with LangSmith Studio
@@ -146,29 +129,13 @@ call the gateway fails with `403 deployments:read`.
 Native Slack supports approve and reject on `execute_change`. Use the rich adapter
 (`paid-media-agent slack`) when reviewers need edits, receipts, and files in Block Kit.
 
-## Release status
-
-The first tagged release is gated on the items in [open-questions.md](open-questions.md). The
-repository ships under the [Apache-2.0 license](LICENSE) as the recommended default pending
-maintainer approval, with a [security policy](SECURITY.md), [contributing guide](CONTRIBUTING.md),
-[changelog](CHANGELOG.md), and CI that runs the offline suite, the fixture demo, and a secret scan.
-
 ## Start here
 
-- [Product and engineering specification](SPEC.md)
-- [Implementation prompt for Claude Fable 5.1](IMPLEMENTATION_PROMPT.md)
-- [Architecture index](docs/architecture/README.md)
-- [Paid-media business context](docs/business-context/README.md)
-- [Source inventory](prep/source-inventory.md)
-- [Operating contract](AGENTS.md)
-- [Live-write canary runbook](docs/operations/live-write-runbook.md)
-- [Parity audit against the reference agent](docs/audits/parity-audit-2026-09-03.md)
-- [Examples](examples/README.md) and [migration notes](docs/migration.md)
+- [Architecture](docs/architecture/README.md) and [operations](OPERATIONS.md)
+- [Paid-media business context](docs/business-context/README.md) the agent reads at run time
+- [Operating contract for humans and coding agents](AGENTS.md)
+- [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [changelog](CHANGELOG.md)
 
-## Public-release boundary
-
-The repository must not contain customer data, company-specific account identifiers, private
-thresholds, production history, credentials, internal Slack or Notion links, or copied proprietary
-fixtures. The license, trademark wording, and maintainer security contact are explicit release gates
-in [open-questions.md](open-questions.md).
-
+Release gates (license text, naming, security contact) are tracked in
+[open-questions.md](open-questions.md). The repository must never contain customer data,
+account identifiers, private thresholds, credentials, or copied proprietary material.

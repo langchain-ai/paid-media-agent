@@ -10,14 +10,12 @@ from paid_media_agent.domain.common import RiskLevel
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog, StaticCatalogProvider
 from paid_media_agent.tools.pipeboard import invoke_mcp_tool
 from paid_media_agent.tools.providers import ProviderError
-from paid_media_agent.tools.writes import (
-    WriteDenied,
-    WriteGate,
+from paid_media_agent.tools.write_policy import (
     WriteOperation,
     WritePolicyFile,
-    classify_risk,
     fixture_write_policy,
 )
+from paid_media_agent.tools.writes import WriteDenied, WriteGate, classify_risk
 
 
 def test_policy_file_validates_against_catalog(

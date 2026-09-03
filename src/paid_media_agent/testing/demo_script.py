@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
+from paid_media_agent.config import Settings, project_root
+from paid_media_agent.domain.presentation import ProposalView
 from paid_media_agent.testing.scripted_model import (
     ScriptedChatModel,
     Step,
@@ -185,3 +190,59 @@ def _report_receipt(messages: Sequence[BaseMessage]) -> AIMessage:
 
 def write_demo_steps() -> list[Step]:
     return [_propose, _execute, _report_receipt]
+
+
+async def run_demo(
+    settings: Settings, *, with_proposal: bool, root: Path | None = None
+) -> dict[str, Any]:
+    from paid_media_agent.runtime.local import build_local_runtime
+
+    root = root or project_root()
+    steps = demo_steps() + (write_demo_steps() if with_proposal else [])
+    model = build_demo_model(steps)
+    runtime = build_local_runtime(settings, project_root=root, model=model)
+    config: RunnableConfig = {
+        "configurable": {"thread_id": "demo-thread", "caller_ref": "local-user"}
+    }
+    state = await runtime.graph.ainvoke(
+        {"messages": [{"role": "user", "content": DEMO_QUESTION}]}, config=config
+    )
+    answer = state["messages"][-1].content
+    result: dict[str, Any] = {
+        "answer": answer,
+        "audit": runtime.components.read_dispatcher.audit,
+        "catalog_revision": runtime.catalog.revision,
+        "selection": runtime.components.metadata.selection.strategy.value,
+    }
+    if not with_proposal:
+        return result
+    state = await runtime.graph.ainvoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Reduce the Performance Max daily budget to 240 and execute it.",
+                }
+            ]
+        },
+        config=config,
+    )
+    snapshot = runtime.graph.get_state(config)
+    if not snapshot.interrupts:
+        result["receipt_message"] = state["messages"][-1].content
+        result["proposal"] = None
+        return result
+    service = runtime.components.proposal_service
+    records = service.proposals.list_for_thread("demo-thread")
+    record = records[-1]
+    view = ProposalView.from_record(record)
+    result["proposal"] = view.model_dump(mode="json")
+    # The demo operator approves through the host service, which creates the signed claim.
+    service.approve(record.changeset.proposal_id, approver_ref="local-user")
+    state = await runtime.graph.ainvoke(
+        Command(resume={"decisions": [{"type": "approve"}]}), config=config
+    )
+    result["receipt_message"] = state["messages"][-1].content
+    receipt = runtime.profile.receipts.get(record.changeset.proposal_id)
+    result["receipt"] = receipt.model_dump(mode="json") if receipt else None
+    return result

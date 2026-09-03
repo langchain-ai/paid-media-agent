@@ -67,6 +67,23 @@ def x_ads_raw_tools() -> list[RawTool]:
         ),
         RawTool(
             platform=Platform.X_ADS.value,
+            name="get_ad_group_performance",
+            description=(
+                "Daily ad group (line item) stats with the parent campaign id for an inclusive "
+                "date range, fetched in 7-day slices per the X Ads stats limit."
+            ),
+            input_schema=_schema(
+                {
+                    "start_date": {"type": "string", "format": "date"},
+                    "end_date": {"type": "string", "format": "date"},
+                },
+                ["start_date", "end_date"],
+            ),
+            annotations=read,
+            source_endpoint=ENDPOINT,
+        ),
+        RawTool(
+            platform=Platform.X_ADS.value,
             name="get_campaign_performance",
             description=(
                 "Daily campaign stats (impressions, clicks, billed spend, web conversion purchases) for an "
@@ -113,7 +130,7 @@ def oauth1_header(
     normalized = "&".join(f"{_pct(k)}={_pct(v)}" for k, v in sorted({**params, **oauth}.items()))
     base = "&".join([method.upper(), _pct(url), _pct(normalized)])
     key = f"{_pct(consumer_secret)}&{_pct(token_secret)}".encode()
-    digest = hmac.new(key, base.encode(), hashlib.sha1).digest()  # noqa: S324 - HMAC-SHA1 is the OAuth 1.0a contract
+    digest = hmac.new(key, base.encode(), hashlib.sha1).digest()
     oauth["oauth_signature"] = base64.b64encode(digest).decode()
     return "OAuth " + ", ".join(f'{k}="{_pct(v)}"' for k, v in sorted(oauth.items()))
 
@@ -252,20 +269,29 @@ class XAdsReadProvider:
                     if status is None or c.get("entity_status") == status
                 ]
                 return ProviderResult(payload={"campaigns": listed})
-            if entry.name == "get_campaign_performance":
+            if entry.name in ("get_campaign_performance", "get_ad_group_performance"):
                 start, end = require_window(
                     arguments.get("start_date"), arguments.get("end_date"), max_days=93
                 )
+                ad_groups = entry.name == "get_ad_group_performance"
+                entities = (
+                    await self._list(
+                        client, f"/accounts/{account}/line_items", context="x line items"
+                    )
+                    if ad_groups
+                    else campaigns
+                )
                 names = {
-                    str(c.get("id")): str(c.get("name") or "") for c in campaigns if c.get("id")
+                    str(e.get("id")): str(e.get("name") or "") for e in entities if e.get("id")
                 }
+                parents = {str(e.get("id")): str(e.get("campaign_id") or "") for e in entities}
                 ids = list(names)
                 rows: list[dict[str, JsonValue]] = []
                 for window_start, window_end in stats_windows(start, end):
                     for i in range(0, len(ids), STATS_MAX_IDS):
                         chunk = ids[i : i + STATS_MAX_IDS]
                         params = {
-                            "entity": "CAMPAIGN",
+                            "entity": "LINE_ITEM" if ad_groups else "CAMPAIGN",
                             "entity_ids": ",".join(chunk),
                             "start_time": window_start,
                             "end_time": window_end,
@@ -307,13 +333,23 @@ class XAdsReadProvider:
                                             and series[offset] is not None
                                             else None
                                         )
+                                    entity_id = str(item.get("id"))
+                                    identity: dict[str, JsonValue] = (
+                                        {
+                                            "line_item_id": entity_id,
+                                            "line_item_name": names.get(entity_id, entity_id),
+                                            "campaign_id": parents.get(entity_id, ""),
+                                        }
+                                        if ad_groups
+                                        else {
+                                            "campaign_id": entity_id,
+                                            "campaign_name": names.get(entity_id, entity_id),
+                                        }
+                                    )
                                     rows.append(
                                         {
                                             "date": day.isoformat(),
-                                            "campaign_id": str(item.get("id")),
-                                            "campaign_name": names.get(
-                                                str(item.get("id")), str(item.get("id"))
-                                            ),
+                                            **identity,
                                             "spend_micros": _pick(
                                                 metrics.get("billed_charge_local_micro"), offset
                                             ),
@@ -325,7 +361,11 @@ class XAdsReadProvider:
                                         }
                                     )
                 return ProviderResult(
-                    payload={"rows": rows, "attribution": "x_web_conversion_purchases"}
+                    payload={
+                        "rows": rows,
+                        "entity_type": "ad_group" if ad_groups else "campaign",
+                        "attribution": "x_web_conversion_purchases",
+                    }
                 )
         raise ProviderError("x read tool not implemented")
 

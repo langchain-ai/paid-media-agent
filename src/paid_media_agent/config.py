@@ -20,7 +20,7 @@ DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
 
 
 class ModelConfig(BaseModel):
-    """Resolved `provider:model` configuration. No gateway is involved."""
+    """Resolved `provider:model` configuration. A gateway is used only via an explicit `langsmith:` spec."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -112,10 +112,11 @@ class Settings(BaseSettings):
     paid_media_model_api_key_env: str | None = None
     """Env var holding the model API key when the provider does not read its default one."""
     paid_media_model_timeout_seconds: int = Field(default=120, ge=10)
+    """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_max_model_calls: int = Field(default=40, ge=5)
     """Model calls per run before the agent stops and reports; bounds runaway tool loops."""
-    """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_runtime: RuntimeName = "local"
+    """Which path the setup console guides you through; the command you run selects the runtime."""
     paid_media_backend: BackendName = "local"
     """Where the model's files live: the repository, or a LangSmith sandbox per process."""
     paid_media_sandbox_snapshot: str | None = None
@@ -124,7 +125,6 @@ class Settings(BaseSettings):
     paid_media_log_level: str = "INFO"
     paid_media_workspace_root: Path = Path("workspace")
     paid_media_account_config_path: Path = Path("config/accounts.example.toml")
-    paid_media_catalog_ttl_seconds: int = Field(default=900, ge=30)
     paid_media_max_selected_tools: int = Field(default=6, ge=1, le=40)
     paid_media_result_offload_chars: int = Field(default=6000, ge=500)
 
@@ -256,3 +256,12 @@ class Settings(BaseSettings):
             if sep and token and caller:
                 result[token] = caller
         return result
+
+
+def project_root(start: Path | None = None) -> Path:
+    """The repository root: the nearest ancestor holding `instructions.md` and `skills/`."""
+    here = (start or Path(__file__)).resolve()
+    for candidate in (here, *here.parents):
+        if (candidate / "instructions.md").exists() and (candidate / "skills").is_dir():
+            return candidate
+    return Path.cwd()

@@ -44,7 +44,7 @@ def _money(value: Decimal) -> str:
     return str(value.quantize(_MONEY, rounding=ROUND_HALF_UP))
 
 
-def _ratio(numerator: Decimal | int | None, denominator: Decimal | int | None) -> str | None:
+def _ratio_str(numerator: Decimal | int | None, denominator: Decimal | int | None) -> str | None:
     if numerator is None or not denominator:
         return None
     return str((Decimal(numerator) / Decimal(denominator)).quantize(_RATIO, rounding=ROUND_HALF_UP))
@@ -89,7 +89,7 @@ def summarize_rows(
                 "entity_ref": ref,
                 "entity_name": own[0].entity_name,
                 "spend": _money(metrics.spend),
-                "share_of_spend": _ratio(metrics.spend, total.spend),
+                "share_of_spend": _ratio_str(metrics.spend, total.spend),
                 "conversions": None if metrics.conversions is None else str(metrics.conversions),
                 "cpa": None if metrics.cpa is None else str(metrics.cpa),
                 "roas": None if metrics.roas is None else str(metrics.roas),
@@ -97,7 +97,7 @@ def summarize_rows(
                 "active_days": active_days,
                 "average_daily_spend": _money(average_daily),
                 "daily_budget": None if budget is None else _money(budget),
-                "pacing": _ratio(average_daily, budget),
+                "pacing": _ratio_str(average_daily, budget),
             }
         )
     entities.sort(key=lambda e: Decimal(e["spend"]), reverse=True)
@@ -114,7 +114,7 @@ def summarize_rows(
         if previous is not None:
             for metric in ("spend", "conversions"):
                 change = _change(point[metric], previous[metric])
-                entry[f"{metric}_change"] = None if change is None else _ratio(change, 1)
+                entry[f"{metric}_change"] = None if change is None else _ratio_str(change, 1)
                 if change is not None and abs(change) >= DAY_CHANGE_FLAG:
                     entry.setdefault("flags", []).append(
                         f"{metric}_moved_{'up' if change > 0 else 'down'}"

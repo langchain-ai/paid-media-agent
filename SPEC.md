@@ -459,51 +459,8 @@ authorize a write.
 
 ## 13. Target repository layout
 
-```text
-agent.py
-instructions.md
-pyproject.toml
-uv.lock
-
-src/paid_media_agent/
-  assembly.py
-  config.py
-  domain/
-  tools/
-    catalog.py
-    pipeboard.py
-    reads.py
-    compute.py
-    writes.py
-  middleware/
-    tool_selection.py
-    authorization.py
-    offload.py
-    redaction.py
-  reports/
-  persistence/
-  surfaces/
-    slack/
-    api/
-    ui/
-  runtime/
-    local.py
-    self_hosted.py
-
-connectors/mcp.py
-channels/slack.py
-sandbox/__init__.py
-sandbox/Dockerfile
-skills/<name>/
-workspace/{in,out,analysis}/
-config/accounts.example.toml
-tests/{unit,contract,integration,evals}/
-docs/{architecture,business-context,sources}/
-prep/research-briefs/
-```
-
-Keep platform-specific normalization under `tools/providers/<platform>/` only when schemas genuinely
-differ. Shared policy stays platform-neutral.
+The current layout is maintained in [AGENTS.md](AGENTS.md) under "Code shape"; this
+specification no longer duplicates it.
 
 ## 14. Dependencies
 
@@ -555,51 +512,8 @@ At minimum, test one supported Anthropic model, one supported OpenAI model, and 
 unnecessary calls. Provider-native search and portable selection must produce equivalent authorized
 reachability.
 
-## 16. Implementation sequence
 
-### Slice 1: fixture read path
-
-Create the package, settings, one shared assembly, fixture catalog, generic business wiki, analysis
-skill, deterministic period comparison, CLI demo, and tests. Acceptance: a clean checkout produces a
-reconciled answer with citations and no network.
-
-### Slice 2: live Pipeboard reads and model-aware selection
-
-Load catalogs host-side, classify tools, enforce account aliases, add both selection middleware paths,
-offload large results, and add `doctor`. Acceptance: live read-only smoke plus three-model contract
-matrix; no mutation tool is reachable.
-
-### Slice 3: reports
-
-Add `ReportPayload`, deterministic renderer, artifact bridge, PDF fixture, and Slack/UI presentation
-objects. Acceptance: every displayed value reconciles to input and missing platforms remain visible.
-
-### Slice 4: proposals and fake execution
-
-Add state machine, persistence interfaces, digest-bound approvals, fake provider, readback, receipts,
-and real-graph interrupt tests. Acceptance: happy path plus tamper, edit, replay, expiry, and unknown
-outcome rejection tests.
-
-### Slice 5: Slack and runtime profiles
-
-Add MDA entry/native channel, rich Socket Mode adapter, signed HTTP adapter, self-hosted API, and
-Postgres persistence. Acceptance: the same proposal can be reviewed from either surface and resumes
-the same graph state.
-
-### Slice 6: narrow live write canary readiness
-
-Compile a small reviewed mutation set from the current Pipeboard catalog. Keep writes globally off.
-Add exact provider adapters, dry-run support where available, readback, incident kill switch, and
-operator runbook. Acceptance: fixture and read-only production gates pass. A live canary still needs
-separate human authorization.
-
-### Slice 7: release hardening
-
-Finalize license, security policy, contributor docs, examples, CI, dependency updates, snapshot,
-redaction, docs links, screenshots, and migration notes. Acceptance: a new developer completes the
-fixture path and optional MDA path from the README alone.
-
-## 17. Definition of done
+## 16. Definition of done
 
 The first public release is done when:
 

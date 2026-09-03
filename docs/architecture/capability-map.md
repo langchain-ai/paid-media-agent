@@ -5,7 +5,8 @@
 | Run fixture demo | `paid-media-agent demo` | `runtime/local.py` + scripted model + `tools/compute.py` | thread + `workspace/analysis` artifacts | fixture/schema mismatch |
 | Discover tools | `discover_tools` | `tools/catalog.py` + `middleware/tool_selection.py` | catalog revision | stale or unknown tool |
 | Read platform data | `<platform>__<tool>` | `tools/reads.py` dispatcher + guard | artifact metadata | auth, scope, schema, or partial source failure |
-| Compare performance | `compare_periods` | `tools/compute.py` | `PeriodComparison` artifact | incompatible window, grain, unit, or currency |
+| Compare performance | `summarize_window` | one window: per-entity totals, pacing against daily budgets, daily series with flagged days | deterministic code |
+| `compare_periods` | `tools/compute.py` | `PeriodComparison` artifact | incompatible window, grain, unit, or currency |
 | Generate report | `render_report` | `reports/render.py` + bridge | artifact receipt | reconciliation or render failure |
 | Propose change | `propose_change` | `tools/writes.py` `ProposalService` | persisted ChangeSet | invalid target or policy denial |
 | Edit proposal | UI/Slack | proposal revision service | new digest and revision | stale approval |
@@ -19,12 +20,3 @@
 | Onboard and operate | `setup` console or CLI groups | `admin/actions.py` (host-side, no model) | `.env`, `config/accounts.toml`, process logs | doctor failures, invalid key, gate refusal |
 
 Update this table whenever a capability, entry point, state owner, or terminal condition changes.
-
-## Single-window analysis (2026-09-03)
-
-`summarize_window` complements `compare_periods`: given performance artifacts for one window (and
-the `list_campaigns` artifacts for budgets) it returns per-entity totals, spend share, CPA, ROAS,
-CTR, average daily spend, pacing against the daily budget, and a daily series with day-over-day
-changes and flagged days. Pacing, anomaly, and top-N questions resolve through it; the model quotes
-its output and never derives a figure in prose.
-

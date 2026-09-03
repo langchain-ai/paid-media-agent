@@ -29,7 +29,6 @@ class ToolSurfacePolicy(BaseModel):
 
     allowed_tool_names: frozenset[str]
     hidden_tool_names: frozenset[str] = HIDDEN_BUILTIN_TOOLS
-    mode: str = "conversation"
 
     def allows(self, name: str) -> bool:
         return name in self.allowed_tool_names and name not in self.hidden_tool_names

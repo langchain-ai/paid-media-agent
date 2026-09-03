@@ -124,7 +124,7 @@ UNKNOWN_MODEL = ModelCapabilities(
     verified=False,
 )
 
-INTEGRATION_PACKAGES: dict[str, str] = {
+PROVIDER_DISTRIBUTIONS: dict[str, str] = {
     "anthropic": "langchain-anthropic",
     "openai": "langchain-openai",
     "google_genai": "langchain-google-genai",

@@ -8,31 +8,21 @@ exact tool for the canary, and enabled writes; an incident kill switch halts eve
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import hmac
-import json
-import logging
 import secrets
-import tomllib
 import uuid
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 import jsonschema
-from langchain.agents.middleware import InterruptOnConfig
-from langchain.agents.middleware.types import ToolCallRequest
-from langchain.tools import ToolRuntime
-from langchain_core.tools import BaseTool, StructuredTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from paid_media_agent.config import AccountRegistry
-from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, RiskLevel
-from paid_media_agent.domain.presentation import ProposalView, ReceiptView
+from paid_media_agent.domain.common import JsonValue, RiskLevel
 from paid_media_agent.domain.proposals import (
     ApprovalClaim,
     ChangeSet,
@@ -43,7 +33,6 @@ from paid_media_agent.domain.proposals import (
     ProposalState,
     ReceiptStatus,
     WriteReceipt,
-    canonical_json,
     compute_payload_digest,
     stamp_digest,
     transition,
@@ -55,7 +44,6 @@ from paid_media_agent.persistence.interfaces import (
     ReceiptRepository,
 )
 from paid_media_agent.tools.catalog import (
-    AuthorizedToolCatalog,
     CatalogEntry,
     CatalogProvider,
     ToolClass,
@@ -66,8 +54,10 @@ from paid_media_agent.tools.providers import (
     ReadProvider,
     WriteProvider,
 )
-
-logger = logging.getLogger(__name__)
+from paid_media_agent.tools.write_policy import (
+    WriteOperation,
+    WritePolicy,
+)
 
 PROPOSE_CHANGE_TOOL = "propose_change"
 EXECUTE_CHANGE_TOOL = "execute_change"
@@ -81,180 +71,6 @@ DEFAULT_MUTATION_TIMEOUT_SECONDS = 30.0
 _STATUS_FIELDS = frozenset({"status", "state", "enabled", "paused", "active"})
 _BUDGET_MARKERS = ("budget", "bid", "spend", "amount")
 _BULK_MARKERS = ("ids", "items", "operations", "batch", "bulk")
-
-
-class WriteOperation(BaseModel):
-    """One admitted mutation: which read proves its state and which fields it may change."""
-
-    model_config = ConfigDict(frozen=True)
-
-    tool_name: str
-    readback_tool: str
-    target_arg: str
-    editable_fields: tuple[str, ...]
-    readback_fields: dict[str, str]
-    """Maps proposal field -> field name in the readback payload."""
-    risk: RiskLevel
-    units: dict[str, str] = Field(default_factory=dict)
-    readback_entity_key: str | None = "campaign"
-    """Key holding the entity object inside the readback payload, or None for a flat payload."""
-    validate_only_arg: str | None = None
-    """Schema argument that turns the call into provider-side validation, when the tool has one."""
-    idempotency_arg: str | None = None
-    """Schema argument for a provider idempotency key, when the tool has one."""
-
-    def digest(self) -> str:
-        return hashlib.sha256(
-            canonical_json(self.model_dump(mode="json")).encode("utf-8")
-        ).hexdigest()[:16]
-
-
-class WritePolicy(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    operations: tuple[WriteOperation, ...]
-
-    def get(self, tool_name: str) -> WriteOperation | None:
-        for op in self.operations:
-            if op.tool_name == tool_name:
-                return op
-        return None
-
-    def admitted_names(self) -> tuple[str, ...]:
-        return tuple(op.tool_name for op in self.operations)
-
-
-class PolicyIssue(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    tool_name: str
-    reason: str
-
-
-class WritePolicyEntry(BaseModel):
-    """One TOML row. `admitted` is the operator's explicit release decision for this operation."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    admitted: bool = False
-    readback_tool: str
-    target_arg: str
-    editable_fields: tuple[str, ...]
-    readback_fields: dict[str, str]
-    risk: RiskLevel = RiskLevel.MEDIUM
-    units: dict[str, str] = Field(default_factory=dict)
-    readback_entity_key: str | None = "campaign"
-    validate_only_arg: str | None = None
-    idempotency_arg: str | None = None
-    notes: str = ""
-
-
-class WritePolicyFile(BaseModel):
-    """Reviewed mutation set. Rows are data: removing a row makes the operation unreachable."""
-
-    model_config = ConfigDict(frozen=True)
-
-    operations: dict[str, WritePolicyEntry] = Field(default_factory=dict)
-
-    @classmethod
-    def from_toml(cls, path: Path) -> WritePolicyFile:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-        raw = data.get("operations", {})
-        if not isinstance(raw, Mapping):
-            raise ValueError("write policy must contain an [operations] table")
-        return cls(operations={name: WritePolicyEntry.model_validate(v) for name, v in raw.items()})
-
-    def admitted_names(self) -> tuple[str, ...]:
-        return tuple(name for name, entry in self.operations.items() if entry.admitted)
-
-    def validate_against(
-        self, catalog: AuthorizedToolCatalog
-    ) -> tuple[WritePolicy, tuple[PolicyIssue, ...]]:
-        """Keep only admitted operations the current catalog can honor. Everything else is an issue."""
-        operations: list[WriteOperation] = []
-        issues: list[PolicyIssue] = []
-        for name, entry in self.operations.items():
-            if not entry.admitted:
-                issues.append(PolicyIssue(tool_name=name, reason="not_admitted"))
-                continue
-            catalog_entry = catalog.get(name)
-            if catalog_entry is None:
-                issues.append(PolicyIssue(tool_name=name, reason="not_in_catalog"))
-                continue
-            if catalog_entry.tool_class is not ToolClass.MUTATION:
-                issues.append(
-                    PolicyIssue(
-                        tool_name=name,
-                        reason=f"catalog_class_{catalog_entry.tool_class.value}:{catalog_entry.policy.reason}",
-                    )
-                )
-                continue
-            properties = catalog_entry.input_schema.get("properties", {})
-            if not isinstance(properties, Mapping):
-                issues.append(PolicyIssue(tool_name=name, reason="malformed_schema"))
-                continue
-            missing = [f for f in (entry.target_arg, *entry.editable_fields) if f not in properties]
-            for optional_arg in (entry.validate_only_arg, entry.idempotency_arg):
-                if optional_arg is not None and optional_arg not in properties:
-                    missing.append(optional_arg)
-            if missing:
-                issues.append(
-                    PolicyIssue(tool_name=name, reason=f"schema_missing_fields:{','.join(missing)}")
-                )
-                continue
-            readback = catalog.get(entry.readback_tool)
-            if readback is None or readback.tool_class is not ToolClass.READ:
-                issues.append(PolicyIssue(tool_name=name, reason="readback_tool_unavailable"))
-                continue
-            if set(entry.readback_fields) != set(entry.editable_fields):
-                issues.append(
-                    PolicyIssue(tool_name=name, reason="readback_fields_must_cover_editable_fields")
-                )
-                continue
-            operations.append(
-                WriteOperation(
-                    tool_name=name,
-                    readback_tool=entry.readback_tool,
-                    target_arg=entry.target_arg,
-                    editable_fields=entry.editable_fields,
-                    readback_fields=entry.readback_fields,
-                    risk=entry.risk,
-                    units=entry.units,
-                    readback_entity_key=entry.readback_entity_key,
-                    validate_only_arg=entry.validate_only_arg,
-                    idempotency_arg=entry.idempotency_arg,
-                )
-            )
-        return WritePolicy(operations=tuple(operations)), tuple(issues)
-
-
-def fixture_write_policy() -> WritePolicy:
-    ops: list[WriteOperation] = []
-    for platform in PIPEBOARD_PLATFORMS:
-        prefix = f"{platform.value}__"
-        ops.append(
-            WriteOperation(
-                tool_name=f"{prefix}update_campaign_budget",
-                readback_tool=f"{prefix}get_campaign",
-                target_arg="campaign_id",
-                editable_fields=("daily_budget",),
-                readback_fields={"daily_budget": "daily_budget"},
-                risk=RiskLevel.MEDIUM,
-                units={"daily_budget": "account currency per day"},
-                validate_only_arg="validate_only",
-            )
-        )
-        ops.append(
-            WriteOperation(
-                tool_name=f"{prefix}update_campaign_status",
-                readback_tool=f"{prefix}get_campaign",
-                target_arg="campaign_id",
-                editable_fields=("status",),
-                readback_fields={"status": "status"},
-                risk=RiskLevel.HIGH,
-            )
-        )
-    return WritePolicy(operations=tuple(ops))
 
 
 def classify_risk(
@@ -480,7 +296,6 @@ class ProposalService:
     def proposals(self) -> ProposalRepository:
         return self._proposals
 
-    @property
     def write_policy(self) -> WritePolicy:
         return self._write_policy
 
@@ -632,12 +447,6 @@ class ProposalService:
 
     def get(self, proposal_id: UUID) -> ProposalRecord | None:
         return self._proposals.get(proposal_id)
-
-    def is_pending(self, proposal_id: UUID, thread_id: str | None = None) -> bool:
-        record = self._proposals.get(proposal_id)
-        if record is None or record.state is not ProposalState.AWAITING_APPROVAL:
-            return False
-        return thread_id is None or record.changeset.thread_id == thread_id
 
     def belongs_to(self, proposal_id: UUID, thread_id: str) -> bool:
         record = self._proposals.get(proposal_id)
@@ -1080,181 +889,3 @@ class WriteExecutor:
             reason="provider state could not be proven within the readback budget" + suffix,
             readback_attempts=attempts,
         )
-
-
-class ProposeChangeArgs(BaseModel):
-    account_alias: str = Field(description="Configured account alias from list_accounts.")
-    tool_name: str = Field(
-        description="Admitted mutation from discover_write_operations, e.g. google_ads__update_campaign_budget."
-    )
-    target_ref: str = Field(
-        description="Provider entity id being changed, e.g. a campaign id from a read."
-    )
-    changes: dict[str, JsonValue] = Field(
-        description="Field -> new value. Only fields the policy admits."
-    )
-    reason: str = Field(min_length=1, max_length=2000)
-    measurement_plan: str = Field(default="", max_length=800)
-    reversal_plan: str = Field(default="", max_length=800)
-
-
-class ProposalIdArgs(BaseModel):
-    proposal_id: str = Field(description="UUID of the proposal returned by propose_change.")
-
-
-class _NoArgs(BaseModel):
-    pass
-
-
-def _caller_from_config(config: Any) -> tuple[str, str]:
-    configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
-    thread_id = str(configurable.get("thread_id") or "local-thread")
-    caller = str(configurable.get("caller_ref") or "local-user")
-    return thread_id, caller
-
-
-def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
-    return _caller_from_config(getattr(runtime, "config", None) or {})
-
-
-def _proposal_id_from_call(tool_call: Mapping[str, Any]) -> UUID | None:
-    raw = (
-        tool_call.get("args", {}).get("proposal_id")
-        if isinstance(tool_call.get("args"), Mapping)
-        else None
-    )
-    try:
-        return UUID(str(raw))
-    except (ValueError, TypeError):
-        return None
-
-
-def build_execute_interrupt(service: ProposalService) -> InterruptOnConfig:
-    """Interrupt only for a proposal that exists on this thread; anything else runs and is denied.
-
-    The predicate is evaluated again when the graph resumes, so it must not depend on state that
-    the reviewer's decision changes (a rejection is persisted before the resume). Existence on the
-    thread is stable; the executor still refuses anything that is not awaiting approval.
-    """
-
-    def _when(request: ToolCallRequest) -> bool:
-        proposal_id = _proposal_id_from_call(request.tool_call)
-        if proposal_id is None:
-            return False
-        thread_id, _ = _caller_from_config(getattr(request.runtime, "config", None) or {})
-        return service.belongs_to(proposal_id, thread_id)
-
-    def _description(tool_call: Any, state: Any, runtime: Any) -> str:  # noqa: ARG001
-        proposal_id = _proposal_id_from_call(tool_call)
-        record = service.get(proposal_id) if proposal_id is not None else None
-        if record is None:
-            return "Execute a staged change (proposal not found)."
-        cs = record.changeset
-        before = ", ".join(f"{fv.field}={fv.value}" for fv in cs.before) or "n/a"
-        after = ", ".join(f"{fv.field}={fv.value}" for fv in cs.after) or "n/a"
-        flags = ", ".join(cs.risk_flags) or "none"
-        return (
-            f"Approve change {cs.proposal_id} (revision {cs.revision}, {record.state.value}) on {cs.platform.value} account "
-            f"{cs.account_ref}: {cs.tool_name} target {cs.target_ref}. Before: {before}. After: {after}. "
-            f"Risk: {cs.risk.value} [{flags}]. Reason: {cs.reason[:300]}"
-        )
-
-    return InterruptOnConfig(
-        allowed_decisions=["approve", "reject"], description=_description, when=_when
-    )
-
-
-def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list[BaseTool]:
-    async def _propose(
-        account_alias: str,
-        tool_name: str,
-        target_ref: str,
-        changes: dict[str, JsonValue],
-        reason: str,
-        runtime: ToolRuntime,
-        measurement_plan: str = "",
-        reversal_plan: str = "",
-    ) -> str:
-        thread_id, caller = _caller_from_runtime(runtime)
-        try:
-            record = await service.propose(
-                thread_id=thread_id,
-                requester_ref=caller,
-                account_alias=account_alias,
-                tool_name=tool_name,
-                target_ref=target_ref,
-                changes=changes,
-                reason=reason,
-                measurement_plan=measurement_plan,
-                reversal_plan=reversal_plan,
-            )
-        except WriteDenied as exc:
-            return json.dumps({"denied": True, "reason": exc.reason, "detail": exc.detail})
-        view = ProposalView.from_record(record)
-        return json.dumps(
-            {
-                "proposal": view.model_dump(mode="json"),
-                "next_step": "Present the proposal, then call execute_change with the proposal_id. The runtime pauses for human approval.",
-            }
-        )
-
-    async def _execute(proposal_id: str) -> str:
-        try:
-            pid = UUID(proposal_id)
-        except ValueError:
-            return json.dumps({"denied": True, "reason": "invalid_proposal_id"})
-        try:
-            receipt = await executor.execute(pid)
-        except WriteDenied as exc:
-            return json.dumps({"denied": True, "reason": exc.reason, "detail": exc.detail})
-        return json.dumps({"receipt": ReceiptView.from_receipt(receipt).model_dump(mode="json")})
-
-    def _get(proposal_id: str) -> str:
-        try:
-            record = service.get(UUID(proposal_id))
-        except ValueError:
-            return json.dumps({"denied": True, "reason": "invalid_proposal_id"})
-        if record is None:
-            return json.dumps({"denied": True, "reason": "unknown_proposal"})
-        return json.dumps({"proposal": ProposalView.from_record(record).model_dump(mode="json")})
-
-    def _discover() -> str:
-        return json.dumps(
-            {
-                "operations": service.admitted_operations(),
-                "execution_gate": executor.gate.describe(),
-                "note": "Only these operations can be proposed. Each needs a human approval before one execution attempt.",
-            }
-        )
-
-    propose_tool = StructuredTool.from_function(
-        coroutine=_propose,
-        name=PROPOSE_CHANGE_TOOL,
-        description=(
-            "Stage a typed change proposal for one admitted mutation. Reads current provider state for the "
-            "before value, computes the digest, and persists it. Nothing is executed."
-        ),
-        args_schema=ProposeChangeArgs,
-    )
-    execute_tool = StructuredTool.from_function(
-        coroutine=_execute,
-        name=EXECUTE_CHANGE_TOOL,
-        description=(
-            "Request execution of a staged proposal. The runtime interrupts for human approval; the host verifies "
-            "the signed approval, runs one mutation attempt, and reads back the result."
-        ),
-        args_schema=ProposalIdArgs,
-    )
-    get_tool = StructuredTool.from_function(
-        func=_get,
-        name=GET_PROPOSAL_TOOL,
-        description="Read the current persisted state of a proposal by id.",
-        args_schema=ProposalIdArgs,
-    )
-    discover_tool = StructuredTool.from_function(
-        func=_discover,
-        name=DISCOVER_WRITE_OPERATIONS_TOOL,
-        description="List the admitted mutation operations, their editable fields, units, risk, and the current execution gate.",
-        args_schema=_NoArgs,
-    )
-    return [discover_tool, propose_tool, execute_tool, get_tool]

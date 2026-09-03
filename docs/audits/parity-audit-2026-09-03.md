@@ -153,15 +153,19 @@ prose; one final-run answer wrote dollar signs instead of the currency code.
 
 ## 11. Remaining gaps, ranked
 
-1. Entity depth on direct platforms (ad group, creative, conversion, geographic, lead-gen reads)
-   and keyword or search-term grain on Google, with the aggregation wrappers that grain needs.
-2. Creation and archive write flows (paused drafts) and writes on direct platforms; batch approval
-   cards.
-3. Public generic playbook content: benchmarks, anomaly significance, bidding and budget, keyword
-   and quality score, per-platform strategy, exec-summary style.
-4. Slack presentation layer (code-rendered charts and tables) and Slack delivery of scheduled
+Closed after the audit (same day): one grain below campaign on every platform (fixture ad groups,
+LinkedIn creatives, X line items, OpenAI Ads ad groups), the public playbook pages, the question
+eval under `tests/eval/`, and the Slack HTTP transport and Edit reply.
+
+Still open:
+
+1. Keyword and search-term grain on Google with the aggregation wrappers that grain needs, and
+   conversion, geographic, and lead-gen breakdowns on LinkedIn.
+2. Creation and archive write flows (paused drafts), writes on direct platforms, and batch approval
+   cards. These need live provider access to validate and carry real blast radius.
+3. A Slack presentation layer (code-rendered charts and tables) and Slack delivery of scheduled
    reports with per-platform narratives and a campaign-anchor guard.
-5. Judged evals (LLM-as-judge quiz, source-blind report eval) and finer-grain synthetic fixtures,
-   including fixtures for the direct platforms.
-6. Change history reads, run-time preflight alerts, capability-gap feedback, and a context
+4. Judged evals (LLM-as-judge quiz, source-blind report eval) and synthetic fixtures for the direct
+   platforms.
+5. Change history reads, run-time preflight alerts, capability-gap feedback, and a context
    integrity manifest for sandbox mounts.

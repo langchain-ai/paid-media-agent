@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (2026-09-01)
+## Unreleased
 
 ### Added (sandbox parity)
 
@@ -9,6 +9,29 @@
   mirrored under `/workspace`, and PDF reports rendered inside the sandbox.
 - `paid-media-agent sandbox publish|use|test` and a console route for building, declaring, and
   probing the snapshot; `mda check` verifies the MDA declaration matches `.env`.
+
+### Added (gap closure)
+
+- Ad-group grain on the fixture catalog (`get_ad_group_performance`, derived deterministically from
+  campaign rows) and on the direct adapters: LinkedIn creatives, X line items, OpenAI Ads ad
+  groups. Normalization keys rows by the requested grain and reads carry the grain forward.
+- Five public playbook wiki pages (benchmarks, anomalies and significance, bidding and budget,
+  platform playbooks, answer style) routed from the analysis skill.
+- `tests/eval/`: the fifteen-question eval with a runner and a grader over fixture ground truth.
+- The signed Slack HTTP transport is served by `serve` when `SLACK_TRANSPORT=http`, and a thread
+  reply of the form `edit <field> <value>` edits the waiting proposal.
+
+### Changed (clarity pass)
+
+- Removed dead code and duplicated helpers (one `project_root`, one text flattener, one account
+  schema builder, one `_NoArgs`); `admin/model_presets.py`, `tools/write_policy.py`, and
+  `tools/write_tools.py` split out of the two largest modules; `tools/analysis.py` is now
+  `tools/compare_periods.py`; the demo runner lives in `testing/demo_script.py`.
+- Dropped the catalog TTL setting (the catalog loads once per process), the unused schedule run
+  mode, the `LANGSMITH_GATEWAY` env key, and the Slack Cancel action.
+- `OPERATIONS.md` is the command reference; the README quick start leads with the credential-free
+  demo; `AGENTS.md` maps the whole tree; build scaffolding moved to `docs/history/`.
+- Inert `noqa` markers removed and `RUF100` enabled so unused suppressions fail lint.
 
 ### Added (parity audit follow-ups)
 

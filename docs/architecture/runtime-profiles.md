@@ -66,7 +66,7 @@ terms.
 - `connectors/mcp.py` is intentionally absent: MDA's MCP connector would bind provider tools to the
   model directly, bypassing the authorized catalog. Tools always enter through the assembly.
 
-## Slice 6 notes (2026-09-01)
+## Live-catalog notes
 
 - With a live catalog, `self_hosted` and `mda` profiles use `PipeboardReadProvider` and the gated
   `PipeboardWriteProvider` and mark the provider as not fake. The fixture fake is used only with the

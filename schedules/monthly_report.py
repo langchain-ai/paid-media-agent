@@ -1,4 +1,5 @@
-"""Managed Deep Agents schedule: the monthly cross-platform report (28-day windows)."""
+"""Managed Deep Agents schedule. It runs the same agent as a conversation would; any change it
+proposes still waits for a human approval, and the prompt asks for a report, not a change."""
 
 from managed_deepagents import define_schedule
 

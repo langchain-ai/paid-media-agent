@@ -10,7 +10,6 @@ from paid_media_agent.persistence.interfaces import DedupeStore
 from paid_media_agent.surfaces.runner import AgentRunner, RunOutcome, ThreadAccessDenied
 from paid_media_agent.surfaces.slack.blocks import (
     ACTION_APPROVE,
-    ACTION_CANCEL,
     ACTION_EDIT,
     ACTION_REJECT,
     SlackMessage,
@@ -90,6 +89,20 @@ class SlackApplicationService:
             return None
         thread_id = slack_thread_id(team_id, channel, thread_ts)
         caller = self._caller(team_id, user_id)
+        edit = text.split(maxsplit=2)
+        if len(edit) == 3 and edit[0].lower() == "edit":
+            # The Edit button asks for `edit <field> <value>` in the thread; this is that reply.
+            proposal = self._runner.latest_proposal(thread_id)
+            if proposal is None:
+                return SlackReply(channel, thread_ts, render_answer("No proposal is waiting here."))
+            message = await self.handle_edit_command(
+                routing_id=proposal.routing_id,
+                team_id=team_id,
+                user_id=user_id,
+                field=edit[1],
+                value=edit[2],
+            )
+            return SlackReply(channel, thread_ts, message)
         try:
             outcome = await self._runner.send(thread_id=thread_id, caller_ref=caller, text=text)
         except ThreadAccessDenied:
@@ -146,10 +159,6 @@ class SlackApplicationService:
                 outcome = await self._runner.reject(
                     proposal_id=proposal.proposal_id, actor_ref=actor, message="rejected in Slack"
                 )
-            elif action_id == ACTION_CANCEL:
-                outcome = await self._runner.reject(
-                    proposal_id=proposal.proposal_id, actor_ref=actor, message="cancelled in Slack"
-                )
             elif action_id == ACTION_EDIT:
                 return SlackReply(
                     channel,
@@ -188,3 +197,16 @@ class SlackApplicationService:
         except WriteDenied as exc:
             return render_answer(f"Edit refused: {exc.reason}. {exc.detail}".strip())
         return render_proposal(view, can_act=True)
+
+
+def build_slack_service(runtime: Any) -> SlackApplicationService:
+    """One Slack service over a built runtime, shared by Socket Mode and the HTTP transport."""
+    from paid_media_agent.surfaces.runner import AgentRunner
+
+    runner = AgentRunner(
+        graph=runtime.graph,
+        service=runtime.components.proposal_service,
+        receipts=runtime.profile.receipts,
+        threads=runtime.threads,
+    )
+    return SlackApplicationService(runner=runner, dedupe=runtime.dedupe)

@@ -21,6 +21,8 @@ class _DiscoverArgs(BaseModel):
 
 
 class _NoArgs(BaseModel):
+    """Argument schema for tools that take nothing. Shared with the write tools."""
+
     pass
 
 

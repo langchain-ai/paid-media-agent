@@ -24,7 +24,9 @@ async def test_pipeboard_catalog_loads_and_denies_mutations() -> None:
     loader = PipeboardCatalogLoader(settings=settings)
     catalog = await loader.refresh()
     assert catalog.source == "pipeboard"
-    assert catalog.mutation_entries() == (), "no mutation is admitted before the Slice 6 review"
+    assert catalog.mutation_entries() == (), (
+        "no mutation is admitted before the live-write release review"
+    )
     for entry in catalog.read_entries():
         assert entry.read_only_hint is True and entry.account_arg is not None
 

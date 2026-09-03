@@ -65,7 +65,7 @@ class RedactionMiddleware(AgentMiddleware[Any, Any, Any]):
     def wrap_tool_call(self, request: ToolCallRequest, handler: Any) -> ToolMessage | Command[Any]:
         try:
             return self._clean(handler(request))
-        except Exception as exc:  # noqa: BLE001 - every tool error is sanitized for the model
+        except Exception as exc:
             return ToolMessage(
                 content=f"Tool failed: {sanitize_exception(exc, self._secrets)}",
                 tool_call_id=request.tool_call["id"],
@@ -78,7 +78,7 @@ class RedactionMiddleware(AgentMiddleware[Any, Any, Any]):
     ) -> ToolMessage | Command[Any]:
         try:
             return self._clean(await handler(request))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return ToolMessage(
                 content=f"Tool failed: {sanitize_exception(exc, self._secrets)}",
                 tool_call_id=request.tool_call["id"],

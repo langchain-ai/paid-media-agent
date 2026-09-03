@@ -165,8 +165,8 @@ def open_sandbox(settings: Settings, *, name: str | None = None) -> Sandbox:
     `close()` deletes it. Servers that die without running exit handlers leave it to the
     platform: it stops after the idle TTL and is deleted shortly after.
     """
-    from deepagents.backends import LangSmithSandbox  # noqa: PLC0415 - optional dependency path
-    from langsmith.sandbox import SandboxClient, SandboxClientError  # noqa: PLC0415
+    from deepagents.backends import LangSmithSandbox
+    from langsmith.sandbox import SandboxClient, SandboxClientError
 
     resolved_name = name or f"paid-media-{secrets.token_hex(4)}"
     client = SandboxClient()

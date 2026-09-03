@@ -18,5 +18,4 @@ agent = define_deep_agent(
     tools=list(_components.tools),
     middleware=list(_components.middleware),
     interrupt_on=dict(_components.interrupt_on) or None,
-    response_format=_components.response_format,
 )

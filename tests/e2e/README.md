@@ -1,5 +1,7 @@
 # Browser walkthrough
 
+Not part of `pytest`: needs Node 22, Playwright, and a throwaway project copy.
+
 `console_walkthrough.mjs` drives the setup wizard with headless Chromium and captures a screenshot
 per screen: welcome (capabilities and example prompts), model presets and a custom key name, ad
 accounts, try-it (an in-page question and LangGraph Studio start and stop), the managed vs
@@ -19,3 +21,5 @@ node tests/e2e/console_walkthrough.mjs "http://127.0.0.1:8766/#token=<printed to
 
 The Python suite covers the same actions through `tests/contract/test_console_api.py`; this script
 adds the rendered page, the forms, the process controls, and the theme toggle.
+
+Not part of `pytest`: needs Node 22, Playwright, and a throwaway project copy.

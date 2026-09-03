@@ -125,7 +125,7 @@ def build_report_payload(
         and comparison.cross_platform_previous is not None
         and currency
     ):
-        from paid_media_agent.tools.compute import deltas as compute_deltas  # noqa: PLC0415
+        from paid_media_agent.tools.compute import deltas as compute_deltas
 
         scorecard = _rows(
             comparison.cross_platform_total,
@@ -243,8 +243,8 @@ class RenderedReport:
 
 
 def pdf_renderer_available() -> tuple[bool, str]:
-    import os  # noqa: PLC0415
-    import sys  # noqa: PLC0415
+    import os
+    import sys
 
     # WeasyPrint writes installation advice straight to file descriptor 2 when Pango or Cairo is
     # missing, so a Python-level redirect is not enough; park fd 2 on /dev/null for the import.
@@ -254,11 +254,11 @@ def pdf_renderer_available() -> tuple[bool, str]:
         with open(os.devnull, "w") as sink:
             os.dup2(sink.fileno(), 2)
             try:
-                import weasyprint  # noqa: F401, PLC0415
+                import weasyprint  # noqa: F401
             finally:
                 os.dup2(saved, 2)
                 os.close(saved)
-    except Exception as exc:  # noqa: BLE001 - missing native libraries raise OSError, not ImportError
+    except Exception as exc:
         return False, f"{type(exc).__name__}: WeasyPrint native libraries unavailable"
     return True, "ok"
 
@@ -276,7 +276,7 @@ class HostPdfEngine:
         return pdf_renderer_available()
 
     def write_pdf(self, html: str, *, base_url: str, target: Path) -> None:
-        from weasyprint import HTML  # noqa: PLC0415
+        from weasyprint import HTML
 
         HTML(string=html, base_url=base_url).write_pdf(str(target))
 
@@ -295,7 +295,7 @@ class ReportRenderer:
         self._pdf = pdf_engine or HostPdfEngine()
 
     def render_html(self, payload: ReportPayload) -> str:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
 
         env = Environment(
             loader=FileSystemLoader(str(self._templates)),

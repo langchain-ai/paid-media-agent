@@ -58,10 +58,6 @@ _TRANSITIONS: dict[tuple[ProposalState, ProposalEvent], ProposalState] = {
     (ProposalState.VERIFYING, ProposalEvent.UNKNOWN): ProposalState.UNKNOWN,
 }
 
-TERMINAL_STATES = frozenset(
-    {ProposalState.VERIFIED, ProposalState.REJECTED, ProposalState.FAILED, ProposalState.UNKNOWN}
-)
-
 
 class InvalidTransition(Exception):
     def __init__(self, state: ProposalState, event: ProposalEvent) -> None:

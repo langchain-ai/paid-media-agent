@@ -1,8 +1,5 @@
-"""Managed Deep Agents schedule: the weekly cross-platform report.
-
-The schedule starts the same agent with a fixed prompt. Report runs use the schedule run mode,
-which exposes read and render tools only; write tools are never inherited by a schedule.
-"""
+"""Managed Deep Agents schedule. It runs the same agent as a conversation would; any change it
+proposes still waits for a human approval, and the prompt asks for a report, not a change."""
 
 from managed_deepagents import define_schedule
 

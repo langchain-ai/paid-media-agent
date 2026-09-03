@@ -23,18 +23,17 @@ from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import CatalogProvider
 from paid_media_agent.tools.fixtures import FakeWriteProvider, FixtureReadProvider, FixtureState
 from paid_media_agent.tools.providers import ReadProvider, WriteProvider
-from paid_media_agent.tools.writes import (
-    ApprovalPolicy,
-    ApprovalSigner,
+from paid_media_agent.tools.write_policy import (
     PolicyIssue,
-    WriteGate,
     WritePolicy,
     WritePolicyFile,
     fixture_write_policy,
 )
+from paid_media_agent.tools.writes import ApprovalPolicy, ApprovalSigner, WriteGate
 
 ProfileName = Literal["local", "mda", "self_hosted"]
-RunMode = Literal["conversation", "schedule"]
+RunMode = Literal["conversation"]
+"""Reserved for a future read-only mode; every current entry point is a conversation."""
 
 
 @dataclass(frozen=True)

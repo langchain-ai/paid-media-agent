@@ -91,6 +91,18 @@ def fixture_raw_tools() -> list[RawTool]:
                 ),
                 RawTool(
                     platform=platform.value,
+                    name="get_ad_group_performance",
+                    description=(
+                        "Daily ad group performance rows (spend, impressions, clicks, conversions, "
+                        "conversion value where reported) with the parent campaign id, for an "
+                        "inclusive date range."
+                    ),
+                    input_schema=_schema(account_arg, date_props, ["start_date", "end_date"]),
+                    annotations={"readOnlyHint": True, "destructiveHint": False},
+                    source_endpoint=endpoint,
+                ),
+                RawTool(
+                    platform=platform.value,
                     name="get_campaign",
                     description="Current configuration of one campaign: status and daily budget.",
                     input_schema=_schema(
@@ -205,6 +217,40 @@ class FixtureState:
         return None
 
 
+AD_GROUP_SHARES: tuple[tuple[str, Decimal], ...] = (("a", Decimal("0.6")), ("b", Decimal("0.4")))
+"""Each fixture campaign is split into two ad groups with fixed shares, so ad-group rows
+reconcile to their campaign exactly and the demo shows one grain below campaign."""
+
+
+def ad_group_rows(rows: list[dict[str, JsonValue]]) -> list[dict[str, JsonValue]]:
+    """Derive daily ad-group rows from campaign rows; the last share takes the rounding remainder."""
+    derived: list[dict[str, JsonValue]] = []
+    for row in rows:
+        remaining = {
+            k: Decimal(str(row[k])) for k in ("spend", "impressions", "clicks", "conversions")
+        }
+        if row.get("value") is not None:
+            remaining["value"] = Decimal(str(row["value"]))
+        for index, (suffix, share) in enumerate(AD_GROUP_SHARES):
+            last = index == len(AD_GROUP_SHARES) - 1
+            part: dict[str, JsonValue] = {
+                "date": row["date"],
+                "campaign_id": row["campaign_id"],
+                "ad_group_id": f"{row['campaign_id']}-{suffix}",
+            }
+            for key, total in list(remaining.items()):
+                whole = key in ("impressions", "clicks")
+                value = (
+                    total
+                    if last
+                    else (total * share).quantize(Decimal(1) if whole else Decimal("0.01"))
+                )
+                remaining[key] = total - value
+                part[key] = int(value) if whole else str(value)
+            derived.append(part)
+    return derived
+
+
 def _to_native_rows(
     platform: Platform, rows: list[dict[str, JsonValue]]
 ) -> list[dict[str, JsonValue]]:
@@ -216,6 +262,7 @@ def _to_native_rows(
             item: dict[str, JsonValue] = {
                 "date": row["date"],
                 "campaign_id": row["campaign_id"],
+                **({"ad_group_id": row["ad_group_id"]} if "ad_group_id" in row else {}),
                 "cost_micros": int(spend * 1_000_000),
                 "impressions": row["impressions"],
                 "clicks": row["clicks"],
@@ -226,6 +273,7 @@ def _to_native_rows(
             item = {
                 "date_start": row["date"],
                 "campaign_id": row["campaign_id"],
+                **({"adset_id": row["ad_group_id"]} if "ad_group_id" in row else {}),
                 "spend": str(spend),
                 "impressions": row["impressions"],
                 "link_clicks": row["clicks"],
@@ -237,6 +285,7 @@ def _to_native_rows(
             item = {
                 "date": row["date"],
                 "campaign_id": row["campaign_id"],
+                **({"ad_group_id": row["ad_group_id"]} if "ad_group_id" in row else {}),
                 "spend_micros": int(spend * 1_000_000),
                 "impressions": row["impressions"],
                 "clicks": row["clicks"],
@@ -284,12 +333,15 @@ class FixtureReadProvider:
             if campaign is None:
                 raise ProviderError("campaign not found in this account")
             return ProviderResult(payload={"campaign": dict(campaign)}, **meta)
-        if entry.name == "get_campaign_performance":
+        if entry.name in ("get_campaign_performance", "get_ad_group_performance"):
             start = date.fromisoformat(str(arguments["start_date"]))
             end = date.fromisoformat(str(arguments["end_date"]))
             selected = [
                 r for r in dataset["daily"] if start <= date.fromisoformat(str(r["date"])) <= end
             ]
+            grain = "campaign"
+            if entry.name == "get_ad_group_performance":
+                selected, grain = ad_group_rows(selected), "ad_group"
             totals = {
                 "spend": str(sum(Decimal(str(r["spend"])) for r in selected)),
                 "clicks": sum(int(r["clicks"]) for r in selected),
@@ -297,10 +349,17 @@ class FixtureReadProvider:
                 "row_count": len(selected),
             }
             names = {c["id"]: c["name"] for c in campaigns}
+            if grain == "ad_group":
+                names = {
+                    f"{cid}-{suffix}": f"{name} / ad group {suffix.upper()}"
+                    for cid, name in names.items()
+                    for suffix, _ in AD_GROUP_SHARES
+                }
             covered = sorted(str(r["date"]) for r in dataset["daily"])
             return ProviderResult(
                 payload={
                     "rows": _to_native_rows(entry.platform, selected),
+                    "entity_type": grain,
                     "entity_names": names,
                     "totals": totals,
                     # Fixture data is static; say what it covers so an empty window is explained.

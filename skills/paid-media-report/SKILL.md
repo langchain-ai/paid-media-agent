@@ -7,7 +7,7 @@ description: Build a reconciled paid-media report or executive summary from dete
 
 Use this skill when the user requests a report, recurring summary, PDF, or portfolio review.
 
-1. Read `docs/business-context/reporting.md`.
+1. Read `/docs/business-context/reporting.md`.
 2. Confirm scope, source coverage, window, comparison, timezone, and currency.
 3. Generate or reuse a `compare_periods` analysis artifact id.
 4. Call `render_report` with the analysis artifact id, a title, a short executive summary (change,

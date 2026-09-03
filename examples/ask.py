@@ -16,7 +16,11 @@ from paid_media_agent.runtime.local import build_local_runtime
 async def main(question: str) -> None:
     settings = Settings()
     root = Path(__file__).resolve().parents[1]
-    model = resolve_model(settings.model_settings())
+    model = resolve_model(
+        settings.model_settings(),
+        api_key_env=settings.paid_media_model_api_key_env,
+        timeout_seconds=settings.paid_media_model_timeout_seconds,
+    )
     runtime = build_local_runtime(settings, project_root=root, model=model)
     config = RunnableConfig(configurable={"thread_id": "example", "caller_ref": "local-user"})
     state = await runtime.graph.ainvoke(

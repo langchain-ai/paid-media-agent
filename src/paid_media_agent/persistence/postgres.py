@@ -47,7 +47,7 @@ class PostgresRepositories:
     """One connection pool, several repositories. Call `setup()` once per deployment."""
 
     def __init__(self, conn_string: str) -> None:
-        from psycopg_pool import ConnectionPool  # noqa: PLC0415
+        from psycopg_pool import ConnectionPool
 
         self._pool = ConnectionPool(conn_string, min_size=1, max_size=4, open=True)
         self.proposals = PostgresProposalRepository(self._pool)
@@ -138,16 +138,6 @@ class PostgresApprovalRepository:
                 ),
             )
             conn.commit()
-
-    def get(self, claim_id: UUID) -> ApprovalClaim | None:
-        with self._pool.connection() as conn:
-            row = conn.execute(
-                "SELECT claim FROM pma_approvals WHERE claim_id = %s", (claim_id,)
-            ).fetchone()
-        if row is None:
-            return None
-        data = row[0] if not isinstance(row[0], str) else json.loads(row[0])
-        return ApprovalClaim.model_validate(data)
 
     def latest_unused(self, proposal_id: UUID, revision: int) -> ApprovalClaim | None:
         with self._pool.connection() as conn:

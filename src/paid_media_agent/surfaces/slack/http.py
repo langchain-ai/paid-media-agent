@@ -21,7 +21,7 @@ def verify_signature(
     *, signing_secret: str, body: bytes, headers: Mapping[str, str], now: float | None = None
 ) -> None:
     """Raise unless the request carries a fresh, valid Slack signature."""
-    from slack_sdk.signature import SignatureVerifier  # noqa: PLC0415
+    from slack_sdk.signature import SignatureVerifier
 
     timestamp = headers.get("x-slack-request-timestamp") or headers.get("X-Slack-Request-Timestamp")
     signature = headers.get("x-slack-signature") or headers.get("X-Slack-Signature")

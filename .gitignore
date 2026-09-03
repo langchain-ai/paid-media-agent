@@ -24,4 +24,6 @@ artifacts/
 config/accounts.toml
 config/write-policy.toml
 workspace/logs/
+!workspace/*/.gitkeep
 workspace/KILL_SWITCH
+supabase/

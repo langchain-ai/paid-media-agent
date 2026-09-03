@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import json
 from typing import Any
 from uuid import UUID
 
@@ -39,7 +40,7 @@ def resolve_caller(token_map: dict[str, str], authorization: str | None) -> str 
 
 
 def create_app(runtime: Any) -> Any:
-    from fastapi import Depends, FastAPI, Header, HTTPException, Response  # noqa: PLC0415
+    from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 
     settings = runtime.settings
     token_map = settings.api_token_map()
@@ -62,6 +63,41 @@ def create_app(runtime: Any) -> Any:
 
     def _outcome(outcome: RunOutcome) -> dict[str, Any]:
         return outcome_view(outcome).model_dump(mode="json")
+
+    if (
+        settings.slack_transport == "http"
+        and settings.slack_signing_secret
+        and settings.slack_bot_token
+    ):
+        # The rich Slack adapter over signed HTTP lives on the same server as the API.
+        from slack_sdk import WebClient
+
+        from paid_media_agent.surfaces.slack.http import SlackHttpTransport, SlackSignatureError
+        from paid_media_agent.surfaces.slack.service import build_slack_service
+        from paid_media_agent.surfaces.slack.socket_mode import post_reply
+
+        transport = SlackHttpTransport(
+            signing_secret=settings.slack_signing_secret.get_secret_value(),
+            service=build_slack_service(runtime),
+        )
+        slack_client = WebClient(token=settings.slack_bot_token.get_secret_value())
+
+        @app.post("/slack/events")
+        async def slack_events(request: Request) -> Any:
+            body = await request.body()
+            try:
+                status, payload, reply = await transport.handle(
+                    body=body,
+                    headers=dict(request.headers),
+                    content_type=request.headers.get("content-type", ""),
+                )
+            except SlackSignatureError as exc:
+                raise HTTPException(status_code=401, detail=str(exc)) from None
+            if reply is not None:
+                post_reply(slack_client, reply)
+            return Response(
+                content=json.dumps(payload), status_code=status, media_type="application/json"
+            )
 
     @app.get("/health")
     def health() -> dict[str, Any]:

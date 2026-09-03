@@ -29,5 +29,5 @@ Slack outside MDA native Slack while reusing the graph and proposal service.
 
 ## Sources
 
-See [official-links.md](../../docs/sources/official-links.md).
+See [official-links.md](../../../sources/official-links.md).
 

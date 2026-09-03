@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -77,7 +76,6 @@ class PipeboardCatalogLoader:
         *,
         settings: Settings,
         policy: LocalPolicy = DEFAULT_LOCAL_POLICY,
-        ttl_seconds: int | None = None,
         extra_raw_tools: list[RawTool] | None = None,
     ) -> None:
         if settings.pipeboard_api_token is None:
@@ -85,30 +83,21 @@ class PipeboardCatalogLoader:
         self._settings = settings
         self._policy = policy
         self._extra_raw_tools = list(extra_raw_tools or [])
-        self._ttl = ttl_seconds or settings.paid_media_catalog_ttl_seconds
         self._catalog: AuthorizedToolCatalog | None = None
-        self._loaded_at = 0.0
         self._tools_by_name: dict[str, BaseTool] = {}
 
     @property
     def policy(self) -> LocalPolicy:
         return self._policy
 
-    def with_policy(self, policy: LocalPolicy) -> None:
-        """Replace the local policy. The next `refresh()` reclassifies the catalog with it."""
-        self._policy = policy
-
     def current(self) -> AuthorizedToolCatalog:
+        """The catalog from `refresh()`. Loaded once per process; restart to pick up changes."""
         if self._catalog is None:
             raise RuntimeError("catalog not loaded; call refresh() first")
         return self._catalog
 
-    @property
-    def expired(self) -> bool:
-        return self._catalog is None or (time.monotonic() - self._loaded_at) > self._ttl
-
     async def refresh(self) -> AuthorizedToolCatalog:
-        from langchain_mcp_adapters.client import MultiServerMCPClient  # noqa: PLC0415
+        from langchain_mcp_adapters.client import MultiServerMCPClient
 
         token = self._settings.pipeboard_api_token
         assert token is not None  # noqa: S101 - checked in __init__
@@ -119,7 +108,7 @@ class PipeboardCatalogLoader:
         for platform, url in endpoints.items():
             try:
                 tools = await client.get_tools(server_name=platform.value)
-            except Exception as exc:  # noqa: BLE001 - one platform failing must not hide the others
+            except Exception as exc:
                 logger.warning(
                     "catalog load failed for %s: %s", platform.value, sanitize_exception(exc)
                 )
@@ -132,7 +121,6 @@ class PipeboardCatalogLoader:
         )
         self._catalog = catalog
         self._tools_by_name = tools_by_name
-        self._loaded_at = time.monotonic()
         return catalog
 
     def langchain_tool(self, qualified_name: str) -> BaseTool | None:
@@ -148,7 +136,7 @@ async def invoke_mcp_tool(
         message = await asyncio.wait_for(tool.ainvoke(call), timeout=timeout)
     except TimeoutError as exc:
         raise ProviderTimeout("provider call timed out") from exc
-    except Exception as exc:  # noqa: BLE001 - sanitized for the caller
+    except Exception as exc:
         raise ProviderError(sanitize_exception(exc)) from None
     if isinstance(message, ToolMessage):
         if message.status == "error":

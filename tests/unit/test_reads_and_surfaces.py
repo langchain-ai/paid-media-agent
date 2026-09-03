@@ -19,9 +19,9 @@ from paid_media_agent.surfaces.slack.blocks import (
     render_receipt,
     render_report,
 )
-from paid_media_agent.tools.analysis import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import StaticCatalogProvider
+from paid_media_agent.tools.compare_periods import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.fixtures import FixtureReadProvider, FixtureState, build_fixture_catalog
 from paid_media_agent.tools.reads import ReadDenied, ReadDispatcher, model_facing_schema
 from paid_media_agent.tools.reports import RenderReportArgs, run_render_report

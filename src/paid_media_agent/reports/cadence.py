@@ -16,9 +16,9 @@ from paid_media_agent.config import AccountRegistry
 from paid_media_agent.domain.analysis import PeriodComparison
 from paid_media_agent.domain.common import JsonValue
 from paid_media_agent.domain.metrics import MetricWindow
-from paid_media_agent.tools.analysis import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.artifacts import ArtifactStore
-from paid_media_agent.tools.catalog import AuthorizedToolCatalog
+from paid_media_agent.tools.catalog import AuthorizedToolCatalog, qualified_name
+from paid_media_agent.tools.compare_periods import ComparePeriodsArgs, run_compare_periods
 from paid_media_agent.tools.reads import ACCOUNT_ALIAS_ARG, ReadDenied, ReadDispatcher
 from paid_media_agent.tools.reports import RenderReportArgs, run_render_report
 
@@ -88,7 +88,7 @@ async def run_cadence_report(
         if binding is None:
             unavailable.append(f"{alias}: unknown alias")
             continue
-        entry = catalog.get(f"{binding.platform.value}__{PERFORMANCE_TOOL}")
+        entry = catalog.get(qualified_name(binding.platform, PERFORMANCE_TOOL))
         if entry is None:
             unavailable.append(
                 f"{alias}: {binding.platform.value} has no campaign performance read tool"
@@ -106,7 +106,7 @@ async def run_cadence_report(
         except ReadDenied as exc:
             unavailable.append(f"{alias}: {exc.reason}")
             continue
-        except Exception as exc:  # noqa: BLE001 - one failed source must not sink the report
+        except Exception as exc:
             unavailable.append(f"{alias}: {type(exc).__name__}")
             continue
         if result.artifact_kind != "performance_rows":

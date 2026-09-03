@@ -2,8 +2,8 @@
 
 ## From a direct-integration agent to this package
 
-1. Move provider OAuth to Pipeboard and delete per-platform HTTP clients. The catalog is the only
-   entry point for provider capability.
+1. Move provider OAuth to Pipeboard where it exists; keep a thin read adapter only for platforms
+   Pipeboard does not cover (`tools/direct/`). The catalog is the only entry point for capability.
 2. Replace prompt-level tool restrictions with the authorized catalog and the invocation guard.
    A prompt that says "do not call X" is not a capability profile.
 3. Replace ad-hoc arithmetic with `PerformanceRow` normalization and `compare_periods`. Keep
@@ -17,7 +17,8 @@
 
 - Local to self-hosted: set `DATABASE_URL` and `PAID_MEDIA_API_TOKENS`; proposals, claims, and
   receipts move from memory to Postgres with the same objects and ids.
-- Self-hosted to MDA: keep `agent.py`, `instructions.md`, `skills/`, and `channels/slack.py`;
+- Self-hosted to MDA: keep `agent.py`, `identity.py`, `instructions.md`, `skills/`, `schedules/`,
+  `channels/slack.py`, and the generated `sandbox/__init__.py`;
   MDA supplies the backend, threads, identity, and native Slack. The rich Slack adapter stays an
   external service when Block Kit review or edits are required.
 

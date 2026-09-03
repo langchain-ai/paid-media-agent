@@ -40,7 +40,23 @@ def test_documented_commands_exist(project_root: Path) -> None:
             r"uv run paid-media-agent (\w[\w-]*)", (project_root / name).read_text()
         ):
             documented.add(match.group(1))
-    assert {"demo", "doctor", "serve", "slack"} <= documented
+    assert {
+        "demo",
+        "doctor",
+        "serve",
+        "slack",
+        "setup",
+        "ask",
+        "report",
+        "test",
+        "config",
+        "accounts",
+        "catalog",
+        "policy",
+        "writes",
+        "mda",
+        "sandbox",
+    } <= documented
     runner = CliRunner()
     for command in documented:
         result = runner.invoke(main, [command, "--help"])

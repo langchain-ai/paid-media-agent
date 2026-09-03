@@ -25,8 +25,28 @@ _SPEND_KEYS: dict[Platform, tuple[tuple[str, Decimal], ...]] = {
 }
 _CONVERSION_KEYS = ("conversions", "purchases", "results")
 _VALUE_KEYS = ("conversion_value", "conversions_value", "value", "purchase_value", "action_values")
+_GRAIN_ID_KEYS: dict[EntityType, tuple[str, ...]] = {
+    EntityType.AD_GROUP: ("ad_group_id", "adset_id", "line_item_id"),
+    EntityType.AD: ("ad_id", "promoted_tweet_id"),
+    EntityType.CREATIVE: ("creative_id", "ad_id"),
+    EntityType.KEYWORD: ("keyword_id", "criterion_id"),
+}
+_GRAIN_NAME_KEYS: dict[EntityType, tuple[str, ...]] = {
+    EntityType.AD_GROUP: ("ad_group_name", "adset_name", "line_item_name"),
+    EntityType.AD: ("ad_name",),
+    EntityType.CREATIVE: ("creative_name", "ad_name"),
+    EntityType.KEYWORD: ("keyword", "keyword_text"),
+}
 _ENTITY_ID_KEYS = ("campaign_id", "ad_group_id", "ad_id", "entity_id", "id")
 _ENTITY_NAME_KEYS = ("campaign_name", "ad_group_name", "ad_name", "entity_name", "name")
+
+
+def entity_keys(entity_type: EntityType) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Id and name keys to try, most specific to the requested grain first."""
+    return (
+        (*_GRAIN_ID_KEYS.get(entity_type, ()), *_ENTITY_ID_KEYS),
+        (*_GRAIN_NAME_KEYS.get(entity_type, ()), *_ENTITY_NAME_KEYS),
+    )
 
 
 class NormalizationError(Exception):
@@ -91,11 +111,12 @@ def normalize_rows(
                 break
         if spend is None:
             raise NormalizationError("row without spend")
-        entity_ref = _first(raw, _ENTITY_ID_KEYS)
+        id_keys, name_keys = entity_keys(entity_type)
+        entity_ref = _first(raw, id_keys)
         if entity_ref is None:
             raise NormalizationError("row without an entity id")
         entity_ref_str = str(entity_ref)
-        name = _first(raw, _ENTITY_NAME_KEYS)
+        name = _first(raw, name_keys)
         entity_name = (
             str(name)
             if name is not None

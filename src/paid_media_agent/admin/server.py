@@ -250,7 +250,7 @@ def create_console_app(
 
 def run_console(root: Path, *, port: int = 8765, open_browser: bool = True) -> None:
     """Serve the console on 127.0.0.1 and open the browser with the per-run token."""
-    import uvicorn  # noqa: PLC0415
+    import uvicorn
 
     token = secrets.token_urlsafe(32)
     app = create_console_app(root, token=token)
@@ -259,7 +259,7 @@ def run_console(root: Path, *, port: int = 8765, open_browser: bool = True) -> N
     server = uvicorn.Server(config)
     app.state.console.shutdown = lambda: os.kill(os.getpid(), signal.SIGINT)
     if open_browser:
-        import webbrowser  # noqa: PLC0415
+        import webbrowser
 
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     print(f"Paid Media Agent setup console: {url}", flush=True)
