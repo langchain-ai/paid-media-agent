@@ -391,6 +391,10 @@ def summarize(comparison: PeriodComparison, artifact_id: str) -> AnalysisSummary
                 roas_current=format_ratio(platform.current.roas),
                 roas_previous=format_ratio(platform.previous.roas),
                 entity_count=len(platform.entities),
+                days_covered=(
+                    f"{platform.current.day_coverage}/{platform.current_window.day_count} current, "
+                    f"{platform.previous.day_coverage}/{platform.previous_window.day_count} previous"
+                ),
                 missing_fields=platform.missing_fields,
                 quality_flags=platform.quality_flags,
                 attention=_attention_lines(platform),

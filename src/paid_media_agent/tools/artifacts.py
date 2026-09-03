@@ -130,7 +130,10 @@ class ArtifactStore:
             catalog_revision=catalog_revision,
         )
         envelope = {"metadata": metadata.model_dump(mode="json"), "payload": payload}
-        path.write_text(json.dumps(envelope, sort_keys=True, default=str), encoding="utf-8")
+        # One row per line so the model can page through an artifact with read_file offsets.
+        path.write_text(
+            json.dumps(envelope, sort_keys=True, default=str, indent=1), encoding="utf-8"
+        )
         self.publish(path)
         return metadata
 

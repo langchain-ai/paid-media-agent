@@ -20,3 +20,11 @@
 
 Update this table whenever a capability, entry point, state owner, or terminal condition changes.
 
+## Single-window analysis (2026-09-03)
+
+`summarize_window` complements `compare_periods`: given performance artifacts for one window (and
+the `list_campaigns` artifacts for budgets) it returns per-entity totals, spend share, CPA, ROAS,
+CTR, average daily spend, pacing against the daily budget, and a daily series with day-over-day
+changes and flagged days. Pacing, anomaly, and top-N questions resolve through it; the model quotes
+its output and never derives a figure in prose.
+

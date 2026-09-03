@@ -485,7 +485,11 @@ def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> Act
         if invoke is None:
             from paid_media_agent.assembly import resolve_model  # noqa: PLC0415
 
-            chat = resolve_model(model, api_key_env=settings.paid_media_model_api_key_env)
+            chat = resolve_model(
+                model,
+                api_key_env=settings.paid_media_model_api_key_env,
+                timeout_seconds=settings.paid_media_model_timeout_seconds,
+            )
             reply = _content_text(chat.invoke("Reply with the single word OK.").content)
         else:
             reply = invoke(model.spec)
@@ -1073,7 +1077,9 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
             model
             if model is not None
             else resolve_model(
-                settings.model_settings(), api_key_env=settings.paid_media_model_api_key_env
+                settings.model_settings(),
+                api_key_env=settings.paid_media_model_api_key_env,
+                timeout_seconds=settings.paid_media_model_timeout_seconds,
             )
         )
         from paid_media_agent.runtime.sandbox import build_backend  # noqa: PLC0415

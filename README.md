@@ -162,6 +162,7 @@ maintainer approval, with a [security policy](SECURITY.md), [contributing guide]
 - [Source inventory](prep/source-inventory.md)
 - [Operating contract](AGENTS.md)
 - [Live-write canary runbook](docs/operations/live-write-runbook.md)
+- [Parity audit against the reference agent](docs/audits/parity-audit-2026-09-03.md)
 - [Examples](examples/README.md) and [migration notes](docs/migration.md)
 
 ## Public-release boundary

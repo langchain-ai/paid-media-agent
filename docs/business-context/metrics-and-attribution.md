@@ -18,6 +18,12 @@ Every metric carries an inclusive start date, inclusive end date, timezone, and 
 Comparison periods use equivalent day counts and maturation where possible. An in-progress period is
 not compared to a complete period without an explicit caveat or aligned cutoff.
 
+Relative phrases resolve deterministically: a "week" is Monday to Sunday and "last week" is the most
+recent complete one; "last N days" counts back from the latest complete date a platform reports,
+so two platforms with different completeness dates can have different windows, which the answer
+must say; "this month" and "last month" are calendar months. The requested window stays in the
+answer even when data ends inside it; the missing days are named, never silently dropped.
+
 ## Platform attribution
 
 Platforms may differ in attribution window, click/view inclusion, modeled conversions, identity,

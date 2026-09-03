@@ -20,6 +20,12 @@ platform attribution is the same as incremental or pipeline impact.
 Missing data is not zero. Do not publish a cross-platform total unless windows, units, currency, and
 source coverage are compatible.
 
+Resolve relative windows one way and say which. "Last week" is the most recent complete Monday to
+Sunday week. "Last N days" and "the last N days of available data" end on the latest date the
+platform reports as complete, never on today. "This month" is the calendar month to date. Read the
+union of both comparison windows before comparing them; when data ends inside a window, keep the
+window and name the missing days.
+
 ## Changes
 
 Read tools may execute directly. Never invoke a provider mutation directly. When a user requests a

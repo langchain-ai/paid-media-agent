@@ -15,6 +15,9 @@ from paid_media_agent.tools.artifacts import ArtifactStore
 
 OFFLOAD_SCHEMA_VERSION = "tool-result/1"
 PREVIEW_CHARS = 400
+PAGED_TOOLS = frozenset({"read_file", "ls", "glob", "grep", "edit_file", "write_file"})
+"""Filesystem tools page with offset and limit; offloading their output would send the model
+to read an artifact about reading an artifact."""
 
 
 class ResultOffloadMiddleware(AgentMiddleware[Any, Any, Any]):
@@ -30,7 +33,7 @@ class ResultOffloadMiddleware(AgentMiddleware[Any, Any, Any]):
     ) -> ToolMessage | Command[Any]:
         if not isinstance(result, ToolMessage) or not isinstance(result.content, str):
             return result
-        if len(result.content) <= self._max_chars:
+        if request.tool_call["name"] in PAGED_TOOLS or len(result.content) <= self._max_chars:
             return result
         metadata = self._artifacts.write_json(
             "tool_result",

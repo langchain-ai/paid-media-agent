@@ -61,6 +61,22 @@ def run_compare_periods(artifacts: ArtifactStore, args: ComparePeriodsArgs) -> d
         rows = rows_from_payload(record.payload)
         if not rows:
             raise ComputeError(f"{artifact_id} contains no rows")
+        first = min(r.window.start for r in rows)
+        latest = max(r.window.start for r in rows)
+        for label, window in (("current", current), ("previous", previous)):
+            if window.start < first:
+                # The read did not cover this window; a partial total would look like a drop.
+                raise ComputeError(
+                    f"{artifact_id}: the {label} window starts {window.start.isoformat()} but the "
+                    f"read begins {first.isoformat()}; re-read the union of both windows"
+                )
+            if not any(window.start <= r.window.start <= window.end for r in rows):
+                # An empty window is unavailable data, never zero spend.
+                raise ComputeError(
+                    f"{artifact_id}: no rows in the {label} window "
+                    f"{window.start.isoformat()}..{window.end.isoformat()}; "
+                    f"the source has data through {latest.isoformat()}"
+                )
         platform = Platform(record.metadata.platform or rows[0].platform.value)
         account_ref = record.metadata.account_ref or rows[0].account_ref
         provider_totals = record.payload.get("provider_totals") or None

@@ -127,6 +127,19 @@ entries except to correct a factual typo with an explicit correction entry.
   cards' bullet lists, and the Recommended badge became an inline lead-in so it cannot overlap a
   card title.
 
+## 2026-09-03 (parity audit against the reference agent)
+
+- Inventoried the reference (tools, skills, wiki, middleware, surfaces, reports, evals, fixtures,
+  instructed behaviors) read-only and mapped it against this repository in
+  `docs/audits/parity-audit-2026-09-03.md`.
+- Ran fifteen business questions through the local LangGraph Server on the synthetic fixtures and
+  graded them against deterministic ground truth computed from the same fixtures.
+- Found and fixed: two 33-minute gateway stalls (no per-request model timeout), a `read_file`
+  result over the offload budget turning into a second artifact (paged tools are now exempt and
+  artifacts are pretty-printed), no deterministic way to answer pacing or anomaly questions
+  (`summarize_window`), inconsistent "last week" resolution across answers (window convention in
+  the skill and wiki), no model-call ceiling per run, and sandboxes created with open egress.
+
 ## 2026-09-02 (sandbox parity)
 
 - Answered "do we need a local Docker container" with the reference's own model: no. MDA's

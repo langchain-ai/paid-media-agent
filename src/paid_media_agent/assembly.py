@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from deepagents.backends.protocol import BackendProtocol
-from langchain.agents.middleware import AgentMiddleware, InterruptOnConfig, ModelRetryMiddleware
+from langchain.agents.middleware import (
+    AgentMiddleware,
+    InterruptOnConfig,
+    ModelCallLimitMiddleware,
+    ModelRetryMiddleware,
+)
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -22,6 +27,7 @@ from paid_media_agent.middleware.authorization import (
 from paid_media_agent.middleware.current_date import CurrentDateMiddleware
 from paid_media_agent.middleware.offload import ResultOffloadMiddleware
 from paid_media_agent.middleware.redaction import RedactionMiddleware
+from paid_media_agent.middleware.timeout import ModelTimeoutMiddleware
 from paid_media_agent.middleware.tool_selection import (
     SelectionPlan,
     build_selection_middleware,
@@ -39,6 +45,7 @@ from paid_media_agent.tools.discovery import (
 )
 from paid_media_agent.tools.reads import ReadDispatcher, build_platform_read_tools
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL, build_render_report_tool
+from paid_media_agent.tools.summary import SUMMARIZE_WINDOW_TOOL, build_summarize_window_tool
 from paid_media_agent.tools.writes import (
     DISCOVER_WRITE_OPERATIONS_TOOL,
     EXECUTE_CHANGE_TOOL,
@@ -56,6 +63,7 @@ CORE_TOOLS: tuple[str, ...] = (
     LIST_ACCOUNTS_TOOL,
     DISCOVER_TOOLS_TOOL,
     COMPARE_PERIODS_TOOL,
+    SUMMARIZE_WINDOW_TOOL,
     RENDER_REPORT_TOOL,
 )
 WRITE_TOOLS: tuple[str, ...] = (
@@ -141,12 +149,17 @@ def _build_services(settings: Settings, runtime: RuntimeProfile) -> AssemblyServ
 
 
 def resolve_model(
-    config: ModelConfig, override: BaseChatModel | None = None, *, api_key_env: str | None = None
+    config: ModelConfig,
+    override: BaseChatModel | None = None,
+    *,
+    api_key_env: str | None = None,
+    timeout_seconds: int = 120,
 ) -> BaseChatModel:
     """Initialize the configured provider model directly. No gateway, no proxy assumptions.
 
     `api_key_env` names the environment variable holding the key when the provider does not read
-    its default one (for example an OpenAI-compatible endpoint with its own key).
+    its default one (for example an OpenAI-compatible endpoint with its own key). Every request
+    gets a timeout and two SDK retries; the retry middleware handles what remains.
     """
     if override is not None:
         return override
@@ -154,7 +167,7 @@ def resolve_model(
 
     from langchain.chat_models import init_chat_model  # noqa: PLC0415 - optional provider packages
 
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {"timeout": timeout_seconds, "max_retries": 2}
     if config.base_url is not None:
         kwargs["base_url"] = str(config.base_url)
     if api_key_env and os.environ.get(api_key_env):
@@ -179,7 +192,10 @@ def build_agent_components(
     """Compose model, tools, middleware, and interrupt policy. No network, no global state."""
     model_config = settings.model_settings()
     resolved_model = resolve_model(
-        model_config, model, api_key_env=settings.paid_media_model_api_key_env
+        model_config,
+        model,
+        api_key_env=settings.paid_media_model_api_key_env,
+        timeout_seconds=settings.paid_media_model_timeout_seconds,
     )
     services = _build_services(settings, runtime)
 
@@ -188,6 +204,7 @@ def build_agent_components(
         build_list_accounts_tool(runtime.accounts),
         build_discover_tools_tool(runtime.catalog_provider),
         build_compare_periods_tool(runtime.artifacts),
+        build_summarize_window_tool(runtime.artifacts),
         build_render_report_tool(runtime.artifacts, pdf_engine=runtime.pdf_engine),
     ]
     write_tools: list[BaseTool] = []
@@ -214,7 +231,14 @@ def build_agent_components(
     retry: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
     if model_config.provider != "scripted":
         # Transient model failures should not kill a run; bounded, and tool effects never repeat.
-        retry = (ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),)
+        # A run also ends after a fixed number of model calls instead of looping on tools.
+        retry = (
+            ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),
+            ModelTimeoutMiddleware(settings.paid_media_model_timeout_seconds),
+            ModelCallLimitMiddleware(
+                run_limit=settings.paid_media_max_model_calls, exit_behavior="end"
+            ),
+        )
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...] = (
         *retry,
         CurrentDateMiddleware(),

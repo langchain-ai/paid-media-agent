@@ -11,13 +11,21 @@ recommendations.
 1. Read `docs/business-context/decision-model.md`.
 2. Establish goal, account scope, entity grain, date window, comparison, timezone, and currency.
    Comparison windows must have the same day count; `compare_periods` rejects unequal windows.
+   Resolve relative windows one way and say which: "last week" is the most recent complete
+   Monday to Sunday week; "last N days" ends on the latest date the platform reports as complete
+   (`data_complete_through`), not today; "this month" is the calendar month to date. When a
+   platform's data ends inside the requested window, keep the requested window in the answer and
+   name the missing days rather than silently shrinking it.
 3. Call `list_accounts` for aliases, then `discover_tools` with keywords. Never invent a tool name.
    Platform tools are named `<platform>__<tool>` and take `account_alias`, never a provider id.
 4. Pull the smallest complete data: one `<platform>__get_campaign_performance` read per account for
    the union of both windows. Run independent platform reads in parallel. Each read returns a
    compact `read_result` with an `artifact_id`, row count, actual window, missing fields, and flags.
 5. Validate source coverage with `references/validation-checklist.md`.
-6. Call `compare_periods` with the artifact ids and both windows. List any failed read in
+6. For pacing, anomalies, top spenders, or per-entity efficiency inside one window, call
+   `summarize_window` with the performance artifacts (and the `list_campaigns` artifacts for daily
+   budgets); it returns per-entity totals, pacing, and a daily series with flagged days. For
+   period-over-period change, call `compare_periods` with the artifact ids and both windows. List any failed read in
    `unavailable_sources` so it stays visible and suppresses the cross-platform total.
 7. Read the `analysis_summary`. Quote its values verbatim; never recompute from previews or rows.
    `unavailable` means missing, not zero.

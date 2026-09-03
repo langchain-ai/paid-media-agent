@@ -155,6 +155,8 @@ def local_backend(project_root: Path) -> Backend:
 
 SANDBOX_DELETE_AFTER_STOP_SECONDS = 300
 """A sandbox that idles out is deleted by the platform; `close()` is only the fast path."""
+SANDBOX_EGRESS = {"access_control": {"allow_list": ["localhost", "127.0.0.1"]}}
+"""Provider and platform calls run host-side; the sandbox itself needs no outbound network."""
 
 
 def open_sandbox(settings: Settings, *, name: str | None = None) -> Sandbox:
@@ -176,6 +178,7 @@ def open_sandbox(settings: Settings, *, name: str | None = None) -> Sandbox:
             name=resolved_name,
             idle_ttl_seconds=settings.paid_media_sandbox_idle_ttl_seconds,
             delete_after_stop_seconds=SANDBOX_DELETE_AFTER_STOP_SECONDS,
+            proxy_config=SANDBOX_EGRESS,
         )
     except SandboxClientError as exc:
         raise SandboxError(f"could not create a sandbox: {exc}") from None

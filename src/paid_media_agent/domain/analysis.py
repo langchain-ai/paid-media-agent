@@ -143,6 +143,8 @@ class PlatformHeadline(BaseModel):
     roas_current: str
     roas_previous: str
     entity_count: int
+    days_covered: str
+    """Days with rows over days requested, current then previous, e.g. "5/7 current, 7/7 previous"."""
     missing_fields: tuple[str, ...]
     quality_flags: tuple[DataQualityFlag, ...]
     attention: tuple[str, ...]

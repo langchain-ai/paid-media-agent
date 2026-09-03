@@ -10,7 +10,21 @@
 - `paid-media-agent sandbox publish|use|test` and a console route for building, declaring, and
   probing the snapshot; `mda check` verifies the MDA declaration matches `.env`.
 
+### Added (parity audit follow-ups)
+
+- `summarize_window`: deterministic single-window summary (per-entity spend share, CPA, ROAS,
+  CTR, pacing against `list_campaigns` budgets, daily series with flagged days) so pacing,
+  anomaly, and top-N questions never need arithmetic in prose.
+- Per-request model timeout (`PAID_MEDIA_MODEL_TIMEOUT_SECONDS`) enforced by middleware as well
+  as the SDK, SDK retries, and a per-run model-call limit (`PAID_MEDIA_MAX_MODEL_CALLS`).
+- Sandboxes are created with default-deny egress; only loopback is allowed.
+- The analysis skill and wiki define how relative windows resolve (Monday to Sunday weeks,
+  "last N days" anchored on the platform's complete date, calendar months).
+
 ### Fixed
+
+- Filesystem tool output is no longer offloaded: a `read_file` over the budget became an artifact
+  about an artifact. Artifacts are written one field per line so `read_file` can page them.
 
 - The LangGraph Server graph factory is now async and builds off the event loop; it previously
   called `asyncio.run` and tripped the server's blocking-call guard on the first run.

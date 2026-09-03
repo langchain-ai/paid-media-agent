@@ -278,6 +278,20 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="Gateway key override when it differs from LANGSMITH_API_KEY",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_MODEL_TIMEOUT_SECONDS",
+        group="model",
+        secret=False,
+        description="Per-request model timeout in seconds",
+        example="120",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_MAX_MODEL_CALLS",
+        group="model",
+        secret=False,
+        description="Model calls per run before the agent stops",
+        example="40",
+    ),
+    EnvKeySpec(
         name="PAID_MEDIA_BACKEND",
         group="sandbox",
         secret=False,
