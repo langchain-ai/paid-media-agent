@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Added (release readiness)
+
+- Repository health files and automation: `CODE_OF_CONDUCT.md`, issue and pull request templates,
+  `.pre-commit-config.yaml`, a tag-driven release workflow, Dependabot, `Makefile` shortcuts, and
+  `docs/open-source-principles.md` with the rules this repository holds itself to.
+- Self-hosting in one command: `Dockerfile` (with the PDF native libraries) and
+  `docker-compose.yml` with Postgres.
+- Synthetic data anchored to today (`PAID_MEDIA_FIXTURE_ANCHOR` pins a date), so sample prompts
+  such as "last week" keep working on any day the repository is cloned.
+
+### Fixed (console walkthrough)
+
+- Console commands now show `uv run ...` exactly as a fresh checkout runs them.
+- Answers in the Try-it step render as formatted text and tables instead of raw markdown.
+- The provider grid highlights the LangSmith Gateway card for `langsmith:` models instead of
+  "Custom"; the accounts step points to the direct platforms; the runtime step title matches its
+  chip; the preflight shows the sandbox snapshot; the Done step lists what to do next.
+- The MDA import smoke test no longer depends on the developer's local `.env`.
+
+### Verified
+
+- Managed deployment end to end: `mda deploy` built the sandbox recipe, deployed, answered a
+  run through the LangGraph SDK in 32 s, and registered the weekly and monthly schedules. Slack
+  provisioning needs a one-time OAuth grant by the workspace owner.
+
 ### Added (sandbox parity)
 
 - `PAID_MEDIA_BACKEND=sandbox`: the model's filesystem in a LangSmith sandbox built from

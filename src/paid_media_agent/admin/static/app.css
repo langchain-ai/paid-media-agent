@@ -293,3 +293,17 @@ textarea.input { height: auto; min-height: 84px; padding: 12px; resize: vertical
 .art-ill .txt { fill: var(--line-strong); }
 .art-ill .ok { fill: var(--positive-bg); }
 .art-ill .okink { fill: var(--positive); }
+
+/* Rendered answers */
+.answer.md { white-space: normal; line-height: 1.6; }
+.answer.md h2, .answer.md h3, .answer.md h4 { margin: 18px 0 8px; font-size: 15px; font-weight: 600; }
+.answer.md p { margin: 8px 0; }
+.answer.md ul, .answer.md ol { margin: 8px 0 8px 20px; }
+.answer.md li { margin: 4px 0; }
+.answer.md table { border-collapse: collapse; margin: 10px 0; width: 100%; font-size: 13px; }
+.answer.md th, .answer.md td { border: 1px solid var(--line, #e5e5e5); padding: 6px 10px; text-align: left; vertical-align: top; }
+.answer.md th { font-weight: 600; background: var(--surface-2, rgba(0,0,0,0.03)); }
+.answer.md code { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.answer.md hr { border: 0; border-top: 1px solid var(--line, #e5e5e5); margin: 14px 0; }
+.next { margin: 6px 0 18px 18px; line-height: 1.7; }
+.sub-title { font-size: 14px; font-weight: 600; margin: 18px 0 4px; }

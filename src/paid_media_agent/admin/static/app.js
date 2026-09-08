@@ -22,7 +22,33 @@
   const badge = (tone, text) => el("span", { class: "badge", "data-tone": tone, text });
   const tick = () => el("span", { class: "tick", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' });
   const facts = (items) => el("div", { class: "facts" }, items.map((t) => el("span", { class: "fact", text: t })));
-  const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: command })]);
+  // Every command is shown the way a fresh checkout runs it, matching README and OPERATIONS.
+  // Answers arrive as markdown. Escape everything, then render the small subset the agent uses.
+  const escapeHtml = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const inline = (t) => escapeHtml(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  function renderMarkdown(text) {
+    const lines = String(text || "").split("\n"); const html = []; let list = null; let table = null;
+    const flush = () => { if (list) { html.push(`</${list}>`); list = null; } if (table) { html.push("</tbody></table>"); table = null; } };
+    for (const raw of lines) {
+      const line = raw.trimEnd();
+      if (/^\|.*\|$/.test(line)) {
+        const cells = line.slice(1, -1).split("|").map((c) => c.trim());
+        if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue;
+        if (!table) { if (list) flush(); table = "open"; html.push(`<table><thead><tr>${cells.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>`); continue; }
+        html.push(`<tr>${cells.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`); continue;
+      }
+      if (table) flush();
+      const heading = /^(#{1,4})\s+(.*)$/.exec(line);
+      if (heading) { flush(); html.push(`<h${heading[1].length + 1}>${inline(heading[2])}</h${heading[1].length + 1}>`); continue; }
+      if (/^(-{3,}|\*{3,})$/.test(line)) { flush(); html.push("<hr>"); continue; }
+      const bullet = /^\s*[-*]\s+(.*)$/.exec(line); const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+      if (bullet || numbered) { const kind = bullet ? "ul" : "ol"; if (list !== kind) { flush(); list = kind; html.push(`<${kind}>`); } html.push(`<li>${inline((bullet || numbered)[1])}</li>`); continue; }
+      if (!line.trim()) { flush(); continue; }
+      flush(); html.push(`<p>${inline(line)}</p>`);
+    }
+    flush(); return html.join("");
+  }
+  const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: command.startsWith("uv run ") ? command : `uv run ${command}` })]);
   const intro = (logoName, title, note, actions = null, cls = "") => el("div", { class: "intro" }, [logo(logoName, cls), el("div", {}, [el("span", { class: "name", text: title }), el("span", { class: "note", text: note }), actions])]);
 
   // ---- fragment: #token=...&view=...&step=...&route=...
@@ -209,7 +235,9 @@
     if (!state.picked) {
       const byModel = presets.find((p) => p.id !== "custom" && currentSpec && p.model === currentSpec);
       const byKey = presets.find((p) => p.id !== "custom" && d.model_key_env && p.key === d.model_key_env && currentSpec.startsWith(p.model.split(":")[0] + ":"));
-      state.picked = (byModel || byKey)?.id || (s.modelDone ? "custom" : null);
+      // Same provider, different model id or key name (a gateway model, a newer Anthropic id): still that card.
+      const byProvider = presets.find((p) => p.id !== "custom" && currentSpec && currentSpec.startsWith(p.model.split(":")[0] + ":"));
+      state.picked = (byModel || byKey || byProvider)?.id || (s.modelDone ? "custom" : null);
     }
     const cards = el("div", { class: "options stagger" }, presets.map((p) => el("button", { class: "option compact", type: "button", "aria-pressed": state.picked === p.id ? "true" : "false", onclick: () => { state.picked = p.id; state.session.modelTested = null; refreshScreen(); } }, [
       el("div", { class: "row" }, [logo(p.logo, p.logo === "langchain" ? "lc" : ""), el("span", { class: "name", text: p.label })]),
@@ -295,6 +323,11 @@
     }
     if (state.discovered && state.discovered.length) nodes.push(accountsPicker());
     else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `No token yet, so reads resolve against the fixture catalog: ${(d.accounts || []).map((a) => a.alias).join(", ")}.` }));
+    nodes.push(el("p", { class: "sub" }, [
+      el("span", { text: "LinkedIn Ads, X Ads, and OpenAI Ads are not on Pipeboard. " }),
+      el("a", { href: "#", text: "Direct platforms", onclick: (ev) => { ev.preventDefault(); state.view = "advanced"; state.routeId = "direct"; render(); } }),
+      el("span", { text: " takes their credentials and adds them to the same catalog." }),
+    ]));
     nodes.push(
       el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]),
       cli("paid-media-agent accounts discover"),
@@ -354,7 +387,8 @@
     question.value = state.session.draft || EXAMPLES[0];
     const ask = el("button", { class: "btn btn-primary", type: "submit", text: "Ask", disabled: s.modelDone ? null : true });
     const line = el("div", { class: "status-line", id: "ask-status" });
-    const answerBox = el("div", { class: "answer", hidden: state.session.answer ? null : true, text: state.session.answer || "" });
+    const answerBox = el("div", { class: "answer md", hidden: state.session.answer ? null : true });
+    if (state.session.answer) answerBox.innerHTML = renderMarkdown(state.session.answer);
     const form = el("form", { class: "form" }, [
       el("div", { class: "field" }, [el("label", { for: "w-q", text: "Ask the agent" }), question]),
       el("div", { class: "prompts" }, EXAMPLES.map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { question.value = q; } }))),
@@ -366,7 +400,7 @@
       const result = await runAction("ask", { question: question.value });
       if (!result.ok) { setLine(line, "fail", result.summary); return; }
       state.session.answer = result.detail.answer;
-      answerBox.hidden = false; answerBox.textContent = result.detail.answer;
+      answerBox.hidden = false; answerBox.innerHTML = renderMarkdown(result.detail.answer);
       setLine(line, "ok", `Answered with ${d.model?.spec} (${result.detail.selection} tool selection).`);
       renderProgress();
     }); });
@@ -417,7 +451,7 @@
     ]);
     return [
       el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Runtime" }),
+        el("h1", { class: "hero-title", text: "Where it lives" }),
         el("p", { class: "hero-sub", text: "Both compile the same AgentComponents. Managed supplies the backend, threads, and Slack app; self-hosting gives you Postgres, your own Slack app, and the FastAPI boundary." }),
       ]),
       el("div", { class: "options two stagger" }, [
@@ -435,7 +469,7 @@
     const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save and run preflight" });
     const line = el("div", { class: "status-line" });
     const preflight = state.session.preflight;
-    const items = preflight ? [["mda CLI installed", preflight.cli_installed], ["LangSmith key", preflight.langsmith_key_set], ["agent.py imports", preflight.import_smoke === "ok"], ["Model package and key", preflight.model_package && preflight.provider_key_set], ["Slack channel declared", preflight.slack_channel]] : [];
+    const items = preflight ? [["mda CLI installed", preflight.cli_installed], ["LangSmith key", preflight.langsmith_key_set], ["agent.py imports", preflight.import_smoke === "ok"], ["Model package and key", preflight.model_package && preflight.provider_key_set], ["Slack channel declared", preflight.slack_channel], ["Sandbox snapshot declared (PDF and parity; optional)", preflight.sandbox_declared]] : [];
     const form = el("form", { class: "form" }, [
       el("div", { class: "field" }, [el("label", { for: "w-ls", text: "LangSmith API key" }), keyInput, el("span", { class: "hint" }, [el("a", { href: "https://smith.langchain.com/settings", target: "_blank", rel: "noopener", text: "Create a key in LangSmith" })])]),
       line,
@@ -572,6 +606,13 @@
         el("p", { class: "hero-sub", text: "The advanced console holds the authorized catalog, the reviewed mutation policy, the write gates, and the running processes." }),
       ]),
       el("ul", { class: "checklist stagger" }, items.map(([label, done, meta]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label }), el("span", { class: "sub mono", text: meta || "" })]))),
+      el("h2", { class: "sub-title", text: "Next" }),
+      el("ul", { class: "next" }, [
+        el("li", { text: "Ask from the terminal: uv run paid-media-agent ask \"How did spend move week over week?\"" }),
+        el("li", { text: "Render the weekly report: uv run paid-media-agent report --cadence weekly" }),
+        el("li", { text: s.runtime === "mda" ? "Run the managed build locally: uv run mda dev, then deploy with uv run mda deploy ." : "Serve the API: uv run paid-media-agent serve, or run Slack: uv run paid-media-agent slack" }),
+        el("li", { text: "Read OPERATIONS.md for the full command reference and the write-enable runbook." }),
+      ]),
       el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } })]),
       cli("paid-media-agent doctor"),
     ];

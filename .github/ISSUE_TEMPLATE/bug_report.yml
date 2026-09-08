@@ -1,0 +1,35 @@
+name: Bug report
+description: Something behaves differently from the documentation.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: One or two sentences. What did you run, what did you expect, what did you see.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `uv run paid-media-agent doctor --json`
+      description: It never prints secret values. Paste it as is.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command or console step
+      placeholder: uv run paid-media-agent ask "..."
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options: [local, langgraph dev, mda dev, mda deploy, serve, slack]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: Redact keys. The redaction middleware masks them in tool output, not in shell logs.
+      render: text

@@ -293,6 +293,13 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         example="workspace",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_FIXTURE_ANCHOR",
+        group="runtime",
+        secret=False,
+        description="Last complete day of the synthetic data (default: two days ago)",
+        example="2026-08-28",
+    ),
+    EnvKeySpec(
         name="PAID_MEDIA_MAX_SELECTED_TOOLS",
         group="model",
         secret=False,

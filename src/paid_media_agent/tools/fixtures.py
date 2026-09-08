@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
-from datetime import date
+import os
+from datetime import date, timedelta
 from decimal import Decimal
 from importlib import resources
 from typing import Literal
@@ -197,13 +198,53 @@ def load_fixture_dataset(platform: Platform) -> dict[str, JsonValue]:
     return data
 
 
-class FixtureState:
-    """Mutable in-memory copy of the fixture datasets shared by the read and write fakes."""
+FIXTURE_LAG_DAYS = 2
+"""Platforms report with a lag; the synthetic data ends this many days before today by default."""
 
-    def __init__(self) -> None:
+
+def fixture_anchor(configured: date | None = None) -> date:
+    """The last complete day of the synthetic data.
+
+    Explicit argument, then `PAID_MEDIA_FIXTURE_ANCHOR` (tests pin the shipped dates), then two
+    days before today so the demo never ages out.
+    """
+    if configured is not None:
+        return configured
+    pinned = os.environ.get("PAID_MEDIA_FIXTURE_ANCHOR")
+    return date.fromisoformat(pinned) if pinned else date.today() - timedelta(days=FIXTURE_LAG_DAYS)
+
+
+def shift_dataset(dataset: dict[str, JsonValue], offset: timedelta) -> dict[str, JsonValue]:
+    """Move every date by `offset`. Values never change; platform lags stay as shipped."""
+    if not offset:
+        return dataset
+    shifted = copy.deepcopy(dataset)
+    complete = date.fromisoformat(str(shifted["data_complete_through"]))
+    shifted["data_complete_through"] = (complete + offset).isoformat()
+    for row in shifted["daily"]:
+        if isinstance(row, dict):
+            row["date"] = (date.fromisoformat(str(row["date"])) + offset).isoformat()
+    return shifted
+
+
+def shipped_anchor(datasets: dict[Platform, dict[str, JsonValue]]) -> date:
+    """The newest complete day across the shipped files; every platform shifts by the same offset."""
+    return max(date.fromisoformat(str(d["data_complete_through"])) for d in datasets.values())
+
+
+class FixtureState:
+    """Mutable in-memory copy of the fixture datasets shared by the read and write fakes.
+
+    Dates are anchored so the newest complete day is `anchor` (default: two days ago). The shipped
+    files end on 2026-08-28; a test that needs those exact dates passes that anchor.
+    """
+
+    def __init__(self, anchor: date | None = None) -> None:
+        loaded = {platform: load_fixture_dataset(platform) for platform in PIPEBOARD_PLATFORMS}
+        offset = fixture_anchor(anchor) - shipped_anchor(loaded)
         self.datasets: dict[Platform, dict[str, JsonValue]] = {
-            platform: copy.deepcopy(load_fixture_dataset(platform))
-            for platform in PIPEBOARD_PLATFORMS
+            platform: shift_dataset(copy.deepcopy(dataset), offset)
+            for platform, dataset in loaded.items()
         }
 
     def account_id(self, platform: Platform) -> str:

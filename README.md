@@ -1,5 +1,10 @@
 # Paid Media Agent
 
+[![CI](https://github.com/amal-irgashev/paid-media-agent-open-source/actions/workflows/ci.yml/badge.svg)](https://github.com/amal-irgashev/paid-media-agent-open-source/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Built with Deep Agents](https://img.shields.io/badge/built%20with-Deep%20Agents-1c3c3c.svg)](https://docs.langchain.com/oss/python/deepagents/overview)
+
 Paid Media Agent is an open-source Deep Agents application for analyzing and safely managing paid
 platforms through Pipeboard. One shared agent core powers local development, Managed Deep Agents
 (MDA), self-hosted deployments, Slack, and an Agent UI.
@@ -108,6 +113,16 @@ last complete window with the one before, and renders HTML and PDF with no model
 MDA project ships the same runs as schedules in `schedules/`. A platform whose read fails stays
 visible as unavailable and suppresses the cross-platform total.
 
+## Self-host with Docker
+
+```bash
+cp .env.example .env            # add a model key; everything else has a default
+docker compose up               # API on :8080 with Postgres for proposals, approvals, receipts
+```
+
+The image includes Pango and Cairo, so PDF reports render without a sandbox. `SLACK_TRANSPORT=http`
+with a signing secret and bot token mounts the rich Slack transport on the same server.
+
 ## Managed Deep Agents path
 
 `agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, `channels/slack.py`,
@@ -135,6 +150,7 @@ Native Slack supports approve and reject on `execute_change`. Use the rich adapt
 - [Paid-media business context](docs/business-context/README.md) the agent reads at run time
 - [Operating contract for humans and coding agents](AGENTS.md)
 - [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [changelog](CHANGELOG.md)
+- [Open-source principles this repository follows](docs/open-source-principles.md)
 
 Release gates (license text, naming, security contact) are tracked in
 [open-questions.md](open-questions.md). The repository must never contain customer data,

@@ -1,0 +1,29 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the wheel and sdist
+        run: uv build
+      - name: Cut the release notes from CHANGELOG.md
+        run: |
+          python - <<'PY'
+          import re, pathlib
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          match = re.search(r"^## Unreleased\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+          pathlib.Path("RELEASE_NOTES.md").write_text(match.group(1).strip() if match else "See CHANGELOG.md.")
+          PY
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          files: dist/*

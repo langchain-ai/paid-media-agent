@@ -58,6 +58,17 @@ Optional native dependencies:
 - The self-hosted API needs the `self-host` extra and `PAID_MEDIA_API_TOKENS` (`token:caller,...`).
   Durable state needs `DATABASE_URL`; without it the profile keeps state in memory.
 
+## Synthetic data
+
+The fixture datasets ship with August 2026 dates but are served anchored to today: the newest
+complete day is two days ago, and each platform keeps its shipped reporting lag. Set
+`PAID_MEDIA_FIXTURE_ANCHOR=2026-08-28` to reproduce a specific window (the test suite pins this).
+
+## Self-hosting with Docker
+
+`docker compose up` builds the API image (Pango and Cairo included, so PDFs render) and starts
+Postgres. Keys come from your local `.env` through `env_file`; the image copies no env file.
+
 ## Live checks
 
 The default test suite is offline. Live, read-only checks are opt-in:

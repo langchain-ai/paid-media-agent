@@ -225,6 +225,9 @@ def test_mda_definition_uses_shared_components(
     import sys
 
     monkeypatch.delenv("PIPEBOARD_API_TOKEN", raising=False)
+    # The import reads the developer's .env; pin the model so a local typo cannot fail the suite.
+    monkeypatch.setenv("PAID_MEDIA_MODEL", "anthropic:claude-sonnet-4-6")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-never-used")
     monkeypatch.chdir(project_root)
     sys.modules.pop("agent", None)
     module = importlib.import_module("agent")

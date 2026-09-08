@@ -144,7 +144,7 @@ def fixture_profile(
     run_mode: RunMode = "conversation",
 ) -> RuntimeProfile:
     """Fixture-backed profile. The write provider is always the in-memory fake."""
-    state = fixture_state or FixtureState()
+    state = fixture_state or FixtureState(settings.paid_media_fixture_anchor)
     root = workspace_root or (project_root / settings.paid_media_workspace_root)
     return RuntimeProfile(
         name=name,

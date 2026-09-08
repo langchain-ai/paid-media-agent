@@ -4,6 +4,20 @@ Append-only record of material changes to this repository's behavior. Newest fir
 journal (2026-08-31 to 2026-09-03) is preserved in
 [docs/history/build-log-2026-09.md](docs/history/build-log-2026-09.md).
 
+## 2026-09-08 (release readiness and console walkthrough)
+
+- Walked the setup console in a browser as a first-time user and fixed what confused: `uv run`
+  prefixes on every shown command, markdown rendering for answers, provider-card selection for
+  gateway models, the direct-platform hint, consistent step titles, a snapshot preflight row, and
+  next steps on Done.
+- Found the synthetic data had aged past "last week"; fixtures now anchor to today with a pinnable
+  setting so the demo and the eval keep working.
+- Verified the managed deployment end to end with a deployment-capable key: sandbox recipe baked,
+  deployed, SDK run answered, both schedules registered. Slack provisioning stops at an OAuth grant
+  only the workspace owner can give.
+- Wrote `docs/open-source-principles.md` and added the repository gems it names: code of conduct,
+  issue and PR templates, pre-commit, release workflow, Dockerfile plus compose, Makefile.
+
 ## 2026-09-03 (gap closure and clarity pass)
 
 - Closed the top parity gaps that can be verified without live credentials: ad-group and creative

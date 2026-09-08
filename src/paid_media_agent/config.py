@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tomllib
 from collections.abc import Mapping
+from datetime import date
 from pathlib import Path
 from typing import Literal
 
@@ -124,6 +125,9 @@ class Settings(BaseSettings):
     paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
     paid_media_log_level: str = "INFO"
     paid_media_workspace_root: Path = Path("workspace")
+    paid_media_fixture_anchor: date | None = None
+    """Last complete day of the synthetic data. Unset means two days ago, so the demo never ages
+    out; tests pin it to the shipped dates. Set it only when reproducing a specific window."""
     paid_media_account_config_path: Path = Path("config/accounts.example.toml")
     paid_media_max_selected_tools: int = Field(default=6, ge=1, le=40)
     paid_media_result_offload_chars: int = Field(default=6000, ge=500)

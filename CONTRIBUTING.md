@@ -38,3 +38,15 @@ The suite is offline by design. Live checks are opt-in (`PAID_MEDIA_LIVE_TESTS=1
 - Small, root-cause changes over stacked patches.
 - Explain what the change makes true and which test proves it.
 - Do not weaken assertions or widen tolerances to make a test pass.
+
+## Local hooks and shortcuts
+
+```bash
+uv tool install pre-commit && pre-commit install   # the CI lint and format gates, before each commit
+make check                                          # lint, format check, types, tests (what CI runs)
+make demo                                           # the fixture demo
+```
+
+Commit messages follow the plain imperative ("Add X", "Fix Y"); `CHANGELOG.md` gets one line per
+user-visible change under Unreleased. Releases are tags (`vX.Y.Z`); the release workflow builds the
+artifacts and publishes the changelog section as the release notes.

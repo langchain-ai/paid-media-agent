@@ -1,0 +1,26 @@
+name: Feature request
+description: A capability the agent or the tooling should have.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: The business question or operator task this serves
+      description: Phrase it the way a marketer or operator would ask the agent.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What happens today
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [reads and analysis, reports, governed writes, platforms and adapters, setup console, Slack, MDA and deployment, docs]
+  - type: checkboxes
+    id: parity
+    attributes:
+      label: Context
+      options:
+        - label: I checked docs/audits/parity-audit-2026-09-03.md for the ranked open gaps.

@@ -14,3 +14,6 @@ uv run python tests/eval/grade.py results.jsonl        # numeric checks + a revi
 prints every answer's tools, timing, and the expectation to judge by hand. Add a question by
 appending to `questions.json` with an `expect` line; add a numeric check in `grade.py` when the
 answer has one.
+
+The grader shifts its windows by the same fixture anchor the server uses (`PAID_MEDIA_FIXTURE_ANCHOR`,
+default two days ago), so figures line up on any day.

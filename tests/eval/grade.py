@@ -6,27 +6,41 @@ Usage: grade.py <results.jsonl>
 from __future__ import annotations
 
 import json
+import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS
-from paid_media_agent.tools.fixtures import load_fixture_dataset
+from paid_media_agent.tools.fixtures import load_fixture_dataset, shift_dataset
 
-LAST_WEEK = (date(2026, 8, 24), date(2026, 8, 30))
-PRIOR_WEEK = (date(2026, 8, 17), date(2026, 8, 23))
-AUGUST = (date(2026, 8, 1), date(2026, 8, 31))
+SHIPPED_ANCHOR = date(2026, 8, 28)
+ANCHOR = (
+    date.fromisoformat(os.environ["PAID_MEDIA_FIXTURE_ANCHOR"])
+    if os.environ.get("PAID_MEDIA_FIXTURE_ANCHOR")
+    else date.today() - timedelta(days=2)
+)
+OFFSET = ANCHOR - SHIPPED_ANCHOR
+"""The server anchors fixture dates to today; grade the same shifted windows."""
+
+
+def _shift(window: tuple[date, date]) -> tuple[date, date]:
+    return (window[0] + OFFSET, window[1] + OFFSET)
+
+
+LAST_WEEK = _shift((date(2026, 8, 24), date(2026, 8, 30)))
+PRIOR_WEEK = _shift((date(2026, 8, 17), date(2026, 8, 23)))
+AUGUST = _shift((date(2026, 8, 1), date(2026, 8, 31)))
 
 
 def window_totals(platform: str, window: tuple[date, date]) -> dict[str, str | None]:
     """Spend, conversions, and CPA for one platform over one window, from the fixture rows."""
+    dataset = shift_dataset(
+        load_fixture_dataset(next(p for p in PIPEBOARD_PLATFORMS if p.value == platform)), OFFSET
+    )
     rows = [
-        r
-        for r in load_fixture_dataset(next(p for p in PIPEBOARD_PLATFORMS if p.value == platform))[
-            "daily"
-        ]
-        if window[0] <= date.fromisoformat(str(r["date"])) <= window[1]
+        r for r in dataset["daily"] if window[0] <= date.fromisoformat(str(r["date"])) <= window[1]
     ]
     spend = sum(Decimal(str(r["spend"])) for r in rows)
     conversions = sum(Decimal(str(r["conversions"])) for r in rows)
@@ -57,7 +71,10 @@ def expected_figures(question_id: str) -> list[str]:
 
 WEEK_PAIRS = (
     (LAST_WEEK, PRIOR_WEEK),
-    ((date(2026, 8, 22), date(2026, 8, 28)), (date(2026, 8, 15), date(2026, 8, 21))),
+    (
+        _shift((date(2026, 8, 22), date(2026, 8, 28))),
+        _shift((date(2026, 8, 15), date(2026, 8, 21))),
+    ),
 )
 
 

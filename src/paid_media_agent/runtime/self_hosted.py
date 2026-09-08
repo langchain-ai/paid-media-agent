@@ -147,7 +147,7 @@ async def build_self_hosted_runtime(
     loaded = await load_catalog(settings, project_root=project_root)
     workspace = project_root / settings.paid_media_workspace_root
     backend = build_backend(settings, project_root=project_root)
-    state = FixtureState()
+    state = FixtureState(settings.paid_media_fixture_anchor)
     write_policy, issues = resolve_write_policy(settings, project_root, loaded.provider)
     live = loaded.read_provider is not None and loaded.write_provider is not None
     base = fixture_profile(

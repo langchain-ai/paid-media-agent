@@ -19,6 +19,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def _isolated_environment() -> Iterator[None]:
     """Console actions export .env values into the process; never let that leak across tests."""
     snapshot = dict(os.environ)
+    # Tests reason about the shipped fixture dates; the demo itself anchors to today.
+    os.environ["PAID_MEDIA_FIXTURE_ANCHOR"] = "2026-08-28"
     yield
     os.environ.clear()
     os.environ.update(snapshot)
