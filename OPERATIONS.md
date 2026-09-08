@@ -58,6 +58,19 @@ Optional native dependencies:
 - The self-hosted API needs the `self-host` extra and `PAID_MEDIA_API_TOKENS` (`token:caller,...`).
   Durable state needs `DATABASE_URL`; without it the profile keeps state in memory.
 
+## Native Slack on Managed Deep Agents
+
+`mda deploy` provisions the Slack app declared in `channels/slack.py`. On the first deploy the CLI
+prints a Slack authorization link: open it, pick the workspace, approve, then return to the
+terminal and press Enter so the CLI can verify the grant and finish provisioning. Run the deploy
+from an interactive terminal for that step; a non-interactive run stops at "Slack channel setup
+requires authorization" every time.
+
+After provisioning the agent sends you a Slack direct message. Reply to it to start a run, or
+mention the app in a channel it has been invited to; replies in the same thread continue the
+conversation. Proposed changes arrive with Approve and Reject buttons; edits need the rich
+adapter (`paid-media-agent slack`) or the API.
+
 ## Synthetic data
 
 The fixture datasets ship with August 2026 dates but are served anchored to today: the newest

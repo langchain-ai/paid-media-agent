@@ -141,7 +141,7 @@ optional extras and are unavailable in a managed build unless you move them into
 `mda deploy` needs a LangSmith key with deployment permissions; a key that can only trace or
 call the gateway fails with `403 deployments:read`.
 
-Native Slack supports approve and reject on `execute_change`. Use the rich adapter
+After the first deploy the agent DMs you in Slack; reply there or mention it in a channel. Native Slack supports approve and reject on `execute_change`. Use the rich adapter
 (`paid-media-agent slack`) when reviewers need edits, receipts, and files in Block Kit.
 
 ## Start here
