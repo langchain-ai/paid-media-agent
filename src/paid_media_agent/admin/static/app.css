@@ -307,3 +307,9 @@ textarea.input { height: auto; min-height: 84px; padding: 12px; resize: vertical
 .answer.md hr { border: 0; border-top: 1px solid var(--line, #e5e5e5); margin: 14px 0; }
 .next { margin: 6px 0 18px 18px; line-height: 1.7; }
 .sub-title { font-size: 14px; font-weight: 600; margin: 18px 0 4px; }
+
+/* Your business */
+.org-form .field .hint { display: block; font-size: 13px; color: var(--ink); opacity: 0.72; margin: 2px 0 8px; }
+.org-form .org-answer { min-height: 48px; resize: vertical; }
+.org-form .row { display: flex; gap: 10px; align-items: center; }
+.org-form input[type="file"] { padding: 8px; }

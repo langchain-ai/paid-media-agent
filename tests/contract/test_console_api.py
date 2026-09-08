@@ -60,6 +60,7 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
     assert [r["id"] for r in data["routes"]] == [
         "local",
         "pipeboard",
+        "org",
         "direct",
         "sandbox",
         "slack",

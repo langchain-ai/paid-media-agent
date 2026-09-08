@@ -35,6 +35,7 @@ machine reads it, and the setup console runs the same actions.
 | `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate signing keys and API tokens |
 | `uv run paid-media-agent test model\|pipeboard\|slack\|db\|all` | Connection tests that never print secret values |
 | `uv run paid-media-agent accounts discover\|list\|add\|remove` | Host-side account discovery and alias mapping (six platforms) |
+| `uv run paid-media-agent org show\|interview\|set field=value\|add-link URL\|add-file PATH` | Your organization's context (goals, conversions, targets, naming, approvers, shared docs) in `docs/org` |
 | `uv run paid-media-agent catalog show [--live]` | The authorized tool catalog: reads, admitted mutations, denied tools |
 | `uv run paid-media-agent policy validate [--live]` | Validate the write policy against the fixture or live catalog |
 | `uv run paid-media-agent ask "question"` | One question through the local runtime with the configured model |
@@ -70,6 +71,18 @@ After provisioning the agent sends you a Slack direct message. Reply to it to st
 mention the app in a channel it has been invited to; replies in the same thread continue the
 conversation. Proposed changes arrive with Approve and Reject buttons; edits need the rich
 adapter (`paid-media-agent slack`) or the API.
+
+## Organization context
+
+`docs/org/` holds what only your organization knows: what you sell, the conversion that counts,
+targets or "directional", monthly budget, markets and timezone, seasonality, campaign naming, and
+who approves changes, plus links and text files you share. It is ignored by git and mounted at
+`/docs/org` in every runtime, including the sandbox. Fill it from the console step "Your
+business", from `paid-media-agent org interview`, or by asking the agent to learn about your
+business (skill `paid-media-org-onboarding`, tools `update_org_profile` and `add_org_source`).
+The agent reads `goals.md` and `conventions.md` before every analysis and says "not provided"
+rather than guessing when a field is empty. Links must be public https pages under 1 MB; files
+must be text (`.md`, `.txt`, `.csv`, `.json`, `.html`).
 
 ## Synthetic data
 

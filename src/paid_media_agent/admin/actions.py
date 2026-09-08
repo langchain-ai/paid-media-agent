@@ -44,6 +44,7 @@ from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.middleware.tool_selection import capabilities_for, plan_selection
+from paid_media_agent.org import org_summary
 from paid_media_agent.runtime.graph import STUDIO_PORT, STUDIO_URL
 from paid_media_agent.runtime.profiles import load_write_policy_file
 from paid_media_agent.surfaces.runner import _content_text
@@ -140,6 +141,7 @@ def status(root: Path) -> ActionResult:
     detail: dict[str, JsonValue] = {
         "checks": _checks_json(checks),
         "env": env,
+        "org": org_summary(root),
         "runtime": settings.paid_media_runtime,
         "model_presets": [dict(p) for p in MODEL_PRESETS],
         "model_key_env": model_key_env(settings),
@@ -1106,4 +1108,76 @@ def sandbox_test(root: Path) -> ActionResult:
         "sandbox can host the agent" if not failing else f"failing: {', '.join(failing)}",
         detail,
         command=command,
+    )
+
+
+# ---------------------------------------------------------------- organization context
+
+
+def org_show(root: Path) -> ActionResult:
+    from paid_media_agent.org import load_profile, org_summary, questions_json
+
+    summary = org_summary(root)
+    profile = load_profile(root).model_dump(mode="json")
+    sources = summary["sources"]
+    count = len(sources) if isinstance(sources, list) else 0
+    return _result(
+        "org_show",
+        "ok" if summary["configured"] else "warn",
+        f"{summary['answered']} of {summary['questions']} questions answered; {count} source(s)",
+        {"summary": summary, "profile": profile, "questions": questions_json()},
+        command="paid-media-agent org show",
+    )
+
+
+def org_set(root: Path, updates: Mapping[str, str]) -> ActionResult:
+    """Merge answers into the profile and re-render the pages the agent reads."""
+    from paid_media_agent.org import QUESTIONS, load_profile, save_profile
+
+    allowed = {q.field for q in QUESTIONS} | {"notes"}
+    unknown = sorted(set(updates) - allowed)
+    if unknown:
+        return _result("org_set", "fail", f"unknown field(s): {', '.join(unknown)}")
+    profile = load_profile(root).model_copy(update={k: v.strip() for k, v in updates.items()})
+    written = save_profile(root, profile)
+    return _result(
+        "org_set",
+        "ok",
+        f"saved {', '.join(sorted(updates))}; {profile.answered()} of {len(QUESTIONS)} answered",
+        {"written": [str(w.relative_to(root)) for w in written]},
+        command="paid-media-agent org set " + " ".join(f'{k}="..."' for k in sorted(updates)),
+    )
+
+
+def org_add_link(root: Path, url: str, note: str = "") -> ActionResult:
+    from paid_media_agent.org import SourceError, add_link
+
+    try:
+        stored = add_link(root, url, note)
+    except SourceError as exc:
+        return _result("org_add_link", "fail", str(exc))
+    except Exception as exc:
+        return _result("org_add_link", "fail", f"could not fetch: {sanitize_exception(exc)}")
+    return _result(
+        "org_add_link",
+        "ok",
+        f"stored {stored.relative_to(root)}",
+        {"stored": str(stored.relative_to(root))},
+        command=f"paid-media-agent org add-link {url}",
+    )
+
+
+def org_add_file(root: Path, path: Path, note: str = "") -> ActionResult:
+    from paid_media_agent.org import SourceError, add_file
+
+    try:
+        stored = add_file(root, path, note)
+    except SourceError as exc:
+        return _result("org_add_file", "fail", str(exc))
+    return _result(
+        "org_add_file",
+        "ok",
+        f"stored {stored.relative_to(root)}",
+        {"stored": str(stored.relative_to(root))},
+        command=f"paid-media-agent org add-file {path}",
     )

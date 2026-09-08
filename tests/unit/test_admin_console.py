@@ -109,6 +109,7 @@ def test_status_and_routes_reflect_configuration(
     assert list(routes) == [
         "local",
         "pipeboard",
+        "org",
         "direct",
         "sandbox",
         "slack",

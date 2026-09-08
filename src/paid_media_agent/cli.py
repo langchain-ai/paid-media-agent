@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 
 import click
@@ -274,6 +275,62 @@ def policy_validate(live: bool, as_json: bool) -> None:
     click.echo(f"{result.status.upper()} {result.summary}")
     for issue in result.detail.get("issues", []):
         click.echo(f"  {issue['tool']:<48} {issue['reason']}")
+
+
+@main.group()
+def org() -> None:
+    """Your organization's context: the interview, links, and files the agent reads."""
+
+
+@org.command("show")
+@click.option("--json", "as_json", is_flag=True)
+def org_show(as_json: bool) -> None:
+    _emit(actions.org_show(project_root()), as_json)
+
+
+@org.command("interview")
+def org_interview() -> None:
+    """Answer the eight questions in the terminal; Enter keeps the current answer."""
+    from paid_media_agent.org import QUESTIONS, load_profile
+
+    current = load_profile(project_root())
+    answers: dict[str, str] = {}
+    for question in QUESTIONS:
+        click.echo(f"\n{question.question}\n  why: {question.why}\n  e.g. {question.example}")
+        answer = click.prompt(
+            "", default=getattr(current, question.field) or "", show_default=False
+        )
+        if answer.strip() and answer.strip() != getattr(current, question.field):
+            answers[question.field] = answer.strip()
+    _emit(
+        actions.org_set(project_root(), answers) if answers else actions.org_show(project_root()),
+        False,
+    )
+
+
+@org.command("set")
+@click.argument("pairs", nargs=-1, required=True)
+@click.option("--json", "as_json", is_flag=True)
+def org_set(pairs: tuple[str, ...], as_json: bool) -> None:
+    """Set answers as field=value pairs (business, primary_conversion, targets, ...)."""
+    updates = dict(pair.split("=", 1) for pair in pairs if "=" in pair)
+    _emit(actions.org_set(project_root(), updates), as_json)
+
+
+@org.command("add-link")
+@click.argument("url")
+@click.option("--note", default="")
+@click.option("--json", "as_json", is_flag=True)
+def org_add_link(url: str, note: str, as_json: bool) -> None:
+    _emit(actions.org_add_link(project_root(), url, note), as_json)
+
+
+@org.command("add-file")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--note", default="")
+@click.option("--json", "as_json", is_flag=True)
+def org_add_file(path: Path, note: str, as_json: bool) -> None:
+    _emit(actions.org_add_file(project_root(), path, note), as_json)
 
 
 @main.group()

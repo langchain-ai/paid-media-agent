@@ -47,7 +47,10 @@ code, and requires a verified human approval before every mutation.
 
 - `agent.py`, `identity.py`, `channels/`, `schedules/`, `sandbox/`, `langgraph.json`: Managed Deep
   Agents and LangGraph project files; the platform requires them at the repository root.
-- `instructions.md`, `skills/`, `docs/business-context/`: what the model reads at run time.
+- `instructions.md`, `skills/`, `docs/business-context/`: what the model reads at run time;
+  `docs/org/` (ignored by git) is the organization's own context, written by onboarding.
+- `src/paid_media_agent/org.py`, `tools/org.py`, `skills/paid-media-org-onboarding/`: the
+  onboarding interview, its host tools, and the pages it renders.
 - `src/paid_media_agent/assembly.py`: shared agent components and policy.
 - `src/paid_media_agent/config.py`: typed settings, `ModelConfig`, account aliases, `project_root`.
 - `src/paid_media_agent/tools/`: catalog policy, Pipeboard loading, direct adapters (`direct/`),
@@ -65,6 +68,14 @@ code, and requires a verified human approval before every mutation.
 - `src/paid_media_agent/testing/`: scripted and provider-shaped fake models for offline runs.
 - `tests/`: unit oracles, real-graph contracts, behavior checks, opt-in integration, and the
   question eval under `tests/eval/`.
+
+## Onboarding a user
+
+Run the fixture demo, then `paid-media-agent setup` (or the CLI equivalents it prints). Before the
+first real analysis, fill the organization context: `paid-media-agent org interview`, or let the
+agent run the interview in chat. Ask for links and text files the organization already has (briefs,
+plans, dashboard exports) rather than asking people to retype them. Never ask for keys or provider
+account ids in chat; those go through the console or `config set`.
 
 ## Change discipline
 

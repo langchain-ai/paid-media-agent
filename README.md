@@ -71,8 +71,11 @@ uv run paid-media-agent setup                  # local page: model, ad accounts,
 
 `setup` opens a local-only onboarding page (127.0.0.1, per-run token, writes only your `.env`):
 pick a model provider and test one call, paste a scoped Pipeboard token and tick the accounts the
-agent may read, ask a question or open LangGraph Studio, then choose Managed Deep Agents or
-self-hosting. Every step shows the CLI command it runs, so a coding agent can do the same without
+agent may read, answer eight plain questions about your business (or share links and files) so
+the agent knows your goals, conversions, targets, and naming, ask a question or open LangGraph
+Studio, then choose Managed Deep Agents or self-hosting. The agent can run that same interview in
+chat: ask it to learn about your business, and it saves the answers under `docs/org/`, which stays
+out of git. Every step shows the CLI command it runs, so a coding agent can do the same without
 a browser. The full command reference is in [OPERATIONS.md](OPERATIONS.md#command-reference).
 
 ```bash

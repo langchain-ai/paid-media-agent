@@ -27,3 +27,6 @@ workspace/logs/
 !workspace/*/.gitkeep
 workspace/KILL_SWITCH
 supabase/
+# The organization's own context; never committed.
+docs/org/*
+!docs/org/README.md

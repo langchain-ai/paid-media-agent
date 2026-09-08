@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 WORKSPACE = "/workspace"
 WORKSPACE_DIRS = ("in", "out", "analysis")
-MOUNTED_DIRS = ("skills", "docs/business-context")
+MOUNTED_DIRS = ("skills", "docs/business-context", "docs/org")
 """Project directories the model reads. Same absolute paths in the repository and the sandbox."""
 _PROBE_HTML = "<html><body><h1>Paid Media Agent sandbox probe</h1></body></html>"
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -107,6 +107,16 @@ class WorkspaceMirror:
         self._sandbox.put(f"{WORKSPACE}/{relative_path}", data)
 
 
+class ProjectMirror:
+    """Copies a host-written project file (for example `docs/org/goals.md`) to the same sandbox path."""
+
+    def __init__(self, sandbox: Sandbox) -> None:
+        self._sandbox = sandbox
+
+    def put(self, relative_path: str, data: bytes) -> None:
+        self._sandbox.put(f"/{relative_path}", data)
+
+
 class SandboxPdfEngine:
     """Renders PDFs with the WeasyPrint baked into the sandbox image."""
 
@@ -141,6 +151,13 @@ class Backend:
     mirror: FileSink | None
     pdf_engine: PdfEngine
     close: Callable[[], None]
+    project_mirror: FileSink | None = None
+    """Receives project files host tools write (the organization pages); None for the repository."""
+
+    def publish(self, project_root: Path, path: Path) -> None:
+        """Copy a host-written project file into the model's filesystem when that is a sandbox."""
+        if self.project_mirror is not None:
+            self.project_mirror.put(path.relative_to(project_root).as_posix(), path.read_bytes())
 
 
 def local_backend(project_root: Path) -> Backend:
@@ -206,6 +223,7 @@ def build_backend(settings: Settings, *, project_root: Path) -> Backend:
         mirror=WorkspaceMirror(sandbox),
         pdf_engine=SandboxPdfEngine(sandbox),
         close=sandbox.close,
+        project_mirror=ProjectMirror(sandbox),
     )
 
 

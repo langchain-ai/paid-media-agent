@@ -236,6 +236,33 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         if slack.get("transport") == "socket_mode"
         else bool(slack.get("signing_secret_set"))
     )
+    org = _get(detail, "org") or {}
+    org_configured = bool(isinstance(org, dict) and org.get("configured"))
+    org_route = Route(
+        id="org",
+        title="Your business",
+        tagline="Goals, conversions, targets, naming, approvers, and the docs you share",
+        description="Eight plain questions the agent reads before every analysis, plus links and files. Stored in docs/org, never committed.",
+        steps=(
+            Step(
+                id="org_profile",
+                title="Answer the interview",
+                description="What you sell, the conversion that counts, targets or directional, budget, markets, seasonality, naming, approvers.",
+                status="done" if org_configured else "todo",
+                cli="uv run paid-media-agent org interview",
+                action=StepAction(kind="command", label="Copy command"),
+            ),
+            Step(
+                id="org_sources",
+                title="Share briefs and exports",
+                description="Public links are fetched as text; text files are copied. Both are listed on /docs/org/sources.md.",
+                status="optional",
+                cli="uv run paid-media-agent org add-link https://... ; uv run paid-media-agent org add-file ./brief.md",
+                action=StepAction(kind="command", label="Copy command"),
+            ),
+        ),
+    )
+
     direct = Route(
         id="direct",
         title="Direct platforms",
@@ -584,6 +611,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     return [
         local,
         pipeboard,
+        org_route,
         direct,
         sandbox_route,
         slack_route,

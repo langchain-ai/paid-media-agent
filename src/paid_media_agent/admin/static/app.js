@@ -97,12 +97,13 @@
     const tokenSet = !!d.pipeboard?.token_set;
     const realAccounts = String(d.accounts_path || "").endsWith("config/accounts.toml") && (d.accounts || []).length > 0;
     const runtime = d.runtime || "local";
+    const orgDone = !!d.org?.configured;
     const slack = d.slack || {};
     const slackDone = !!slack.bot_token_set && (slack.transport === "socket_mode" ? !!slack.app_token_set : !!slack.signing_secret_set);
     const approvers = (d.writes?.approvers || []).length > 0;
     const mdaDone = !!d.mda?.langsmith_key_set && modelDone;
     const selfDone = slackDone && approvers;
-    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, runtime, slackDone, approvers, mdaDone, selfDone,
+    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, orgDone, runtime, slackDone, approvers, mdaDone, selfDone,
       pathDone: runtime === "mda" ? mdaDone : runtime === "self_hosted" ? selfDone : false };
   }
   function stepList() {
@@ -111,6 +112,7 @@
       { id: "welcome", label: "Welcome", done: true },
       { id: "model", label: "Model", done: s.modelDone },
       { id: "pipeboard", label: "Ad accounts", done: s.pipeboardDone },
+      { id: "org", label: "Your business", done: s.orgDone },
       { id: "try", label: "Try it", done: !!state.session.answer },
       { id: "path", label: "Where it lives", done: s.runtime !== "local" },
     ];
@@ -164,7 +166,7 @@
   function renderScreen(animate = true) {
     const host = $("#screen");
     const token = ++screenToken;
-    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
+    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, org: screenOrg, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
     const next = el("section", { class: "screen", "data-enter": animate ? "" : null }, build());
     const current = host.firstElementChild;
     const swap = () => { if (token !== screenToken) return; host.replaceChildren(next); requestAnimationFrame(() => requestAnimationFrame(() => next.removeAttribute("data-enter"))); };
@@ -378,6 +380,64 @@
   }
   const platformLogo = (platform) => ({ google_ads: "google", meta_ads: "langchain", reddit_ads: "langchain" }[platform] || "langchain");
   const suggestAlias = (row) => `${row.platform.replace("_ads", "")}-${(row.name || "main").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 24) || "main"}`;
+
+  function screenOrg() {
+    const d = state.status.detail;
+    const org = d.org || {};
+    const nodes = [el("div", { class: "hero" }, [
+      el("h1", { class: "hero-title", text: "Your business" }),
+      el("p", { class: "hero-sub", text: "Eight plain questions the agent reads before every analysis. Answer what you know; skip the rest. Nothing here is committed to git." }),
+    ])];
+    const fields = [];
+    const form = el("form", { class: "form org-form" });
+    const status = el("div", { class: "status-line", id: "org-status" });
+    if (state.session.orgStatus) setLine(status, state.session.orgStatus.status, state.session.orgStatus.text);
+    const questions = state.session.orgQuestions || [];
+    const profile = state.session.orgProfile || {};
+    if (!state.session.orgQuestions) {
+      api("/api/org").then((r) => { state.session.orgQuestions = r.detail.questions || []; state.session.orgProfile = r.detail.profile || {}; refreshScreen(); }).catch((e) => setLine(status, "fail", e.message));
+      nodes.push(el("p", { class: "sub", text: "Loading the questions…" }));
+      return nodes;
+    }
+    for (const q of questions) {
+      const input = el("textarea", { class: "input org-answer", id: `org-${q.field}`, rows: "2", placeholder: q.example });
+      input.value = profile[q.field] || "";
+      fields.push([q.field, input]);
+      form.append(el("div", { class: "field" }, [el("label", { for: `org-${q.field}`, text: q.question }), el("span", { class: "hint", text: q.why }), input]));
+    }
+    const links = el("textarea", { class: "input", id: "org-links", rows: "2", placeholder: "https://... one public link per line (a brief, a plan, a dashboard export)" });
+    form.append(el("div", { class: "field" }, [el("label", { for: "org-links", text: "Links the agent should read" }), links]));
+    const file = el("input", { class: "input", type: "file", id: "org-file", accept: ".md,.txt,.csv,.json,.html" });
+    const attach = el("button", { class: "btn btn-outline btn-compact", type: "button", text: "Attach file" });
+    attach.addEventListener("click", () => busy(attach, async () => {
+      if (!file.files.length) { setLine(status, "info", "Choose a text file first (.md, .txt, .csv, .json, .html; up to 1 MB)."); return; }
+      const body = new FormData(); body.append("file", file.files[0]);
+      const response = await fetch("/api/org/files", { method: "POST", headers: { "X-Admin-Token": state.token }, body });
+      const data = await response.json().catch(() => ({}));
+      state.session.orgStatus = { status: response.ok && data.ok ? "ok" : "fail", text: data.summary || data.detail || "upload failed" };
+      state.session.orgQuestions = null;
+      await loadStatus();
+    }));
+    form.append(el("div", { class: "field" }, [el("label", { for: "org-file", text: "Attach a file" }), el("div", { class: "row" }, [file, attach])]));
+    const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save" });
+    form.append(status, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]));
+    form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(save, async () => {
+      const answers = {};
+      for (const [field, input] of fields) if ((input.value || "").trim() !== (profile[field] || "")) answers[field] = input.value.trim();
+      const urls = links.value.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (!Object.keys(answers).length && !urls.length) { setLine(status, "info", "Nothing changed."); return; }
+      setLine(status, "info", "Saving…");
+      const result = await api("/api/org", { method: "POST", body: { answers, links: urls } });
+      const failed = (result.detail?.links || []).filter((l) => !l.ok).map((l) => l.summary);
+      const stored = (result.detail?.links || []).filter((l) => l.ok).length;
+      const text = [result.summary, stored ? `${stored} link(s) stored` : "", ...failed].filter(Boolean).join("; ");
+      state.session.orgStatus = { status: failed.length ? "warn" : "ok", text };
+      state.session.orgQuestions = null; links.value = "";
+      await loadStatus();
+    }); });
+    nodes.push(form, el("p", { class: "sub", text: `Saved to docs/org: ${org.answered || 0} of ${org.questions || 8} answered, ${(org.sources || []).length} source(s). The agent can also run this interview in chat: ask it to learn about your business.` }), cli("paid-media-agent org interview"));
+    return nodes;
+  }
 
   function screenTry() {
     const d = state.status.detail;

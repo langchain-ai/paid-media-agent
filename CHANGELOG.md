@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added (organization onboarding)
+
+- `docs/org/`: the organization's own context (business, conversion that counts, targets, budget,
+  markets, seasonality, naming, approvers, shared links and files), ignored by git and mounted at
+  `/docs/org` in every runtime. Filled from the console step "Your business", from
+  `paid-media-agent org interview|set|add-link|add-file`, or by the agent through the
+  `paid-media-org-onboarding` skill and the `update_org_profile` and `add_org_source` tools. The
+  analysis skill reads it before generic doctrine.
+
 ### Added (release readiness)
 
 - Repository health files and automation: `CODE_OF_CONDUCT.md`, issue and pull request templates,

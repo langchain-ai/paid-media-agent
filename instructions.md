@@ -10,6 +10,8 @@ platforms.
 3. Use the smallest complete source set.
 4. Let deterministic tools compute metrics and reconciliation. Do not calculate from raw rows in prose.
 5. Read the relevant paid-media skill and business-context page before making a recommendation.
+   Organization context lives in `/docs/org`; read `goals.md` and `conventions.md` first when they
+   exist, and offer the onboarding interview (skill `paid-media-org-onboarding`) when they do not.
 6. Cite the source window and artifact used. Keep unavailable or conflicting data visible.
 7. Explain what happened, why it matters, what to do, expected effect, confidence, and how to reverse it.
 

@@ -42,6 +42,7 @@ from paid_media_agent.tools.discovery import (
     build_discover_tools_tool,
     build_list_accounts_tool,
 )
+from paid_media_agent.tools.org import ORG_TOOLS, build_org_tools
 from paid_media_agent.tools.reads import ReadDispatcher, build_platform_read_tools
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL, build_render_report_tool
 from paid_media_agent.tools.summary import SUMMARIZE_WINDOW_TOOL, build_summarize_window_tool
@@ -60,6 +61,7 @@ FILESYSTEM_TOOLS: tuple[str, ...] = ("ls", "read_file", "write_file", "edit_file
 CORE_TOOLS: tuple[str, ...] = (
     LIST_ACCOUNTS_TOOL,
     DISCOVER_TOOLS_TOOL,
+    *ORG_TOOLS,
     COMPARE_PERIODS_TOOL,
     SUMMARIZE_WINDOW_TOOL,
     RENDER_REPORT_TOOL,
@@ -198,6 +200,13 @@ def build_agent_components(
     )
     services = _build_services(settings, runtime)
 
+    project_root = runtime.skills_root or Path.cwd()
+    backend = runtime.backend
+
+    def publish_project_file(path: Path) -> None:
+        if backend is not None:
+            backend.publish(project_root, path)
+
     platform_tools = build_platform_read_tools(catalog, services.read_dispatcher)
     core_tools: list[BaseTool] = [
         build_list_accounts_tool(runtime.accounts),
@@ -205,6 +214,7 @@ def build_agent_components(
         build_compare_periods_tool(runtime.artifacts),
         build_summarize_window_tool(runtime.artifacts),
         build_render_report_tool(runtime.artifacts, pdf_engine=runtime.pdf_engine),
+        *build_org_tools(project_root, publish=publish_project_file),
     ]
     write_tools: list[BaseTool] = []
     if runtime.run_mode == "conversation":
@@ -252,8 +262,9 @@ def build_agent_components(
 
     prompt = system_prompt
     if prompt is None:
-        root = runtime.skills_root or Path.cwd()
-        prompt = load_system_prompt(root) if (root / "instructions.md").exists() else ""
+        prompt = (
+            load_system_prompt(project_root) if (project_root / "instructions.md").exists() else ""
+        )
     metadata = AssemblyMetadata(
         model_spec=model_config.spec,
         selection=plan,

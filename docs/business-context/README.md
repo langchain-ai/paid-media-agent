@@ -24,6 +24,12 @@ Read when the question calls for it:
 Use [hot.md](hot.md) for current public capability notes and [open-questions.md](open-questions.md)
 for unresolved doctrine. Append material changes to [log.md](log.md).
 
+## The organization layer
+
+Generic doctrine lives here. The organization's own goals, conversions, targets, budget,
+naming, and approvers live in `/docs/org` (ignored by git, written during onboarding) and take
+precedence wherever the two differ.
+
 ## Boundaries
 
 - This wiki contains general doctrine and public sources.
