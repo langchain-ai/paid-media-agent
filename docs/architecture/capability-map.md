@@ -17,6 +17,7 @@
 | Deliver artifact | `render_report` files | host artifact bridge | artifact receipt | unsafe path, type, size, or delivery error |
 | Read organization context | `get_org_context` | `org.py` profile and shared sources on the host | `docs/org/` | empty profile reported as "Not provided" |
 | Run on MDA | `agent.py` | shared components + MDA config | managed thread and sandbox | deployment/config mismatch |
+| Run self-hosted | `serve`, `slack`, `docker compose up` | shared components + Postgres (`runtime/self_hosted.py`) | self-hosted thread | auth, persistence, or adapter mismatch |
 | Run locally | `paid-media-agent ask`, `report`, `mda dev` | the same components compiled by `runtime/local.py` | in-memory thread | model key or catalog mismatch |
 | Onboard and operate | `setup` console or CLI groups | `admin/actions.py` (host-side, no model) | `.env`, `config/accounts.toml`, process logs | doctor failures, invalid key, gate refusal |
 

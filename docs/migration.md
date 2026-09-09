@@ -13,19 +13,19 @@
 5. Encode business judgment in `skills/` (the wiki is `skills/paid-media-wiki/`); keep
    organization-specific goals, thresholds, and account ids in host configuration and `docs/org/`.
 
-## From the self-hosted profile to Managed Deep Agents
+## Between the two deployment paths
 
-The self-hosted profile is on the `self-hosted` branch. Moving a deployment to `main`:
-
-- keep `agent.py`, `identity.py`, `instructions.md`, `skills/`, `schedules/`, `channels/slack.py`,
-  `config/`, and `docs/org/`; MDA supplies threads, checkpoints, the sandbox, identity, and Slack;
-- drop `DATABASE_URL`, `PAID_MEDIA_API_TOKENS`, `SLACK_*`, `PAID_MEDIA_BACKEND`, and
-  `PAID_MEDIA_RUNTIME` from `.env`; `config show` lists what is still read;
-- replace `slack:<team>:<user>` approver refs with the identities MDA presents (a refused
-  approval names one);
-- wiki links change from `/docs/business-context/<page>` to `/skills/paid-media-wiki/<page>`.
+- Self-hosted to Managed Deep Agents: keep `agent.py`, `identity.py`, `instructions.md`,
+  `skills/`, `schedules/`, `channels/slack.py`, `config/`, and `docs/org/`; MDA supplies threads,
+  checkpoints, the sandbox, identity, and Slack. Replace `slack:<team>:<user>` approver refs with
+  the identities MDA presents (a refused approval names one).
+- Managed Deep Agents to self-hosted: set `DATABASE_URL`, generate `PAID_MEDIA_API_TOKENS` and the
+  signing key, create the Slack app from the manifest, and use `slack:<team>:<user>` approver refs.
+  Proposals, claims, and receipts keep the same objects and ids across memory and Postgres.
+- Wiki links changed on 2026-09-08 from `/docs/business-context/<page>` to
+  `/skills/paid-media-wiki/<page>`; the org profile is read through `get_org_context`.
 
 ## Version 0.1.0
 
-First implementation. There are no stored-format migrations; proposals, approval claims, and
-receipts are in-memory objects owned by the running process.
+First implementation. There are no stored-format migrations yet; the Postgres tables are created by
+`PostgresRepositories.setup()` and the LangGraph checkpointer's own setup.

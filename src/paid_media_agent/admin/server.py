@@ -35,6 +35,8 @@ ACTIONS: dict[str, Callable[..., actions.ActionResult]] = {
     "accounts_list": lambda root, **_: actions.accounts_list(root),
     "catalog_show": lambda root, live=False, **_: actions.catalog_show(root, live=bool(live)),
     "policy_validate": lambda root, live=False, **_: actions.policy_validate(root, live=bool(live)),
+    "slack_test": lambda root, **_: actions.slack_test(root),
+    "database_test": lambda root, **_: actions.database_test(root),
     "mda_check": lambda root, **_: actions.mda_check(root),
     "demo_run": lambda root, with_proposal=False, **_: actions.demo_run(
         root, with_proposal=bool(with_proposal)
@@ -168,6 +170,20 @@ def create_console_app(
         body: dict[str, JsonValue] | None = None,
         console: ConsoleState = Depends(_authorized),
     ) -> dict[str, JsonValue]:
+        if name == "generate_secrets":
+            first = actions.generate_secret(console.root, "PAID_MEDIA_APPROVAL_SIGNING_KEY")
+            second = actions.generate_secret(console.root, "PAID_MEDIA_API_TOKENS")
+            merged = actions.ActionResult(
+                action="generate_secrets",
+                ok=first.ok and second.ok,
+                status="ok" if first.ok and second.ok else "fail",
+                summary="signing key and API token generated"
+                if first.ok and second.ok
+                else f"{first.summary}; {second.summary}",
+                detail={"api_token_show_once": second.detail.get("show_once", "")},
+                command="paid-media-agent config generate PAID_MEDIA_APPROVAL_SIGNING_KEY PAID_MEDIA_API_TOKENS",
+            )
+            return merged.model_dump(mode="json")
         handler = ACTIONS.get(name)
         if handler is None:
             raise HTTPException(status_code=404, detail="unknown action")

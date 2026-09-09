@@ -29,7 +29,7 @@ from paid_media_agent.tools.write_policy import (
 )
 from paid_media_agent.tools.writes import ApprovalPolicy, ApprovalSigner, WriteGate
 
-ProfileName = Literal["local", "mda"]
+ProfileName = Literal["local", "mda", "self_hosted"]
 RunMode = Literal["conversation"]
 """Reserved for a future read-only mode; every current entry point is a conversation."""
 

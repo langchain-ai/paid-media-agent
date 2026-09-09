@@ -53,8 +53,9 @@ the approved change at most once, verify the provider state with bounded readbac
 - Generic public paid-media business wiki and progressive skills.
 - Deterministic cross-platform analysis and report rendering.
 - Typed proposals, durable approval state, provider execution, readback, and receipts.
-- MDA native Slack, and Block Kit renderers kept for a custom Slack channel.
-- Deployment through Managed Deep Agents; self-hosting preserved on the `self-hosted` branch.
+- MDA native Slack and a rich Slack adapter (Socket Mode and signed HTTP).
+- Two deployment paths on one assembly: Managed Deep Agents (recommended, one command) and
+  self-hosted (API, Postgres, Docker compose).
 - Source-blind tests, deterministic oracles, security rejection tests, and context-cost checks.
 
 ### Not included in v1
@@ -406,12 +407,15 @@ capability; no business behavior exists only in the UI.
 
 ### Self-hosted
 
-Preserved on the `self-hosted` branch, not on `main`: the same components compiled with
-`create_deep_agent`, Postgres persistence, a FastAPI boundary, and the rich Slack transports.
-See `docs/self-hosting.md`.
+- compile the same agent components with `create_deep_agent`;
+- use the Postgres-backed checkpointer and repositories in production, in-memory only to try;
+- expose a small FastAPI boundary for threads, artifacts, approvals, and health;
+- use explicit auth (bearer tokens mapped to caller names) and per-caller thread ownership;
+- run rich Slack through Socket Mode or signed HTTP;
+- ship as one `Dockerfile` and `docker-compose.yml`.
 
-Managed Deep Agents owns thread and checkpoint durability. Proposals, approval claims, and receipts
-are process-owned objects today; making them durable across restarts is an open question.
+On MDA, proposals, approval claims, and receipts are process-owned objects today; making them
+durable across restarts is an open question.
 
 ## 11. Sandbox and snapshot
 
@@ -519,7 +523,7 @@ The first public release is done when:
 - deterministic analysis and reports reconcile;
 - all writes are typed, interruptible, durable, exact, and at most once;
 - Slack and UI use shared presentation contracts;
-- the MDA definition and the local CLI use one agent assembly;
+- the MDA definition, the self-hosted runtime, and the local CLI use one agent assembly;
 - sandbox and secrets boundaries pass rejection tests;
 - public docs contain no private data;
 - commands, links, install steps, and examples work from a clean environment;

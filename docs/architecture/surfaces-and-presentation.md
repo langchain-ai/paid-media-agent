@@ -13,11 +13,14 @@ messages, threads, and an approve/reject card on `execute_change`. MDA renders t
 content is not customizable today, so the agent writes the proposal summary in chat right before
 it calls `execute_change`, and the card sits under it.
 
-`surfaces/slack/blocks.py` and `surfaces/slack/service.py` hold the Block Kit review cards
-(proposal with edit, receipts, reports, answers folded to mrkdwn) and the transport-neutral event
-and action service: dedupe and replay protection, caller-to-thread mapping, mention and DM policy,
-approver lookup, proposal actions. They are tested against the real graph and kept for a custom
-Slack channel; a transport supplies only event delivery and message posting.
+The self-hosted path runs the rich adapter: `surfaces/slack/blocks.py` renders Block Kit review
+cards (proposal with Approve, Edit, Reject; receipts; reports; answers folded to mrkdwn) and
+`surfaces/slack/service.py` is the transport-neutral event and action service (dedupe and replay
+protection, caller-to-thread mapping, mention and DM policy, approver lookup, proposal actions).
+`socket_mode.py` and `http.py` are the two transports; signed HTTP verifies the Slack signature
+and a five-minute replay window before parsing. `surfaces/api/app.py` is the FastAPI boundary
+(health, thread messages, proposal read, approve, edit, reject, artifacts) behind constant-time
+bearer lookup, and `surfaces/ui/views.py` maps a run outcome to `OutcomeView`.
 
 Every message has accessible top-level text. Model prose is escaped, length-bounded, and never used
 as an action id or routing value.
@@ -37,8 +40,9 @@ Block Kit renderer folds any leftover markdown for Slack.
 
 The console under `admin/` is an operator surface, not an agent surface. It calls host actions
 (doctor, config, discovery, tests, process control) that the CLI exposes with `--json`. It binds to
-localhost, requires the per-run token, writes only local files, and starts only `mda dev` and
-`mda deploy`. Deployment secrets stay in the deployment platform.
+localhost, requires the per-run token, writes only local files, and starts fixed-template
+processes (`mda dev`, `mda deploy`, `serve`, `slack`). Deployment secrets stay in the deployment
+platform.
 
 ## Implementation notes (2026-09-08)
 

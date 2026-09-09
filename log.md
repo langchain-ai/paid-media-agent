@@ -4,6 +4,16 @@ Append-only record of material changes to this repository's behavior. Newest fir
 journal (2026-08-31 to 2026-09-03) is preserved in
 [docs/history/build-log-2026-09.md](docs/history/build-log-2026-09.md).
 
+## 2026-09-09 (both paths back, MDA first)
+
+- Restored self-hosting on `main` from the `self-hosted` branch on top of the MDA-only tree: API,
+  Postgres, rich Slack transports, Docker, connection tests, and the console's path choice. The
+  self-hosted runtime reuses `configured_profile`, so the three compilers share one profile. Left
+  the per-process sandbox backend and `langgraph dev` out; `mda dev` covers Studio.
+- Tried OpenWiki on branch `openwiki-trial` (not merged): ten line-cited pages in 44 minutes for
+  about $8 once the worker was told to omit ids on new claims and run through the OpenAI
+  Responses path; chat-completions paths through the gateway failed.
+
 ## 2026-09-08 (Managed Deep Agents only)
 
 - Probed the hosted deployment's filesystem through the SDK: `/skills` present, the wiki and

@@ -59,9 +59,11 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
         "direct",
         "sandbox",
         "mda",
+        "slack",
+        "self_hosted",
         "writes",
     ]
-    assert {p["name"] for p in data["processes"]} == {"mda-dev", "mda-deploy"}
+    assert {p["name"] for p in data["processes"]} == {"mda-dev", "mda-deploy", "serve", "slack"}
     posted = client.post(
         "/api/config",
         headers=headers,
@@ -120,10 +122,8 @@ def test_actions_accounts_policy_and_kill_switch(client: TestClient, workspace: 
     assert client.post(
         "/api/kill-switch", headers=headers, json={"engaged": False, "confirm": True}
     ).json()["ok"]
-    generated = client.post(
-        "/api/config/generate", headers=headers, json={"key": "PAID_MEDIA_APPROVAL_SIGNING_KEY"}
-    ).json()
-    assert generated["ok"] and "show_once" not in generated["detail"]
+    generated = client.post("/api/actions/generate_secrets", headers=headers, json={}).json()
+    assert generated["ok"] and generated["detail"]["api_token_show_once"].endswith(":operator")
 
 
 def test_demo_runs_through_the_console(client: TestClient) -> None:

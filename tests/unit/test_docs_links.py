@@ -55,6 +55,8 @@ def test_documented_commands_exist(project_root: Path) -> None:
         "writes",
         "mda",
         "sandbox",
+        "serve",
+        "slack",
     } <= documented
     runner = CliRunner()
     for command in documented:

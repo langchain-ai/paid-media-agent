@@ -3,7 +3,7 @@
   "use strict";
   const LOGOS = window.PMA_LOGOS || {};
   const state = { token: "", view: "wizard", step: null, routeId: "local", status: null, routes: [], processes: [], config: null,
-    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, session: { modelTested: null, catalog: null, preflight: null, answer: null } };
+    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, session: { modelTested: null, catalog: null, preflight: null, slack: null, db: null, answer: null } };
   const $ = (sel, root = document) => root.querySelector(sel);
   const el = (tag, attrs = {}, children = []) => {
     const node = document.createElement(tag);
@@ -48,7 +48,8 @@
     }
     flush(); return html.join("");
   }
-  const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: command.startsWith("uv run ") ? command : `uv run ${command}` })]);
+  // Our own commands run through uv; anything else (docker, open, git) is shown as typed.
+  const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: /^(uv run |paid-media-agent |mda )/.test(command) && !command.startsWith("uv run ") ? `uv run ${command}` : command })]);
   const intro = (logoName, title, note, actions = null, cls = "") => el("div", { class: "intro" }, [logo(logoName, cls), el("div", {}, [el("span", { class: "name", text: title }), el("span", { class: "note", text: note }), actions])]);
 
   // ---- fragment: #token=...&view=...&step=...&route=...
@@ -97,9 +98,13 @@
     const tokenSet = !!d.pipeboard?.token_set;
     const realAccounts = String(d.accounts_path || "").endsWith("config/accounts.toml") && (d.accounts || []).length > 0;
     const orgDone = !!d.org?.configured;
+    const runtime = d.runtime || "local";
     const approvers = (d.writes?.approvers || []).length > 0;
+    const slack = d.slack || {};
+    const slackDone = !!slack.bot_token_set && (slack.transport === "socket_mode" ? !!slack.app_token_set : !!slack.signing_secret_set);
     const mdaDone = !!d.mda?.langsmith_key_set && modelDone && approvers;
-    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, orgDone, approvers, mdaDone };
+    const selfDone = slackDone && approvers;
+    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, orgDone, runtime, approvers, slackDone, mdaDone, selfDone };
   }
   function stepList() {
     const s = derive();
@@ -109,9 +114,11 @@
       { id: "pipeboard", label: "Ad accounts", done: s.pipeboardDone },
       { id: "org", label: "Your business", done: s.orgDone },
       { id: "try", label: "Try it", done: !!state.session.answer },
-      { id: "mda", label: "Deploy", done: s.mdaDone },
-      { id: "done", label: "Done", done: false },
+      { id: "path", label: "Where it lives", done: s.runtime !== "local" },
     ];
+    if (s.runtime === "mda") steps.push({ id: "mda", label: "Deploy", done: s.mdaDone });
+    else if (s.runtime === "self_hosted") steps.push({ id: "selfhost", label: "Self-host", done: s.selfDone });
+    steps.push({ id: "done", label: "Done", done: false });
     return steps;
   }
   function firstOpenStep() {
@@ -159,7 +166,7 @@
   function renderScreen(animate = true) {
     const host = $("#screen");
     const token = ++screenToken;
-    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, org: screenOrg, try: screenTry, mda: screenMda, done: screenDone }[state.step] || screenWelcome;
+    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, org: screenOrg, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
     const next = el("section", { class: "screen", "data-enter": animate ? "" : null }, build());
     const current = host.firstElementChild;
     const swap = () => { if (token !== screenToken) return; host.replaceChildren(next); requestAnimationFrame(() => requestAnimationFrame(() => next.removeAttribute("data-enter"))); };
@@ -460,11 +467,32 @@
     return [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Try it" }),
-        el("p", { class: "hero-sub", text: "The question runs locally through the same profile the deployment runs: your accounts when connected, the demo accounts otherwise. To step through tool calls and the approval interrupt in LangSmith Studio, run mda dev from the Deploy step." }),
+        el("p", { class: "hero-sub", text: "The question runs locally through the same profile a deployment runs: your accounts when connected, the demo accounts otherwise. To step through tool calls and the approval interrupt in LangSmith Studio, run mda dev from the Deploy step." }),
       ]),
       form,
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("mda") })]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("path") })]),
       cli('paid-media-agent ask "How did spend move week over week?"'),
+    ];
+  }
+
+  function screenPath() {
+    const s = derive();
+    const choose = async (button, runtime) => busy(button, async () => { await saveConfig({ PAID_MEDIA_RUNTIME: runtime }); await loadStatus(); go(runtime === "mda" ? "mda" : "selfhost"); });
+    const card = (id, logoNode, title, note, bullets, pressed, recommended) => el("button", { class: "option", type: "button", "aria-pressed": pressed ? "true" : "false", onclick: (ev) => choose(ev.currentTarget, id) }, [
+      el("div", { class: "row" }, [logoNode, el("span", { class: "name", text: title })]),
+      el("span", { class: "note" }, [recommended ? el("b", { class: "rec", text: "Recommended · " }) : null, el("span", { text: note })]),
+      el("ul", {}, bullets.map((b) => el("li", {}, [tick(), el("span", { text: b })]))),
+    ]);
+    return [
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Where it lives" }),
+        el("p", { class: "hero-sub", text: "Both run the same agent. Managed Deep Agents is one command and supplies threads, a sandbox, schedules, identity, and Slack. Self-hosting takes a few more steps and gives you your own API, Postgres, and Slack app with Block Kit review cards." }),
+      ]),
+      el("div", { class: "options two stagger" }, [
+        card("mda", logo("langchain", "lc"), "Managed Deep Agents", "One command deploy on LangSmith Cloud.", ["uv run mda deploy . and you are in Slack", "Threads, sandbox, schedules, identity managed", "mda dev runs it locally with Studio", "Secrets forwarded from your .env"], s.runtime === "mda", true),
+        card("self_hosted", logo("slack"), "Self-host", "A little more setup. All yours.", ["docker compose up: API plus Postgres", "Your own Slack app, Block Kit cards with edits", "Bearer-token API for your tools", "Full control of data and auth"], s.runtime === "self_hosted", false),
+      ]),
+      el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Stay local for now", onclick: () => go("done") })]),
     ];
   }
 
@@ -508,10 +536,82 @@
       nodes.push(el("p", { class: "sub", text: "The first deploy prints a Slack authorization link in the log: open it, pick the workspace, approve, then press Enter in the terminal that runs the deploy. Afterwards the agent DMs you in Slack; reply there or mention it in a channel." }));
     }
     nodes.push(
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") })]),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
+        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to self-host", onclick: () => go("path") }),
+      ]),
       cli("mda deploy ."),
     );
     return nodes;
+  }
+
+  function screenSelfHost() {
+    const d = state.status.detail;
+    const env = d.env || {};
+    // Slack
+    const bot = el("input", { class: "input", type: "password", placeholder: env.SLACK_BOT_TOKEN ? "Set. Paste to replace." : "xoxb-…", autocomplete: "off" });
+    const app = el("input", { class: "input", type: "password", placeholder: env.SLACK_APP_TOKEN ? "Set. Paste to replace." : "xapp-…", autocomplete: "off" });
+    const approvers = el("input", { class: "input", value: (d.writes?.approvers || []).join(", "), placeholder: "slack:T0123:U0456, operator", spellcheck: "false" });
+    const slackLine = el("div", { class: "status-line" });
+    if (state.session.slack) setLine(slackLine, state.session.slack.status, state.session.slack.text);
+    const slackSave = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test Slack" });
+    const slackForm = el("form", { class: "form" }, [
+      intro("slack", "Slack", "Create the app from the manifest, install it to your workspace, then paste the bot token and the app-level token. Socket Mode needs no public URL.",
+        el("div", { class: "actions" }, [el("a", { class: "btn btn-outline btn-compact", href: "https://api.slack.com/apps?new_app=1", target: "_blank", rel: "noopener", text: "Create Slack app" }), el("code", { class: "mono", text: "config/slack-manifest.example.yaml" })])),
+      el("div", { class: "field-row" }, [el("div", { class: "field" }, [el("label", { text: "Bot token" }), bot]), el("div", { class: "field" }, [el("label", { text: "App-level token" }), app])]),
+      el("div", { class: "field" }, [el("label", { text: "Who can approve changes" }), approvers, el("span", { class: "hint", text: "Slack refs look like slack:<team_id>:<user_id>; API callers use the name from PAID_MEDIA_API_TOKENS. Where a card is posted is never authorization." })]),
+      slackLine,
+      el("div", { class: "actions" }, [slackSave]),
+    ]);
+    slackForm.addEventListener("submit", (ev) => { ev.preventDefault(); busy(slackSave, async () => {
+      const updates = { SLACK_TRANSPORT: "socket_mode", PAID_MEDIA_APPROVER_IDS: approvers.value.trim() };
+      if (bot.value) updates.SLACK_BOT_TOKEN = bot.value;
+      if (app.value) updates.SLACK_APP_TOKEN = app.value;
+      const saved = await saveConfig(updates);
+      if (!saved.ok) { setLine(slackLine, "fail", saved.summary); return; }
+      setLine(slackLine, "info", "Testing Slack…");
+      const test = await runAction("slack_test");
+      state.session.slack = { status: test.status, text: test.summary };
+      await loadStatus();
+    }); });
+    // Storage and API
+    const db = el("input", { class: "input", type: "password", placeholder: env.DATABASE_URL ? "Set. Paste to replace." : "postgresql://user:pass@host/db (optional; compose sets it)", autocomplete: "off" });
+    const dbLine = el("div", { class: "status-line" });
+    if (state.session.db) setLine(dbLine, state.session.db.status, state.session.db.text);
+    const dbSave = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test" });
+    const gen = el("button", { class: "btn btn-outline", type: "button", text: env.PAID_MEDIA_API_TOKENS && env.PAID_MEDIA_APPROVAL_SIGNING_KEY ? "Regenerate API token and signing key" : "Generate API token and signing key" });
+    gen.addEventListener("click", () => busy(gen, async () => {
+      const result = await runAction("generate_secrets");
+      const token = result.detail?.api_token_show_once;
+      setLine(dbLine, result.status, token ? `Done. Your API token (shown once): ${token}` : result.summary);
+      await loadStatus();
+    }));
+    const dbForm = el("form", { class: "form" }, [
+      intro("postgres", "Storage and API", "Postgres keeps threads, proposals, approvals, and receipts across restarts; docker compose brings one up for you. Leave it empty to run in memory."),
+      el("div", { class: "field" }, [el("label", { text: "Database URL" }), db]),
+      dbLine,
+      el("div", { class: "actions" }, [dbSave, gen]),
+    ]);
+    dbForm.addEventListener("submit", (ev) => { ev.preventDefault(); busy(dbSave, async () => {
+      if (db.value) { const saved = await saveConfig({ DATABASE_URL: db.value }); if (!saved.ok) { setLine(dbLine, "fail", saved.summary); return; } }
+      const test = await runAction("database_test");
+      state.session.db = { status: test.status, text: test.summary };
+      await loadStatus();
+    }); });
+    return [
+      el("div", { class: "hero" }, [
+        el("h1", { class: "hero-title", text: "Self-host" }),
+        el("p", { class: "hero-sub", text: "Three pieces: a Slack app you own, a database, and the API. The quickest route is docker compose up, which builds the API image with the PDF libraries and starts Postgres. Run the pieces here to try them without Docker." }),
+      ]),
+      slackForm,
+      el("div", { class: "block" }, [dbForm]),
+      el("div", { class: "block" }, [el("h2", { class: "section-title", text: "Run it" }), processControls("serve", "Start API", false, false, "slack", "Start Slack adapter"), cli("docker compose up  # API on :8080 with Postgres")]),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
+        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to managed", onclick: () => go("path") }),
+      ]),
+      cli("paid-media-agent serve"),
+    ];
   }
 
   function processControls(name, label, disabled, confirm, secondName, secondLabel) {
@@ -541,7 +641,10 @@
   function screenDone() {
     const s = derive();
     const d = state.status.detail;
-    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Your business", s.orgDone, `${d.org?.answered || 0} of ${d.org?.questions || 8} answered`], ["Approvers", s.approvers, (d.writes?.approvers || []).length ? `${(d.writes?.approvers || []).length} ref(s)` : "none"], ["Deploy", s.mdaDone, s.mdaDone ? "ready: uv run mda deploy ." : "LangSmith key or approvers missing"]];
+    const runtimeLabel = s.runtime === "mda" ? "Managed Deep Agents" : s.runtime === "self_hosted" ? "Self-hosted" : "local only";
+    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Your business", s.orgDone, `${d.org?.answered || 0} of ${d.org?.questions || 8} answered`], ["Approvers", s.approvers, (d.writes?.approvers || []).length ? `${(d.writes?.approvers || []).length} ref(s)` : "none"], ["Where it lives", s.runtime !== "local", runtimeLabel]];
+    if (s.runtime === "mda") items.push(["Deploy", s.mdaDone, s.mdaDone ? "ready: uv run mda deploy ." : "LangSmith key or approvers missing"]);
+    if (s.runtime === "self_hosted") items.push(["Slack", s.slackDone, s.slackDone ? d.slack?.transport : "not connected"]);
     return [
       el("div", { class: "hero" }, [
         el("h1", { class: "hero-title", text: "Configured" }),
@@ -552,8 +655,8 @@
       el("ul", { class: "next" }, [
         el("li", { text: "Ask from the terminal: uv run paid-media-agent ask \"How did spend move week over week?\"" }),
         el("li", { text: "Render the weekly report: uv run paid-media-agent report --cadence weekly" }),
-        el("li", { text: "Run the managed build locally with Studio: uv run mda dev. Deploy: uv run mda deploy ." }),
-        el("li", { text: "In Slack, DM the agent or mention it in a channel it was invited to. Approve and Reject buttons appear on every proposed change." }),
+        s.runtime === "self_hosted" ? el("li", { text: "Self-host: docker compose up, or uv run paid-media-agent serve and uv run paid-media-agent slack." }) : el("li", { text: "Run the managed build locally with Studio: uv run mda dev. Deploy: uv run mda deploy ." }),
+        el("li", { text: "In Slack, DM the agent or mention it in a channel it was invited to. Every proposed change arrives with Approve and Reject." }),
         el("li", { text: "Read OPERATIONS.md for the full command reference and the write-enable runbook." }),
       ]),
       el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } })]),

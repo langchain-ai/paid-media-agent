@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-### Changed (Managed Deep Agents only)
+### Changed (two deployment paths, MDA recommended)
+
+- Self-hosting is back on `main` next to Managed Deep Agents: `paid-media-agent serve` (FastAPI
+  boundary with bearer tokens), Postgres persistence, the rich Slack adapter over Socket Mode or
+  signed HTTP, `Dockerfile` and `docker-compose.yml`, `test slack|db`, and the console's "Where
+  it lives" step with two cards (Managed Deep Agents recommended, Self-host second). The
+  self-hosted runtime now builds on the same configured profile as `agent.py` and the CLI.
+  The per-process sandbox backend and the LangGraph Server factory did not return; `mda dev` is
+  the local server, and the self-hosted model reads the repository directly.
+
+### Changed (Managed Deep Agents only, 2026-09-08)
 
 - `main` deploys with Managed Deep Agents and nothing else. The self-hosted API, Postgres
   persistence, the rich Slack transports (Socket Mode, signed HTTP), the local LangGraph Server

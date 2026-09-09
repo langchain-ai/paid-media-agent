@@ -75,8 +75,10 @@ class AgentRunner:
         records = self._service.proposals.list_for_thread(thread_id)
         return ProposalView.from_record(records[-1]) if records else None
 
-    def _outcome(self, thread_id: str, state: dict[str, Any], config: RunnableConfig) -> RunOutcome:
-        snapshot = self._graph.get_state(config)
+    async def _outcome(
+        self, thread_id: str, state: dict[str, Any], config: RunnableConfig
+    ) -> RunOutcome:
+        snapshot = await self._graph.aget_state(config)
         interrupted = bool(snapshot.interrupts)
         messages = state.get("messages", [])
         text = ""
@@ -103,20 +105,20 @@ class AgentRunner:
         state = await self._graph.ainvoke(
             {"messages": [{"role": "user", "content": text}]}, config=config
         )
-        return self._outcome(thread_id, state, config)
+        return await self._outcome(thread_id, state, config)
 
     async def resume(
         self, *, thread_id: str, caller_ref: str, decision: str, message: str = ""
     ) -> RunOutcome:
         config = self._config(thread_id, caller_ref)
-        snapshot = self._graph.get_state(config)
+        snapshot = await self._graph.aget_state(config)
         if not snapshot.interrupts:
-            return self._outcome(thread_id, snapshot.values, config)
+            return await self._outcome(thread_id, snapshot.values, config)
         payload: dict[str, JsonValue] = {"type": decision}
         if decision == "reject" and message:
             payload["message"] = message
         state = await self._graph.ainvoke(Command(resume={"decisions": [payload]}), config=config)
-        return self._outcome(thread_id, state, config)
+        return await self._outcome(thread_id, state, config)
 
     def proposal_by_routing_id(self, routing_id: str) -> ProposalView | None:
         record = self._service.proposals.get_by_routing_id(routing_id)

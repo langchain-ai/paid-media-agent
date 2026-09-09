@@ -1,7 +1,7 @@
 [project]
 name = "paid-media-agent"
 version = "0.1.0"
-description = "A Managed Deep Agents application for governed paid-media analysis and management."
+description = "A Deep Agents application for governed paid-media analysis and management: one-command Managed Deep Agents deploy, or self-host."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -54,7 +54,14 @@ paid-media-agent = "paid_media_agent.cli:main"
 anthropic = ["langchain-anthropic>=1.4,<2"]  # kept for compatibility; now in core
 openai = ["langchain-openai>=1.1,<2"]  # kept for compatibility; now in core
 google = ["langchain-google-genai>=4,<5"]
-# PDF rendering on the host. Needs Pango and Cairo; the sandbox snapshot bakes them in instead.
+# Self-hosted path: the rich Slack adapter, Postgres persistence, and the production ASGI server.
+slack = ["slack-bolt>=1.30,<2", "aiohttp>=3.9,<4"]
+self-host = [
+    "langgraph-checkpoint-postgres>=3,<4",
+    "psycopg[binary,pool]>=3.2,<4",
+    "uvicorn[standard]>=0.35,<1",
+]
+# PDF rendering on the host. Needs Pango and Cairo; the Docker image and the sandbox snapshot bake them in.
 reports = ["weasyprint>=68,<69"]
 # Extra model providers. Each adds a `provider:` prefix for PAID_MEDIA_MODEL.
 groq = ["langchain-groq>=1,<2"]

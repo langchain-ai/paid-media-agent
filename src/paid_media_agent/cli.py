@@ -380,11 +380,27 @@ def test_pipeboard(as_json: bool) -> None:
     _emit(actions.pipeboard_test(project_root()), as_json)
 
 
+@test.command("slack")
+@click.option("--json", "as_json", is_flag=True)
+def test_slack(as_json: bool) -> None:
+    """Rich Slack adapter credentials (self-hosted path)."""
+    _emit(actions.slack_test(project_root()), as_json)
+
+
+@test.command("db")
+@click.option("--json", "as_json", is_flag=True)
+def test_db(as_json: bool) -> None:
+    """Postgres connection (self-hosted path)."""
+    _emit(actions.database_test(project_root()), as_json)
+
+
 @test.command("all")
 @click.option("--json", "as_json", is_flag=True)
 def test_all(as_json: bool) -> None:
     root = project_root()
     results = [actions.model_test(root), actions.pipeboard_test(root)]
+    if actions.load_settings(root).paid_media_runtime == "self_hosted":
+        results += [actions.slack_test(root), actions.database_test(root)]
     if as_json:
         click.echo(json.dumps([r.model_dump(mode="json") for r in results], indent=2, default=str))
     else:
@@ -558,6 +574,53 @@ def report(
         )
     if not run.reconciled:
         sys.exit(1)
+
+
+# ---------------------------------------------------------------- self-hosted runtime
+
+
+@main.command()
+@click.option("--host", default=None, help="Bind address (default PAID_MEDIA_API_HOST).")
+@click.option("--port", type=int, default=None, help="Port (default PAID_MEDIA_API_PORT).")
+def serve(host: str | None, port: int | None) -> None:
+    """Serve the self-hosted API (Postgres when DATABASE_URL is set, else in-memory state)."""
+    settings = Settings()
+    if host is not None:
+        settings = settings.model_copy(update={"paid_media_api_host": host})
+    if port is not None:
+        settings = settings.model_copy(update={"paid_media_api_port": port})
+    _configure_logging(settings)
+    import uvicorn
+
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.surfaces.api.app import create_app
+
+    async def _serve() -> None:
+        # The Postgres checkpointer is async and bound to this loop, so build and serve in it.
+        runtime = await build_self_hosted_runtime(settings, project_root=project_root())
+        config = uvicorn.Config(
+            create_app(runtime),
+            host=settings.paid_media_api_host,
+            port=settings.paid_media_api_port,
+        )
+        await uvicorn.Server(config).serve()
+
+    asyncio.run(_serve())
+
+
+@main.command()
+def slack() -> None:
+    """Run the rich Slack adapter in Socket Mode against the self-hosted runtime."""
+    settings = Settings()
+    _configure_logging(settings)
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.surfaces.slack.socket_mode import run_socket_mode
+
+    async def _slack() -> None:
+        runtime = await build_self_hosted_runtime(settings, project_root=project_root())
+        await run_socket_mode(settings, runtime)
+
+    asyncio.run(_slack())
 
 
 if __name__ == "__main__":

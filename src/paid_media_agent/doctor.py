@@ -24,7 +24,11 @@ SECRET_ENV_NAMES = (
     "ANTHROPIC_API_KEY",
     "OPENAI_API_KEY",
     "GOOGLE_API_KEY",
+    "SLACK_BOT_TOKEN",
+    "SLACK_APP_TOKEN",
+    "SLACK_SIGNING_SECRET",
     "PAID_MEDIA_APPROVAL_SIGNING_KEY",
+    "DATABASE_URL",
     "LANGSMITH_API_KEY",
 )
 
@@ -207,6 +211,43 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             else "none configured; only the local demo user may approve",
         )
     )
+
+    if settings.paid_media_runtime == "self_hosted":
+        slack_ready = settings.slack_bot_token is not None and (
+            settings.slack_app_token is not None
+            if settings.slack_transport == "socket_mode"
+            else settings.slack_signing_secret is not None
+        )
+        checks.append(
+            Check(
+                "slack",
+                "ok" if slack_ready else "warn",
+                f"transport={settings.slack_transport}; {'configured' if slack_ready else 'not configured'}",
+            )
+        )
+        checks.append(
+            Check(
+                "slack_package",
+                "ok" if _module_available("slack_bolt") else "warn",
+                "slack-bolt installed"
+                if _module_available("slack_bolt")
+                else "slack extra not installed",
+            )
+        )
+        if settings.database_url is None:
+            checks.append(
+                Check("persistence", "warn", "DATABASE_URL not set; in-memory state (local only)")
+            )
+        else:
+            checks.append(
+                Check(
+                    "persistence",
+                    "ok" if _module_available("psycopg") else "fail",
+                    "Postgres configured"
+                    if _module_available("psycopg")
+                    else "psycopg missing; install the self-host extra",
+                )
+            )
 
     from paid_media_agent.reports.render import pdf_renderer_available
 

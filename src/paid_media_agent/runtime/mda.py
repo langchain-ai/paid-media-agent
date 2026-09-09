@@ -2,7 +2,8 @@
 
 `agent.py` hands these components to Managed Deep Agents, which supplies the checkpointer, the
 per-thread sandbox, identity, schedules, and Slack. The CLI compiles the same profile locally for
-`ask` and `report`, so what you try on your machine is what the deployment runs.
+`ask` and `report`, and the self-hosted runtime compiles it behind its own API, so what you try
+on your machine is what either deployment runs.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from paid_media_agent.assembly import AgentComponents, build_agent_components
 from paid_media_agent.config import Settings
 from paid_media_agent.runtime.catalog import LoadedCatalog, load_catalog
 from paid_media_agent.runtime.profiles import (
+    ProfileName,
     RuntimeProfile,
     approval_policy_from_settings,
     fixture_profile,
@@ -43,7 +45,11 @@ def run_coroutine(coro: Coroutine[Any, Any, Any]) -> Any:
 
 
 def configured_profile(
-    settings: Settings, *, project_root: Path, loop: Loop = run_coroutine
+    settings: Settings,
+    *,
+    project_root: Path,
+    loop: Loop = run_coroutine,
+    name: ProfileName = "mda",
 ) -> tuple[RuntimeProfile, LoadedCatalog]:
     """The profile every entry point runs: live providers only when their credentials exist."""
     loaded = loop(load_catalog(settings, project_root=project_root))
@@ -52,7 +58,7 @@ def configured_profile(
         settings,
         project_root=project_root,
         catalog_provider=loaded.provider,
-        name="mda",
+        name=name,
         approval_policy=approval_policy_from_settings(settings),
     )
     overrides: dict[str, Any] = {"write_policy": write_policy, "write_policy_issues": issues}

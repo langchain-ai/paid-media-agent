@@ -291,6 +291,11 @@ def _secret_values(settings: Settings) -> tuple[str, ...]:
     for secret in (
         settings.pipeboard_api_token,
         settings.paid_media_approval_signing_key,
+        settings.slack_bot_token,
+        settings.slack_app_token,
+        settings.slack_signing_secret,
+        settings.database_url,
+        settings.paid_media_api_tokens,
     ):
         if secret is not None:
             values.append(secret.get_secret_value())

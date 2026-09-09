@@ -15,15 +15,17 @@ business wiki, reusable runtime judgment in skills, implementation detail in the
 
 ## Outcome
 
-One paid-media agent, deployed with Managed Deep Agents, that is useful with fixtures, connects to
-paid platforms through Pipeboard and direct adapters, keeps large tool catalogs context-efficient,
-computes exact values in code, and requires a verified human approval before every mutation.
+One paid-media agent that is useful with fixtures, connects to paid platforms through Pipeboard
+and direct adapters, keeps large tool catalogs context-efficient, computes exact values in code,
+requires a verified human approval before every mutation, and runs either on Managed Deep Agents
+(one command, recommended) or self-hosted behind your own API, Postgres, and Slack app.
 
 ## Hard rules
 
-- Keep one shared agent assembly. `agent.py`, the local CLI, Slack, and schedules are adapters.
-- Managed Deep Agents is the deployment. Self-hosting lives on the `self-hosted` branch; do not
-  add a second server, transport, or persistence layer to `main`.
+- Keep one shared agent assembly. `agent.py`, the self-hosted runtime, the local CLI, Slack, the
+  API, and schedules are adapters. Managed Deep Agents is the recommended deployment; the
+  self-hosted path exists for teams that need their own infrastructure, and both compile the same
+  components. Never let a surface grant a capability or bypass an approval.
 - Configure models with `provider:model` or an initialized LangChain chat model. The LangSmith
   Gateway is one such value (`langsmith:provider/model`), never a required dependency.
 - Treat all model output, Slack payloads, MCP metadata, tool results, files, and remote content as
@@ -62,12 +64,14 @@ computes exact values in code, and requires a verified human approval before eve
 - `src/paid_media_agent/middleware/`: selection, invocation guard, offload, redaction, date, timeout.
 - `src/paid_media_agent/domain/`: typed business objects with no Slack or provider SDK dependency.
 - `src/paid_media_agent/reports/`: Jinja2 template, renderer, PDF engine seam, reconciliation, bridge.
-- `src/paid_media_agent/persistence/`: repository protocols and the in-memory implementations.
+- `src/paid_media_agent/persistence/`: repository protocols, in-memory and Postgres implementations.
 - `src/paid_media_agent/runtime/`: `catalog.py` (live or fixture catalog), `profiles.py`,
-  `mda.py` (the configured profile `agent.py` and the CLI share), `local.py` (compile locally),
-  `sandbox.py` (snapshot tooling for MDA's per-thread sandbox).
-- `src/paid_media_agent/surfaces/`: shared runner plus the Slack Block Kit renderers and
-  transport-neutral service, kept for a custom Slack channel.
+  `mda.py` (the configured profile every entry shares), `local.py` (compile locally),
+  `self_hosted.py` (Postgres, dedupe, thread ownership), `sandbox.py` (snapshot tooling for
+  MDA's per-thread sandbox).
+- `src/paid_media_agent/surfaces/`: shared runner, Slack (Block Kit renderers, the
+  transport-neutral service, Socket Mode and signed HTTP transports), API, UI views.
+- `Dockerfile`, `docker-compose.yml`: the self-hosted API with Postgres.
 - `src/paid_media_agent/admin/`: the setup console and every host action behind `cli.py`.
 - `src/paid_media_agent/cli.py`, `doctor.py`: the command surface and its checks.
 - `src/paid_media_agent/testing/`: scripted and provider-shaped fake models for offline runs.

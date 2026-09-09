@@ -65,7 +65,9 @@ def _get(detail: dict[str, JsonValue], *path: str) -> JsonValue:
 def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     env = _get(detail, "env") or {}
     model = _get(detail, "model") or {}
+    slack = _get(detail, "slack") or {}
     mda = _get(detail, "mda") or {}
+    self_hosted = _get(detail, "self_hosted") or {}
     writes = _get(detail, "writes") or {}
     accounts = _get(detail, "accounts") or []
     token_set = bool(_get(detail, "pipeboard", "token_set"))
@@ -343,6 +345,75 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         ),
     )
 
+    socket_ready = bool(slack.get("bot_token_set")) and (
+        bool(slack.get("app_token_set"))
+        if slack.get("transport") == "socket_mode"
+        else bool(slack.get("signing_secret_set"))
+    )
+    slack_route = Route(
+        id="slack",
+        title="Slack (rich adapter)",
+        tagline="Block Kit review cards, edits, receipts, and files",
+        description="For the self-hosted path. Socket Mode needs no public URL; signed HTTP is the hosted alternative. Managed Deep Agents provisions its own Slack app instead.",
+        steps=(
+            Step(
+                id="sl_app",
+                title="Create the Slack app from the manifest",
+                description="Use config/slack-manifest.example.yaml, install it to your workspace, and copy the tokens.",
+                status="done" if slack.get("bot_token_set") else "todo",
+                cli="open https://api.slack.com/apps?new_app=1",
+                action=StepAction(
+                    kind="link", label="Open Slack API", href="https://api.slack.com/apps?new_app=1"
+                ),
+            ),
+            Step(
+                id="sl_tokens",
+                title="Store the tokens",
+                description="Bot token, and either the app-level token (Socket Mode) or the signing secret (HTTP).",
+                status="done" if socket_ready else "todo",
+                cli="uv run paid-media-agent config set SLACK_BOT_TOKEN=... SLACK_APP_TOKEN=... SLACK_TRANSPORT=socket_mode",
+                action=StepAction(
+                    kind="form",
+                    label="Save Slack settings",
+                    keys=(
+                        "SLACK_TRANSPORT",
+                        "SLACK_BOT_TOKEN",
+                        "SLACK_APP_TOKEN",
+                        "SLACK_SIGNING_SECRET",
+                    ),
+                ),
+            ),
+            Step(
+                id="sl_test",
+                title="Test the connection",
+                description="auth.test with the bot token and a Socket Mode ticket with the app token.",
+                status="blocked" if not socket_ready else "todo",
+                cli="uv run paid-media-agent test slack --json",
+                action=StepAction(kind="test", label="Test Slack", action="slack_test"),
+            ),
+            Step(
+                id="sl_approvers",
+                title="Name the approvers",
+                description="Refs look like slack:<team_id>:<user_id>. Card location is never authorization.",
+                status="done" if writes.get("approvers") else "todo",
+                cli="uv run paid-media-agent config set PAID_MEDIA_APPROVER_IDS=slack:T123:U456",
+                action=StepAction(
+                    kind="form",
+                    label="Save approvers",
+                    keys=("PAID_MEDIA_APPROVER_IDS", "PAID_MEDIA_ALLOW_SELF_APPROVAL"),
+                ),
+            ),
+            Step(
+                id="sl_run",
+                title="Run the adapter",
+                description="Starts Socket Mode locally and keeps the log here.",
+                status="blocked" if not socket_ready else "todo",
+                cli="uv run paid-media-agent slack",
+                action=StepAction(kind="process", label="Start Slack adapter", action="slack"),
+            ),
+        ),
+    )
+
     mda_ready = (
         bool(mda.get("cli_installed")) and bool(mda.get("langsmith_key_set")) and model_ready
     )
@@ -420,6 +491,81 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         ),
     )
 
+    db_set = bool(self_hosted.get("database_url_set"))
+    api_set = bool(self_hosted.get("api_tokens_set"))
+    self_route = Route(
+        id="self_hosted",
+        title="Self-host",
+        tagline="Your API, your Postgres, your Slack app, your infrastructure",
+        description="The same components compiled with create_deep_agent, durable state in Postgres, a small authenticated API, and the rich Slack adapter. One `docker compose up` runs it.",
+        steps=(
+            Step(
+                id="sh_docker",
+                title="Run with Docker",
+                description="Builds the API image (PDF libraries included) and starts Postgres. Keys come from your local .env.",
+                status="optional",
+                cli="docker compose up",
+                action=StepAction(kind="command", label="Copy command"),
+            ),
+            Step(
+                id="sh_db",
+                title="Postgres",
+                description="DATABASE_URL for checkpoints, proposals, approvals, receipts, and dedupe. Compose sets it for you; set it here for your own database.",
+                status="done" if db_set else "todo",
+                cli="uv run paid-media-agent config set DATABASE_URL=postgresql://...",
+                action=StepAction(kind="form", label="Save database URL", keys=("DATABASE_URL",)),
+            ),
+            Step(
+                id="sh_db_test",
+                title="Test the database",
+                description="Connects and reads the server version.",
+                status="blocked" if not db_set else "todo",
+                cli="uv run paid-media-agent test db --json",
+                action=StepAction(kind="test", label="Test database", action="database_test"),
+            ),
+            Step(
+                id="sh_tokens",
+                title="API tokens and signing key",
+                description="Generate a caller token for the API and the HMAC key that signs approvals.",
+                status="done" if api_set and writes.get("signing_key_set") else "todo",
+                cli="uv run paid-media-agent config generate PAID_MEDIA_API_TOKENS && uv run paid-media-agent config generate PAID_MEDIA_APPROVAL_SIGNING_KEY",
+                action=StepAction(kind="run", label="Generate secrets", action="generate_secrets"),
+            ),
+            Step(
+                id="sh_approvers",
+                title="Approvers",
+                description="API caller names or Slack refs that may approve, edit, or reject.",
+                status="done" if writes.get("approvers") else "todo",
+                cli="uv run paid-media-agent config set PAID_MEDIA_APPROVER_IDS=operator",
+                action=StepAction(
+                    kind="form",
+                    label="Save approvers",
+                    keys=("PAID_MEDIA_APPROVER_IDS", "PAID_MEDIA_ALLOW_SELF_APPROVAL"),
+                ),
+            ),
+            Step(
+                id="sh_serve",
+                title="Run the API",
+                description="Serves threads, proposals, approvals, artifacts, and health on the configured host and port.",
+                status="todo",
+                cli="uv run paid-media-agent serve",
+                action=StepAction(kind="process", label="Start API", action="serve"),
+            ),
+            Step(
+                id="sh_http_slack",
+                title="Slack over signed HTTP",
+                description="For a hosted deployment, set the signing secret and point the Slack request URL at your public endpoint.",
+                status="optional",
+                cli="uv run paid-media-agent config set SLACK_TRANSPORT=http SLACK_SIGNING_SECRET=...",
+                action=StepAction(
+                    kind="form",
+                    label="Save HTTP transport",
+                    keys=("SLACK_TRANSPORT", "SLACK_SIGNING_SECRET"),
+                ),
+            ),
+        ),
+    )
+
     writes_route = Route(
         id="writes",
         title="Write gates",
@@ -467,4 +613,14 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             ),
         ),
     )
-    return [local, pipeboard, org_route, direct, sandbox_route, mda_route, writes_route]
+    return [
+        local,
+        pipeboard,
+        org_route,
+        direct,
+        sandbox_route,
+        mda_route,
+        slack_route,
+        self_route,
+        writes_route,
+    ]

@@ -1,16 +1,21 @@
-"""Surface parity: the Block Kit service and the MDA definition drive the same components."""
+"""Surface parity: Slack, the API, the MDA definition, and the self-hosted runtime share one assembly."""
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import time
 from pathlib import Path
 
 import pytest
 
 from paid_media_agent.config import Settings
 from paid_media_agent.persistence.memory import InMemoryDedupeStore, InMemoryThreadOwnershipStore
+from paid_media_agent.surfaces.api.app import create_app
 from paid_media_agent.surfaces.runner import AgentRunner
 from paid_media_agent.surfaces.slack.blocks import ACTION_APPROVE
+from paid_media_agent.surfaces.slack.http import SlackSignatureError, verify_signature
 from paid_media_agent.surfaces.slack.service import (
     SlackApplicationService,
     slack_caller_ref,
@@ -107,6 +112,104 @@ async def test_slack_review_and_button_approval_resume_the_same_graph(
     assert threads.owner(thread_id) == slack_caller_ref("T1", "U-requester")
 
 
+async def test_api_and_slack_share_persisted_state(settings: Settings, project_root: Path) -> None:
+    fastapi = pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    policy = ApprovalPolicy(approver_refs=frozenset({"api-reviewer"}), allow_self_approval=False)
+    api_settings = settings.model_copy(
+        update={
+            "paid_media_api_tokens": __import__("pydantic").SecretStr(
+                "tok-req:api-requester,tok-rev:api-reviewer"
+            )
+        }
+    )
+    runtime, _ = build_runtime(
+        api_settings,
+        project_root,
+        WRITE_STEPS,
+        fixture_state=state,
+        write_provider=provider,
+        approval_policy=policy,
+    )
+
+    class Holder:
+        pass
+
+    holder = Holder()
+    holder.settings = api_settings  # type: ignore[attr-defined]
+    holder.graph = runtime.graph  # type: ignore[attr-defined]
+    holder.components = runtime.components  # type: ignore[attr-defined]
+    holder.profile = runtime.profile  # type: ignore[attr-defined]
+    holder.catalog = runtime.catalog  # type: ignore[attr-defined]
+    holder.threads = InMemoryThreadOwnershipStore()  # type: ignore[attr-defined]
+    holder.persistence = "memory"  # type: ignore[attr-defined]
+    app = create_app(holder)
+    client = TestClient(app)
+    assert client.get("/health").json()["writes_enabled"] is False
+    assert client.post("/threads/api-1/messages", json={"text": "lower budget"}).status_code == 401
+    requester = {"Authorization": "Bearer tok-req"}
+    reviewer = {"Authorization": "Bearer tok-rev"}
+    first = client.post("/threads/api-1/messages", json={"text": "lower budget"}, headers=requester)
+    assert first.status_code == 200 and first.json()["interrupted"] is True
+    proposal_id = first.json()["proposal"]["proposal_id"]
+    assert (
+        client.post("/threads/api-1/messages", json={"text": "hi"}, headers=reviewer).status_code
+        == 403
+    ), "thread ownership"
+    assert client.post(f"/proposals/{proposal_id}/approve", headers=requester).status_code == 403
+    edited = client.post(
+        f"/proposals/{proposal_id}/edit", json={"changes": {"daily_budget": 250}}, headers=reviewer
+    )
+    assert edited.status_code == 200 and edited.json()["proposal"]["revision"] == 2
+    approved = client.post(f"/proposals/{proposal_id}/approve", headers=reviewer)
+    assert approved.status_code == 200, approved.text
+    body = approved.json()
+    assert body["receipt"]["status"] == "verified" and body["proposal"]["revision"] == 2
+    assert provider.mutation_calls[0][1]["daily_budget"] == 250
+    fetched = client.get(f"/proposals/{proposal_id}", headers=reviewer).json()
+    assert fetched["receipt"]["status"] == "verified"
+    assert fastapi is not None
+
+
+def test_signed_http_transport_rejects_bad_and_stale_signatures() -> None:
+    secret = "slack-signing-secret-example"
+    body = b'{"type":"url_verification","challenge":"x"}'
+    ts = str(int(time.time()))
+    sig = (
+        "v0="
+        + hmac.new(secret.encode(), f"v0:{ts}:{body.decode()}".encode(), hashlib.sha256).hexdigest()
+    )
+    verify_signature(
+        signing_secret=secret,
+        body=body,
+        headers={"X-Slack-Request-Timestamp": ts, "X-Slack-Signature": sig},
+    )
+    with pytest.raises(SlackSignatureError):
+        verify_signature(
+            signing_secret=secret,
+            body=body + b" ",
+            headers={"X-Slack-Request-Timestamp": ts, "X-Slack-Signature": sig},
+        )
+    old = str(int(time.time()) - 3600)
+    old_sig = (
+        "v0="
+        + hmac.new(
+            secret.encode(), f"v0:{old}:{body.decode()}".encode(), hashlib.sha256
+        ).hexdigest()
+    )
+    with pytest.raises(SlackSignatureError, match="replay"):
+        verify_signature(
+            signing_secret=secret,
+            body=body,
+            headers={"X-Slack-Request-Timestamp": old, "X-Slack-Signature": old_sig},
+        )
+    with pytest.raises(SlackSignatureError):
+        verify_signature(signing_secret=secret, body=body, headers={})
+
+
 def test_mda_definition_uses_shared_components(
     project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -148,6 +251,26 @@ def test_configured_runtime_compiles_the_deployment_profile_locally(
     assert runtime.profile.name == "mda"
     assert runtime.components.metadata.catalog_source == "fixture"
     assert runtime.profile.write_provider_is_fake is True, "no live adapter without credentials"
+    assert {t.name for t in runtime.components.tools} >= {
+        "discover_tools",
+        "compare_periods",
+        "render_report",
+        "get_org_context",
+    }
+
+
+async def test_self_hosted_runtime_uses_the_same_profile(
+    settings: Settings, project_root: Path
+) -> None:
+    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.testing.scripted_model import ScriptedChatModel
+
+    runtime = await build_self_hosted_runtime(
+        settings, project_root=project_root, model=ScriptedChatModel(steps=[])
+    )
+    assert runtime.persistence == "memory" and runtime.profile.name == "self_hosted"
+    assert runtime.components.metadata.catalog_source == "fixture"
+    assert runtime.profile.write_provider_is_fake is True
     assert {t.name for t in runtime.components.tools} >= {
         "discover_tools",
         "compare_periods",

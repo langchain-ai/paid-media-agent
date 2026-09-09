@@ -99,8 +99,19 @@ def test_status_and_routes_reflect_configuration(
     assert result.action == "status"
     assert result.detail["pipeboard"]["token_set"] is False
     routes = {r.id: r for r in build_routes(result.detail)}
-    assert list(routes) == ["local", "pipeboard", "org", "direct", "sandbox", "mda", "writes"]
+    assert list(routes) == [
+        "local",
+        "pipeboard",
+        "org",
+        "direct",
+        "sandbox",
+        "mda",
+        "slack",
+        "self_hosted",
+        "writes",
+    ]
     assert {s.id for s in routes["mda"].steps} >= {"mda_approvers", "mda_check", "mda_deploy"}
+    assert {s.id for s in routes["self_hosted"].steps} >= {"sh_docker", "sh_db", "sh_serve"}
     statuses = {s.id: s.status for s in routes["pipeboard"].steps}
     assert statuses["pb_token"] == "todo" and statuses["pb_test"] == "blocked"
     assert all("--json" in s.cli or s.cli for s in routes["local"].steps)
@@ -254,12 +265,42 @@ def test_saved_provider_key_reaches_the_process_for_model_tests(
     assert "q" * 24 not in actions.as_json(result)
 
 
-def test_generate_secret_stores_the_signing_key_without_returning_it(workspace: Path) -> None:
+def test_generate_secret_shows_api_token_once_only(workspace: Path) -> None:
     signing = actions.generate_secret(workspace, "PAID_MEDIA_APPROVAL_SIGNING_KEY")
     assert signing.ok and "show_once" not in signing.detail
     stored = read_env(workspace)["PAID_MEDIA_APPROVAL_SIGNING_KEY"]
     assert len(stored) > 40 and stored not in actions.as_json(signing)
+    api = actions.generate_secret(workspace, "PAID_MEDIA_API_TOKENS")
+    assert api.ok and api.detail["show_once"].endswith(":operator")
+    assert read_env(workspace)["PAID_MEDIA_API_TOKENS"] == api.detail["show_once"]
     assert actions.generate_secret(workspace, "PAID_MEDIA_MODEL").status == "fail"
+
+
+def test_slack_and_database_tests_never_leak_and_use_injected_clients(workspace: Path) -> None:
+    assert actions.slack_test(workspace).status == "fail"
+    write_env(
+        workspace, {"SLACK_BOT_TOKEN": "xoxb-" + "e" * 20, "SLACK_APP_TOKEN": "xapp-" + "f" * 20}
+    )
+    seen: list[str] = []
+
+    class Client:
+        def __init__(self, token: str) -> None:
+            seen.append(token)
+
+        def auth_test(self) -> dict[str, str]:
+            return {"team": "Acme", "user": "paid-media"}
+
+        def apps_connections_open(self, app_token: str) -> dict[str, bool]:
+            assert app_token.startswith("xapp-")
+            return {"ok": True}
+
+    result = actions.slack_test(workspace, client_factory=Client)
+    assert result.ok and result.detail["team"] == "Acme"
+    assert "xoxb-" not in actions.as_json(result)
+    assert actions.database_test(workspace).status == "warn"
+    write_env(workspace, {"DATABASE_URL": "postgresql://user:pw@localhost/db"})
+    result = actions.database_test(workspace, connect=lambda _url: ("PostgreSQL 16.1",))
+    assert result.ok and "pw@" not in actions.as_json(result)
 
 
 def test_mda_check_runs_import_smoke(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:

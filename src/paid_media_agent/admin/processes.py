@@ -17,6 +17,8 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
     "mda-dev": (sys.executable, "-m", "managed_deepagents", "dev"),
     "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy", "."),
+    "serve": (sys.executable, "-m", "paid_media_agent.cli", "serve"),
+    "slack": (sys.executable, "-m", "paid_media_agent.cli", "slack"),
 }
 CONFIRM_REQUIRED: frozenset[str] = frozenset({"mda-deploy"})
 """Outward-facing processes that need an explicit confirmation before they start."""

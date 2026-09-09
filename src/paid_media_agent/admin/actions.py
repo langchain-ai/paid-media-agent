@@ -150,6 +150,7 @@ def status(root: Path) -> ActionResult:
         "checks": _checks_json(checks),
         "env": env,
         "org": org_summary(root),
+        "runtime": settings.paid_media_runtime,
         "model_presets": [dict(p) for p in MODEL_PRESETS],
         "model_key_env": key_env,
         "model_key_set": bool(key_env and env.get(key_env, False)),
@@ -190,6 +191,20 @@ def status(root: Path) -> ActionResult:
             "approvers": sorted(settings.approver_refs()),
             "allow_self_approval": settings.paid_media_allow_self_approval,
             "signing_key_set": settings.paid_media_approval_signing_key is not None,
+        },
+        "slack": {
+            "transport": settings.slack_transport,
+            "bot_token_set": settings.slack_bot_token is not None,
+            "app_token_set": settings.slack_app_token is not None,
+            "signing_secret_set": settings.slack_signing_secret is not None,
+            "package_installed": importlib.util.find_spec("slack_bolt") is not None,
+        },
+        "self_hosted": {
+            "database_url_set": settings.database_url is not None,
+            "api_tokens_set": settings.paid_media_api_tokens is not None,
+            "psycopg_installed": importlib.util.find_spec("psycopg") is not None,
+            "api_host": settings.paid_media_api_host,
+            "api_port": settings.paid_media_api_port,
         },
         "mda": {
             "cli_installed": importlib.util.find_spec("managed_deepagents") is not None,
@@ -243,15 +258,27 @@ def config_set(root: Path, updates: Mapping[str, str]) -> ActionResult:
 
 
 def generate_secret(root: Path, key: str) -> ActionResult:
-    """Create a strong value for a host-owned secret and store it. The value is never returned."""
-    if key != "PAID_MEDIA_APPROVAL_SIGNING_KEY":
+    """Create a strong value for a host-owned secret and store it.
+
+    The signing key is never returned. An API token is shown once so the operator can store it in
+    their client; `.env` keeps `token:caller` and clients send only the token part as the bearer.
+    """
+    if key == "PAID_MEDIA_APPROVAL_SIGNING_KEY":
+        value = secrets.token_urlsafe(48)
+    elif key == "PAID_MEDIA_API_TOKENS":
+        value = f"{secrets.token_urlsafe(32)}:operator"
+    else:
         return _result("generate_secret", "fail", f"{key} cannot be generated")
-    write_env(root, {key: secrets.token_urlsafe(48)})
+    write_env(root, {key: value})
+    detail: dict[str, JsonValue] = {"key": key}
+    if key == "PAID_MEDIA_API_TOKENS":
+        detail["show_once"] = value
+        detail["usage"] = f"Authorization: Bearer {value.split(':', 1)[0]}"
     return _result(
         "generate_secret",
         "ok",
         f"{key} generated and stored in .env",
-        {"key": key},
+        detail,
         command=f"paid-media-agent config generate {key}",
     )
 
@@ -666,6 +693,84 @@ def policy_validate(
         command="paid-media-agent policy validate --live --json"
         if live
         else "paid-media-agent policy validate --json",
+    )
+
+
+def slack_test(root: Path, *, client_factory: Callable[[str], Any] | None = None) -> ActionResult:
+    settings = load_settings(root)
+    if settings.slack_bot_token is None:
+        return _result("slack_test", "fail", "SLACK_BOT_TOKEN is not set")
+    if importlib.util.find_spec("slack_sdk") is None:
+        return _result("slack_test", "fail", "slack extra not installed; run uv sync --extra slack")
+    try:
+        if client_factory is None:
+            from slack_sdk import WebClient
+
+            client_factory = lambda token: WebClient(token=token)  # noqa: E731
+        bot = client_factory(settings.slack_bot_token.get_secret_value()).auth_test()
+        detail: dict[str, JsonValue] = {
+            "team": bot.get("team"),
+            "bot_user": bot.get("user"),
+            "transport": settings.slack_transport,
+        }
+        if settings.slack_transport == "socket_mode":
+            if settings.slack_app_token is None:
+                return _result(
+                    "slack_test", "fail", "SLACK_APP_TOKEN is required for Socket Mode", detail
+                )
+            app_token = settings.slack_app_token.get_secret_value()
+            client_factory(app_token).apps_connections_open(app_token=app_token)
+            detail["socket_mode"] = "connection ticket issued"
+        elif settings.slack_signing_secret is None:
+            return _result(
+                "slack_test",
+                "fail",
+                "SLACK_SIGNING_SECRET is required for the HTTP transport",
+                detail,
+            )
+    except Exception as exc:
+        return _result(
+            "slack_test", "fail", f"Slack rejected the credentials: {sanitize_exception(exc)}"
+        )
+    return _result(
+        "slack_test",
+        "ok",
+        f"connected to {detail.get('team')} as {detail.get('bot_user')}",
+        detail,
+        command="paid-media-agent test slack --json",
+    )
+
+
+def database_test(root: Path, *, connect: Callable[[str], Any] | None = None) -> ActionResult:
+    settings = load_settings(root)
+    if settings.database_url is None:
+        return _result(
+            "database_test",
+            "warn",
+            "DATABASE_URL is not set; the self-hosted runtime uses in-memory state",
+        )
+    if importlib.util.find_spec("psycopg") is None:
+        return _result(
+            "database_test", "fail", "psycopg not installed; run uv sync --extra self-host"
+        )
+    try:
+        if connect is None:
+            import psycopg
+
+            with psycopg.connect(
+                settings.database_url.get_secret_value(), connect_timeout=10
+            ) as conn:
+                version = conn.execute("SELECT version()").fetchone()
+        else:
+            version = connect(settings.database_url.get_secret_value())
+    except Exception as exc:
+        return _result("database_test", "fail", f"connection failed: {sanitize_exception(exc)}")
+    return _result(
+        "database_test",
+        "ok",
+        "Postgres reachable",
+        {"version": str(version[0])[:60] if version else ""},
+        command="paid-media-agent test db --json",
     )
 
 

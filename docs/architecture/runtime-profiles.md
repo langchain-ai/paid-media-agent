@@ -10,14 +10,18 @@ no network calls and stores no process-global mutable state.
 
 `runtime/mda.py::configured_profile` resolves what a process runs: the live Pipeboard catalog and
 direct adapters when their credentials exist, the fixture catalog otherwise; the reviewed write
-policy validated against that catalog; the approval policy from `PAID_MEDIA_APPROVER_IDS`. Two
+policy validated against that catalog; the approval policy from `PAID_MEDIA_APPROVER_IDS`. Three
 callers compile it:
 
 - `agent.py` hands the components to `define_deep_agent`. Managed Deep Agents supplies the
-  checkpointer, the per-thread sandbox, identity, schedules, and Slack.
-- `runtime/local.py::build_configured_runtime` compiles the same components with
-  `create_deep_agent`, the repository as the model's filesystem, and an in-memory checkpointer,
-  for `paid-media-agent ask`, `report`, and the console's "Try it".
+  checkpointer, the per-thread sandbox, identity, schedules, and Slack. This is the recommended
+  deployment.
+- `runtime/self_hosted.py::build_self_hosted_runtime` compiles the same components with
+  `create_deep_agent` behind the FastAPI boundary and the rich Slack adapter, with proposals,
+  claims, receipts, dedupe, thread ownership, and checkpoints in Postgres when `DATABASE_URL` is
+  set and in memory otherwise.
+- `runtime/local.py::build_configured_runtime` compiles them with an in-memory checkpointer for
+  `paid-media-agent ask`, `report`, and the console's "Try it".
 
 `build_local_runtime` is the fixture-only variant that takes an injected model: the demo and the
 test suite.
@@ -40,9 +44,15 @@ presentation may differ. Capability and approval policy may not.
 
 ## Self-hosting
 
-The self-hosted profile (Postgres, FastAPI boundary, rich Slack transports, per-process sandbox
-backend, LangGraph Server factory) lives on the `self-hosted` branch. See
+The self-hosted profile is the same assembly with durable state you own. Its model filesystem is
+the repository (writes only under `/workspace`), so skills, the wiki, and org pages are readable
+directly, and the same host tools are used anyway so nothing depends on that. See
 [docs/self-hosting.md](../self-hosting.md).
+
+| Profile | Main advantage | Main cost or limit |
+|---|---|---|
+| MDA | one command, managed threads, sandbox, schedules, identity, Slack | generic approval card, US region, in-memory proposal state per process |
+| Self-hosted | your data, auth, Slack cards with edits, Postgres durability | you run the API, database, Slack app, upgrades, and backups |
 
 ## Implementation notes (2026-09-08)
 

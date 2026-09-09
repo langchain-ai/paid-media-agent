@@ -7,6 +7,7 @@
 - a Pipeboard token only for live platform reads; direct-platform credentials only for LinkedIn,
   X, and OpenAI Ads
 - a LangSmith API key with deployment permissions for `mda dev`, `mda deploy`, and sandbox snapshots
+- for self-hosting: Docker (or Postgres and Python), and Slack bot and app tokens for the rich adapter
 
 Start with fixtures. Live credentials are never required for the default test suite.
 
@@ -32,8 +33,8 @@ machine reads it, and the setup console runs the same actions.
 | `uv run paid-media-agent setup [--port] [--no-open]` | Local onboarding console over the actions below |
 | `uv run paid-media-agent demo [--with-proposal]` | Fixture run through the real graph, optionally with a governed write |
 | `uv run paid-media-agent doctor [--snapshot]` | Configuration, packages, catalog, approvals, PDF, and sandbox checks; `--snapshot` runs the sandbox contract |
-| `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate the approval signing key |
-| `uv run paid-media-agent test model\|pipeboard\|all` | Connection tests that never print secret values |
+| `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate the approval signing key and API tokens |
+| `uv run paid-media-agent test model\|pipeboard\|slack\|db\|all` | Connection tests that never print secret values (`all` adds Slack and Postgres on the self-hosted path) |
 | `uv run paid-media-agent accounts discover\|list\|add\|remove` | Host-side account discovery and alias mapping (six platforms) |
 | `uv run paid-media-agent org show\|interview\|set field=value\|add-link URL\|add-file PATH` | Your organization's context (goals, conversions, targets, naming, approvers, shared docs) in `docs/org` |
 | `uv run paid-media-agent catalog show [--live]` | The authorized tool catalog: reads, admitted mutations, denied tools |
@@ -41,6 +42,8 @@ machine reads it, and the setup console runs the same actions.
 | `uv run paid-media-agent ask "question"` | One question, locally, through the same profile the deployment runs |
 | `uv run paid-media-agent report --cadence weekly\|monthly [--end DATE]` | Deterministic cross-platform report, HTML and PDF |
 | `uv run paid-media-agent mda check\|dev\|deploy [--yes]` | Managed Deep Agents preflight, local managed run, hosted deploy |
+| `uv run paid-media-agent serve [--host] [--port]` | Self-hosted API; mounts the signed Slack HTTP transport when `SLACK_TRANSPORT=http` |
+| `uv run paid-media-agent slack` | Rich Slack adapter in Socket Mode against the self-hosted runtime |
 | `uv run paid-media-agent sandbox publish\|use\|test` | Build, declare, and probe the snapshot behind MDA's per-thread sandbox |
 | `uv run paid-media-agent writes kill-switch on\|off` | Incident switch for live writes |
 | `uv run mda dev` / `uv run mda deploy .` | The Managed Deep Agents CLI itself; the console starts these for you |
@@ -48,8 +51,9 @@ machine reads it, and the setup console runs the same actions.
 Optional native dependency: PDF reports use WeasyPrint (`reports` extra), which needs Pango and
 Cairo system libraries (`brew install pango` on macOS, `libpango-1.0-0 libcairo2` on Debian).
 Without them reports render as HTML only and `doctor` reports `report_pdf` as a warning. The
-managed build has no native libraries either; bake them into the sandbox snapshot (below) when
-PDFs matter.
+Docker image includes them; the managed build does not, so bake them into the sandbox snapshot
+(below) when PDFs matter there. `serve` needs the `self-host` extra and `PAID_MEDIA_API_TOKENS`
+(`token:caller,...`); the bearer a client sends is the part before `:caller`.
 
 ## Deploying with Managed Deep Agents
 
@@ -108,9 +112,15 @@ complete day is two days ago, and each platform keeps its shipped reporting lag.
 
 ## Self-hosting
 
-Not on `main`. The self-hosted API, Postgres persistence, the rich Slack adapter, the local
-LangGraph Server, and the Docker files live on the `self-hosted` branch; see
-[docs/self-hosting.md](docs/self-hosting.md).
+`docker compose up` builds the API image (Pango and Cairo included, so PDFs render) and starts
+Postgres with `DATABASE_URL` set for the API. Keys come from your local `.env` through
+`env_file`; the image copies no env file. Without Docker: `uv sync --extra self-host --extra
+slack`, set `DATABASE_URL` (or leave it empty for in-memory state), generate `PAID_MEDIA_API_TOKENS`
+and `PAID_MEDIA_APPROVAL_SIGNING_KEY` with `config generate`, then `paid-media-agent serve` and
+`paid-media-agent slack`. The rich Slack adapter needs an app created from
+`config/slack-manifest.example.yaml`; Socket Mode needs no public URL. Approvers are
+`slack:<team_id>:<user_id>` refs or API caller names. The walkthrough is
+[docs/self-hosting.md](docs/self-hosting.md); the console's "Self-host" step runs the same actions.
 
 ## Live checks
 
@@ -120,8 +130,9 @@ The default test suite is offline. Live, read-only checks are opt-in:
 PAID_MEDIA_LIVE_TESTS=1 uv run pytest tests/integration -q
 ```
 
-They require `PIPEBOARD_API_TOKEN` for the catalog check and a LangSmith key with sandbox
-permissions plus a declared snapshot for the sandbox probe. They never call a provider mutation.
+They require `PIPEBOARD_API_TOKEN` for the catalog check, `DATABASE_URL` for the Postgres
+round-trip, and a LangSmith key with sandbox permissions plus a declared snapshot for the sandbox
+probe. They never call a provider mutation.
 
 ## Source refresh
 
@@ -148,8 +159,8 @@ Source order:
   approvals;
 - no automated test can reach a live mutation;
 - reports reconcile to their structured inputs;
-- the MDA definition and the local CLI compile the same agent assembly;
-- the Block Kit renderers produce the same presentation objects the managed card shows;
+- the MDA definition, the self-hosted runtime, and the local CLI compile the same agent assembly;
+- Socket Mode and signed HTTP Slack paths render the same presentation objects;
 - logs, errors, traces, and generated artifacts pass secret and private-data scans;
 - documentation links and commands are valid.
 
@@ -170,14 +181,17 @@ canary steps: [docs/operations/live-write-runbook.md](docs/operations/live-write
 `uv run paid-media-agent setup [--port 8765] [--no-open]` serves `src/paid_media_agent/admin/` on
 127.0.0.1 with a per-run admin token in the URL fragment. Every page action calls the same
 functions as the CLI subcommands (`admin/actions.py`), so agents can script the same steps with
-`--json`. The console writes `.env` and `config/accounts.toml` locally, starts the two fixed-template
-processes (`mda dev`, and `mda deploy` with confirmation) with logs under `workspace/logs/`, and
-exposes the kill switch. It is not a hosted admin panel: do not expose the port, and prefer
+`--json`. The console writes `.env` and `config/accounts.toml` locally, starts fixed-template processes
+(`mda dev`, `mda deploy` with confirmation, `serve`, `slack`) with logs under `workspace/logs/`,
+and exposes the kill switch. It is not a hosted admin panel: do not expose the port, and prefer
 deployment secrets over `.env` in production.
 
-The wizard has six steps: Model, Ad accounts, Your business, Try it, Deploy, Done. "Try it" runs
-one question locally through the deployment's profile; "Deploy" collects the LangSmith key and
-the approver identities, runs the preflight, and starts `mda dev` or `mda deploy`.
+The wizard has seven steps: Model, Ad accounts, Your business, Try it, Where it lives, then Deploy
+or Self-host, and Done. "Try it" runs one question locally through the same profile a deployment
+runs. "Where it lives" offers Managed Deep Agents (recommended) and self-hosting. "Deploy"
+collects the LangSmith key and the approver identities, runs the preflight, and starts `mda dev`
+or `mda deploy`. "Self-host" collects the Slack tokens and approvers, the database URL, generates
+the API token and signing key, and starts `serve` and `slack`.
 
 ## Local run with LangSmith Studio
 
