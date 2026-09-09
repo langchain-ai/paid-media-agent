@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -73,8 +74,22 @@ def _finish(text: str, blocks: list[dict[str, Any]]) -> SlackMessage:
     return SlackMessage(text=text[:SECTION_TEXT_LIMIT], blocks=tuple(blocks[:BLOCK_LIMIT]))
 
 
+_HEADING = re.compile(r"^#{1,6}\s+(.*)$", re.M)
+_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_RULE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$", re.M)
+
+
+def to_mrkdwn(text: str) -> str:
+    """Slack shows markdown literally; fold the common forms into mrkdwn so a stray one still reads."""
+    text = _HEADING.sub(lambda m: f"*{m.group(1).strip()}*", text)
+    text = _BOLD.sub(r"*\1*", text)
+    text = _RULE.sub("", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def render_answer(text: str) -> SlackMessage:
     """Plain model answer. One section per paragraph, bounded."""
+    text = to_mrkdwn(text)
     paragraphs = [p for p in text.split("\n\n") if p.strip()] or [text]
     blocks = [_section(p) for p in paragraphs[: BLOCK_LIMIT - 1]]
     return _finish(text, blocks)

@@ -81,3 +81,10 @@ def test_model_timeout_turns_a_stalled_call_into_an_error() -> None:
     with pytest.raises(TimeoutError, match="exceeded 0 seconds"):
         asyncio.run(middleware.awrap_model_call(object(), stalled))  # type: ignore[arg-type]
     assert asyncio.run(middleware.awrap_model_call(object(), quick)) == "answer"  # type: ignore[arg-type]
+
+
+def test_slack_answers_fold_markdown_into_mrkdwn() -> None:
+    from paid_media_agent.surfaces.slack.blocks import to_mrkdwn
+
+    folded = to_mrkdwn("## What I can do\n\n---\n\n- **Spend** is 10 USD\n\n### Next")
+    assert folded == "*What I can do*\n\n- *Spend* is 10 USD\n\n*Next*"
