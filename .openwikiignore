@@ -1,0 +1,12 @@
+# Private or generated paths OpenWiki must never read.
+.env
+.env.*
+.venv/
+.mda/
+.git/
+workspace/
+docs/org/
+docs/history/
+docs/screenshots/
+__pycache__/
+*.pyc
