@@ -167,7 +167,9 @@ def _execute(messages: Sequence[BaseMessage]) -> AIMessage:
     proposal = next((r for r in last_tool_results(messages) if "proposal" in r), None)
     if proposal is None:
         return AIMessage(content="The proposal could not be staged.")
-    return tool_call_message("execute_change", {"proposal_id": proposal["proposal"]["proposal_id"]})
+    return tool_call_message(
+        "execute_change", {"proposal_id": proposal["proposal"]["proposal_id"], "revision": 1}
+    )
 
 
 def _report_receipt(messages: Sequence[BaseMessage]) -> AIMessage:

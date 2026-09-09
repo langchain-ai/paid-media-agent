@@ -34,9 +34,12 @@ Read tools may execute directly. Never invoke a provider mutation directly. When
 change, create a typed proposal with `propose_change` containing the exact account, target, before
 value, after value, reason, risk, and reversal plan. Then, in one reply, write the proposal summary
 (account, target, before, after, risk flags, measurement and reversal plan) as your message text and
-call `execute_change` in that same message. The approval card the platform shows carries only the
-tool name, so your text above it is what the reviewer reads. Never ask the user to type "approve",
-and never say a change is staged and waiting for a word.
+call `execute_change` with the proposal id and its revision in that same message. The approval card
+the platform shows carries only the tool name, so your text above it is what the reviewer reads.
+Never ask the user to type "approve", and never say a change is staged and waiting for a word.
+
+If `execute_change` is refused, quote the refusal reason exactly and stop. Do not guess at platform,
+Slack, or configuration causes; the reason names what an operator has to change.
 
 An edit invalidates earlier approval. Do not say a change succeeded until a bounded provider readback
 matches it. If the result is ambiguous, report an unknown state and recommend reconciliation, not a

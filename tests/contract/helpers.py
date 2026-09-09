@@ -45,7 +45,10 @@ def execute_step(messages: Sequence[BaseMessage]) -> AIMessage:
     proposal = next((r for r in last_tool_results(messages) if "proposal" in r), None)
     if proposal is None:
         return AIMessage(content=f"proposal failed: {last_tool_results(messages)}")
-    return tool_call_message("execute_change", {"proposal_id": proposal["proposal"]["proposal_id"]})
+    view = proposal["proposal"]
+    return tool_call_message(
+        "execute_change", {"proposal_id": view["proposal_id"], "revision": view["revision"]}
+    )
 
 
 def final_step(messages: Sequence[BaseMessage]) -> AIMessage:

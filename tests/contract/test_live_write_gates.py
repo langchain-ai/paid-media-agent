@@ -200,9 +200,11 @@ async def test_unknown_proposal_id_does_not_interrupt(
 ) -> None:
     steps = [
         lambda _m: tool_call_message(
-            "execute_change", {"proposal_id": "00000000-0000-0000-0000-000000000009"}
+            "execute_change", {"proposal_id": "00000000-0000-0000-0000-000000000009", "revision": 1}
         ),
-        lambda _m: tool_call_message("execute_change", {"proposal_id": "not-a-uuid"}),
+        lambda _m: tool_call_message(
+            "execute_change", {"proposal_id": "not-a-uuid", "revision": 1}
+        ),
         lambda _m: AIMessage(content="end"),
     ]
     runtime, _ = build_runtime(settings, project_root, steps)
@@ -231,7 +233,10 @@ async def test_foreign_thread_proposal_does_not_interrupt(
     hijack, _ = build_runtime(
         settings,
         project_root,
-        [lambda _m: tool_call_message("execute_change", {"proposal_id": pid}), final_step],
+        [
+            lambda _m: tool_call_message("execute_change", {"proposal_id": pid, "revision": 1}),
+            final_step,
+        ],
         profile=runtime.profile,
         catalog=runtime.catalog,
         catalog_provider=runtime.profile.catalog_provider,
@@ -241,7 +246,7 @@ async def test_foreign_thread_proposal_does_not_interrupt(
         {"messages": [{"role": "user", "content": "execute it"}]}, config=cfg
     )
     assert not hijack.graph.get_state(cfg).interrupts
-    assert _last_tool(state)["receipt"]["status"] == "rejected"
+    assert _last_tool(state)["denied"] is True and _last_tool(state)["reason"] == "unknown_proposal"
     assert provider.mutation_calls == []
     assert (
         runtime.components.proposal_service.get(record.changeset.proposal_id).state

@@ -47,11 +47,24 @@ class ProposalIdArgs(BaseModel):
     proposal_id: str = Field(description="UUID of the proposal returned by propose_change.")
 
 
+class ExecuteChangeArgs(BaseModel):
+    proposal_id: str = Field(description="UUID of the proposal returned by propose_change.")
+    revision: int = Field(
+        ge=1, description="Revision number of the proposal exactly as you presented it."
+    )
+
+
 def _caller_from_config(config: Any) -> tuple[str, str]:
+    """Thread and acting user. Our surfaces set `caller_ref`; Managed Deep Agents sets the user
+    header and `langgraph_auth_user`; a bare local run is `local-user`."""
     configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
     thread_id = str(configurable.get("thread_id") or "local-thread")
-    caller = str(configurable.get("caller_ref") or "local-user")
-    return thread_id, caller
+    auth_user = configurable.get("langgraph_auth_user")
+    identity = getattr(auth_user, "identity", None) or (
+        auth_user.get("identity") if isinstance(auth_user, dict) else None
+    )
+    caller = configurable.get("caller_ref") or configurable.get("x-mda-user-id") or identity
+    return thread_id, str(caller or "local-user")
 
 
 def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
@@ -135,16 +148,41 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
         return json.dumps(
             {
                 "proposal": view.model_dump(mode="json"),
-                "next_step": "Present the proposal, then call execute_change with the proposal_id. The runtime pauses for human approval.",
+                "next_step": "Write the proposal summary and call execute_change with proposal_id and revision in the same message. The runtime pauses for human approval.",
             }
         )
 
-    async def _execute(proposal_id: str) -> str:
+    async def _execute(proposal_id: str, revision: int, runtime: ToolRuntime) -> str:
+        """Runs only after the reviewer approved the interrupt.
+
+        The approval given on the platform's card is recorded here as a signed claim for the acting
+        user, but only when the proposal belongs to this thread and is still the revision that was
+        presented: `revision` is frozen in the tool call when the card is raised, so an edit made in
+        between is refused instead of executing unseen. Surfaces that create the claim themselves
+        (the API, the rich Slack adapter, the demo) pass straight through.
+        """
         try:
             pid = UUID(proposal_id)
         except ValueError:
             return json.dumps({"denied": True, "reason": "invalid_proposal_id"})
+        thread_id, caller = _caller_from_runtime(runtime)
+        record = service.get(pid)
+        if record is None or not service.belongs_to(pid, thread_id):
+            return json.dumps({"denied": True, "reason": "unknown_proposal"})
+        current = record.changeset.revision
         try:
+            if service.approvals.latest_unused(pid, current) is None:
+                # No host-made claim: the card click is the approval, valid only for the revision
+                # that was presented when the card was raised.
+                if current != revision:
+                    return json.dumps(
+                        {
+                            "denied": True,
+                            "reason": "proposal_revised",
+                            "detail": f"revision {current} is current; present it again",
+                        }
+                    )
+                service.approve(pid, approver_ref=caller)
             receipt = await executor.execute(pid)
         except WriteDenied as exc:
             return json.dumps({"denied": True, "reason": exc.reason, "detail": exc.detail})
@@ -184,7 +222,7 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
             "Request execution of a staged proposal. The runtime interrupts for human approval; the host verifies "
             "the signed approval, runs one mutation attempt, and reads back the result."
         ),
-        args_schema=ProposalIdArgs,
+        args_schema=ExecuteChangeArgs,
     )
     get_tool = StructuredTool.from_function(
         func=_get,

@@ -296,8 +296,9 @@ class ProposalService:
     def proposals(self) -> ProposalRepository:
         return self._proposals
 
-    def write_policy(self) -> WritePolicy:
-        return self._write_policy
+    @property
+    def approvals(self) -> ApprovalRepository:
+        return self._approvals
 
     def admitted_operations(self) -> list[dict[str, JsonValue]]:
         """Operations the current catalog can honor, for `discover_write_operations`."""

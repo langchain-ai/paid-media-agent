@@ -72,14 +72,34 @@ async def test_happy_path_interrupts_then_verifies(settings: Settings, project_r
     assert "verified" in _receipt_text(final)
 
 
-async def test_approve_without_claim_is_rejected(settings: Settings, project_root: Path) -> None:
+async def test_resume_by_an_approver_records_the_claim_and_executes(
+    settings: Settings, project_root: Path
+) -> None:
+    """A card approval resumes the graph without a host-made claim; the acting approver's
+    decision is recorded as the claim for the presented revision."""
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    runtime, _ = build_runtime(
+        settings, project_root, WRITE_STEPS, fixture_state=state, write_provider=provider
+    )
+    cfg = config()
+    await run_until_interrupt(runtime, cfg)
+    final = await resume(runtime, cfg)
+    receipt = _last_tool(final)["receipt"]
+    assert receipt["status"] == "verified" and len(provider.mutation_calls) == 1
+    service = runtime.components.proposal_service
+    record = service.proposals.list_for_thread("t-1")[0]
+    assert any("approved by local-user" in line for line in record.history)
+
+
+async def test_resume_by_a_non_approver_is_rejected(settings: Settings, project_root: Path) -> None:
     provider = FakeWriteProvider(FixtureState())
     runtime, _ = build_runtime(settings, project_root, WRITE_STEPS, write_provider=provider)
     cfg = config()
     await run_until_interrupt(runtime, cfg)
-    final = await resume(runtime, cfg)  # nobody created a claim
-    receipt = _last_tool(final)["receipt"]
-    assert receipt["status"] == "rejected" and "no valid approval claim" in receipt["reason"]
+    final = await resume(runtime, config(caller="stranger"))
+    denied = _last_tool(final)
+    assert denied["denied"] is True and denied["reason"] == "approver_policy", denied
     assert provider.mutation_calls == []
 
 
@@ -124,8 +144,8 @@ async def test_edit_invalidates_earlier_approval(settings: Settings, project_roo
     )
     assert revised.routing_id != record.routing_id
     final = await resume(runtime, cfg)
-    receipt = _last_tool(final)["receipt"]
-    assert receipt["status"] == "rejected" and "no valid approval claim" in receipt["reason"]
+    denied = _last_tool(final)
+    assert denied["denied"] is True and denied["reason"] == "proposal_revised", denied
     assert provider.mutation_calls == []
 
 
