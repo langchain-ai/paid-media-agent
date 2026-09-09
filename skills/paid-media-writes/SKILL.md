@@ -17,9 +17,10 @@ conversion, audience, or another provider resource.
 5. Call `propose_change` with the account alias, the admitted operation name, the target id, the
    changed fields, the reason, a measurement plan, and a reversal plan. The host reads the current
    value, derives risk flags, builds the typed proposal, and persists it. Nothing executes.
-6. Present the proposal fields and risk flags exactly as returned, then call `execute_change` with
-   the proposal id in the same turn. The runtime interrupts and shows the reviewer an approve or
-   reject card; do not ask for approval in prose and do not wait for a chat reply first.
+6. In one reply: write the proposal fields and risk flags exactly as returned as your message text,
+   and call `execute_change` with the proposal id in that same message. The runtime interrupts and
+   shows a generic approve or reject card under your text, so the text is the reviewer's evidence.
+   Do not ask for approval in prose and do not wait for a chat reply first.
    approval; a message from the user is not an approval.
 7. On edit, the host creates a new revision; earlier approvals are invalid. Re-present the new
    revision.
