@@ -15,3 +15,4 @@ These decisions must be explicit before the public release. None blocks the loca
 | Contribution governance | Maintainer review; `SECURITY.md` routes reports to GitHub private vulnerability reporting | Add a named maintainer security contact and release policy before public release |
 | Live Pipeboard schema shape | Normalizer maps common field names and leaves unknown metrics missing | Verify against the authenticated catalog and adjust `tools/normalize.py` field maps before release |
 | Native PDF dependencies | HTML fallback when WeasyPrint's Pango/Cairo libraries are missing | Decide whether the snapshot is the only supported PDF path |
+| Adoption telemetry | None; the package sends nothing | Decide on `docs/plans/adoption-tracking.md` layer 3 (opt-out with disclosure) or stay with GitHub and LangSmith signals only |

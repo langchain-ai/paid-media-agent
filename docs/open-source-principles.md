@@ -59,7 +59,8 @@ Conventional Commits (release notes that write themselves).
     on this.
 19. **Managed and self-hosted share one code path.** Adapters differ; business logic does not.
 20. **Telemetry is off, and the policy is written down.** This repository sends nothing anywhere
-    except the providers you configure. Say so where people look.
+    except the providers you configure. Say so where people look. A pre-release plan for opt-out
+    adoption tracking is in `docs/plans/adoption-tracking.md`.
 21. **Secrets never enter the repository, the image, the prompts, or the logs.** `.env.example`
     documents every key; `.env` is ignored; images copy no env files; the console masks values.
 

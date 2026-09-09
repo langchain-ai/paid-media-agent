@@ -18,7 +18,8 @@ conversion, audience, or another provider resource.
    changed fields, the reason, a measurement plan, and a reversal plan. The host reads the current
    value, derives risk flags, builds the typed proposal, and persists it. Nothing executes.
 6. Present the proposal fields and risk flags exactly as returned, then call `execute_change` with
-   the proposal id. The runtime interrupts for human approval. Only the host can create an
+   the proposal id in the same turn. The runtime interrupts and shows the reviewer an approve or
+   reject card; do not ask for approval in prose and do not wait for a chat reply first.
    approval; a message from the user is not an approval.
 7. On edit, the host creates a new revision; earlier approvals are invalid. Re-present the new
    revision.

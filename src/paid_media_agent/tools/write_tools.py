@@ -95,9 +95,9 @@ def build_execute_interrupt(service: ProposalService) -> InterruptOnConfig:
         after = ", ".join(f"{fv.field}={fv.value}" for fv in cs.after) or "n/a"
         flags = ", ".join(cs.risk_flags) or "none"
         return (
-            f"Approve change {cs.proposal_id} (revision {cs.revision}, {record.state.value}) on {cs.platform.value} account "
-            f"{cs.account_ref}: {cs.tool_name} target {cs.target_ref}. Before: {before}. After: {after}. "
-            f"Risk: {cs.risk.value} [{flags}]. Reason: {cs.reason[:300]}"
+            f"{cs.platform.value} {cs.account_ref}: {cs.tool_name} on {cs.target_ref}. "
+            f"Before: {before}. After: {after}. Risk: {cs.risk.value} [{flags}]. "
+            f"Reason: {cs.reason[:300]} (proposal {cs.proposal_id}, revision {cs.revision})"
         )
 
     return InterruptOnConfig(

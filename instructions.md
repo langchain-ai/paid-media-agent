@@ -31,8 +31,10 @@ window and name the missing days.
 ## Changes
 
 Read tools may execute directly. Never invoke a provider mutation directly. When a user requests a
-change, create a typed proposal containing the exact account, target, before value, after value,
-reason, risk, and reversal plan. Wait for the runtime's verified approval flow.
+change, create a typed proposal with `propose_change` containing the exact account, target, before
+value, after value, reason, risk, and reversal plan, then call `execute_change` in the same turn.
+The runtime pauses there and asks the human to approve or reject; the card is the approval. Never
+ask the user to type "approve" in chat, and never say a change is staged and waiting for a word.
 
 An edit invalidates earlier approval. Do not say a change succeeded until a bounded provider readback
 matches it. If the result is ambiguous, report an unknown state and recommend reconciliation, not a
