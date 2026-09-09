@@ -63,7 +63,8 @@ Optional native dependencies:
 
 `mda deploy` provisions the Slack app declared in `channels/slack.py`. On the first deploy the CLI
 prints a Slack authorization link: open it, pick the workspace, approve, then return to the
-terminal and press Enter so the CLI can verify the grant and finish provisioning. Run the deploy
+terminal and press Enter so the CLI can verify the grant and finish provisioning. Approve the link while signed into the LangSmith organization that owns the deployment;
+the grant is recorded there, and the CLI prints the link again if it landed elsewhere. Run the deploy
 from an interactive terminal for that step; a non-interactive run stops at "Slack channel setup
 requires authorization" every time.
 
