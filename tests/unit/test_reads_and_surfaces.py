@@ -12,7 +12,6 @@ from paid_media_agent.domain.presentation import ProposalView, ReceiptView
 from paid_media_agent.domain.proposals import ProposalRecord, ProposalState, WriteReceipt
 from paid_media_agent.reports.bridge import ArtifactBridge, BridgeError
 from paid_media_agent.reports.render import ReportRenderer, build_report_payload, reconcile_report
-from paid_media_agent.surfaces.api.app import resolve_caller
 from paid_media_agent.surfaces.slack.blocks import (
     ACTION_APPROVE,
     render_proposal,
@@ -230,11 +229,3 @@ def test_slack_blocks_escape_and_use_opaque_values() -> None:
     )
     unknown = render_receipt(ReceiptView.from_receipt(receipt))
     assert "Do not retry" in json.dumps(list(unknown.blocks))
-
-
-def test_api_bearer_lookup_is_exact() -> None:
-    tokens = {"tok-one": "alice"}
-    assert resolve_caller(tokens, "Bearer tok-one") == "alice"
-    assert resolve_caller(tokens, "Bearer tok-on") is None
-    assert resolve_caller(tokens, "tok-one") is None
-    assert resolve_caller({}, "Bearer tok-one") is None

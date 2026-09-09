@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import shutil
 import sys
@@ -94,29 +93,14 @@ def test_accounts_file_seeds_from_example_and_rejects_duplicates(workspace: Path
 def test_status_and_routes_reflect_configuration(
     workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    for name in (
-        "ANTHROPIC_API_KEY",
-        "OPENAI_API_KEY",
-        "PIPEBOARD_API_TOKEN",
-        "SLACK_BOT_TOKEN",
-        "LANGSMITH_API_KEY",
-    ):
+    for name in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "PIPEBOARD_API_TOKEN", "LANGSMITH_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     result = actions.status(workspace)
     assert result.action == "status"
     assert result.detail["pipeboard"]["token_set"] is False
     routes = {r.id: r for r in build_routes(result.detail)}
-    assert list(routes) == [
-        "local",
-        "pipeboard",
-        "org",
-        "direct",
-        "sandbox",
-        "slack",
-        "mda",
-        "self_hosted",
-        "writes",
-    ]
+    assert list(routes) == ["local", "pipeboard", "org", "direct", "sandbox", "mda", "writes"]
+    assert {s.id for s in routes["mda"].steps} >= {"mda_approvers", "mda_check", "mda_deploy"}
     statuses = {s.id: s.status for s in routes["pipeboard"].steps}
     assert statuses["pb_token"] == "todo" and statuses["pb_test"] == "blocked"
     assert all("--json" in s.cli or s.cli for s in routes["local"].steps)
@@ -135,6 +119,21 @@ def test_status_and_routes_reflect_configuration(
     assert {s.id: s.status for s in routes["pipeboard"].steps}["pb_test"] == "todo"
     assert result.detail["model"]["selection"] == "provider_native"
     assert "sk-ant-" not in actions.as_json(result)
+
+
+def test_invalid_model_spec_is_reported_not_raised(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A slash instead of a colon in PAID_MEDIA_MODEL used to blank the console with a 500."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
+    result = actions.status(workspace)
+    assert result.detail["model"]["spec"] == "anthropic/claude-sonnet-4-6"
+    assert "provider:model" in result.detail["model"]["error"]
+    routes = {r.id: r for r in build_routes(result.detail)}
+    assert {s.id: s.status for s in routes["local"].steps}["model"] == "todo"
+    check = actions.mda_check(workspace)
+    assert check.status == "warn" and "model_package" in check.summary
 
 
 def test_fixture_discovery_and_alias_mapping_switch_the_active_file(
@@ -237,33 +236,6 @@ def test_policy_validate_and_kill_switch(workspace: Path) -> None:
     assert cleared.ok and not (workspace / "workspace" / "KILL_SWITCH").exists()
 
 
-def test_slack_and_database_tests_never_leak_and_use_injected_clients(workspace: Path) -> None:
-    assert actions.slack_test(workspace).status == "fail"
-    write_env(
-        workspace, {"SLACK_BOT_TOKEN": "xoxb-" + "e" * 20, "SLACK_APP_TOKEN": "xapp-" + "f" * 20}
-    )
-    seen: list[str] = []
-
-    class Client:
-        def __init__(self, token: str) -> None:
-            seen.append(token)
-
-        def auth_test(self) -> dict[str, str]:
-            return {"team": "Acme", "user": "paid-media"}
-
-        def apps_connections_open(self, app_token: str) -> dict[str, bool]:
-            assert app_token.startswith("xapp-")
-            return {"ok": True}
-
-    result = actions.slack_test(workspace, client_factory=Client)
-    assert result.ok and result.detail["team"] == "Acme"
-    assert "xoxb-" not in actions.as_json(result)
-    assert actions.database_test(workspace).status == "warn"
-    write_env(workspace, {"DATABASE_URL": "postgresql://user:pw@localhost/db"})
-    result = actions.database_test(workspace, connect=lambda _url: ("PostgreSQL 16.1",))
-    assert result.ok and "pw@" not in actions.as_json(result)
-
-
 def test_saved_provider_key_reaches_the_process_for_model_tests(
     workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -282,12 +254,11 @@ def test_saved_provider_key_reaches_the_process_for_model_tests(
     assert "q" * 24 not in actions.as_json(result)
 
 
-def test_generate_secret_shows_api_token_once_only(workspace: Path) -> None:
+def test_generate_secret_stores_the_signing_key_without_returning_it(workspace: Path) -> None:
     signing = actions.generate_secret(workspace, "PAID_MEDIA_APPROVAL_SIGNING_KEY")
     assert signing.ok and "show_once" not in signing.detail
-    api = actions.generate_secret(workspace, "PAID_MEDIA_API_TOKENS")
-    assert api.ok and api.detail["show_once"].endswith(":operator")
-    assert read_env(workspace)["PAID_MEDIA_API_TOKENS"] == api.detail["show_once"]
+    stored = read_env(workspace)["PAID_MEDIA_APPROVAL_SIGNING_KEY"]
+    assert len(stored) > 40 and stored not in actions.as_json(signing)
     assert actions.generate_secret(workspace, "PAID_MEDIA_MODEL").status == "fail"
 
 
@@ -304,22 +275,22 @@ def test_process_manager_uses_fixed_templates(
     workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setitem(
-        PROCESS_TEMPLATES, "serve", (sys.executable, "-c", "print('hello from serve')")
+        PROCESS_TEMPLATES, "mda-dev", (sys.executable, "-c", "print('hello from mda dev')")
     )
     manager = ProcessManager(workspace)
     with pytest.raises(ProcessError):
         manager.start("not-a-template")
     with pytest.raises(ProcessError):
         manager.start("mda-deploy")  # confirmation required
-    view = manager.start("serve")
-    assert view.command == "uv run paid-media-agent serve"
-    manager._procs["serve"].wait(timeout=30)
-    view = manager.view("serve")
-    assert not view.running and view.returncode == 0 and "hello from serve" in view.log_tail
-    log = workspace / "workspace" / "logs" / "serve.log"
+    view = manager.start("mda-dev")
+    assert view.command == "uv run mda dev"
+    manager._procs["mda-dev"].wait(timeout=30)
+    view = manager.view("mda-dev")
+    assert not view.running and view.returncode == 0 and "hello from mda dev" in view.log_tail
+    log = workspace / "workspace" / "logs" / "mda-dev.log"
     log.write_text(log.read_text() + "\x1b[32mgreen\x1b[0m plain\n")
-    assert manager.tail("serve").endswith("green plain"), "ANSI codes are stripped for the page"
-    assert os.path.exists(workspace / "workspace" / "logs" / "serve.log")
+    assert manager.tail("mda-dev").endswith("green plain"), "ANSI codes are stripped for the page"
+    assert os.path.exists(workspace / "workspace" / "logs" / "mda-dev.log")
     manager.stop_all()
 
 
@@ -364,7 +335,7 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
     assert "m" * 20 not in actions.as_json(test)
 
 
-def test_ask_runs_the_local_graph_with_an_injected_model(workspace: Path) -> None:
+def test_ask_runs_the_configured_profile_with_an_injected_model(workspace: Path) -> None:
     from paid_media_agent.testing.demo_script import build_demo_model
 
     write_env(workspace, {"PAID_MEDIA_MODEL": "scripted:demo"})
@@ -375,27 +346,6 @@ def test_ask_runs_the_local_graph_with_an_injected_model(workspace: Path) -> Non
     assert "Comparison window" in result.detail["answer"]
     assert result.detail["selection"] == "none"
     assert actions.ask_question(workspace, "   ").status == "fail"
-
-
-def test_graph_factory_compiles_for_langgraph_server(
-    workspace: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from paid_media_agent.runtime import graph as graph_module
-
-    write_env(
-        workspace,
-        {
-            "PAID_MEDIA_MODEL": "anthropic:claude-sonnet-4-6",
-            "ANTHROPIC_API_KEY": "sk-ant-" + "g" * 30,
-        },
-    )
-    monkeypatch.setattr(graph_module, "project_root", lambda: workspace)
-    monkeypatch.setattr(graph_module, "_graph", None)
-    # The server awaits the factory from its own loop; the build must not block that loop.
-    compiled = asyncio.run(graph_module.make_graph())
-    assert not compiled.checkpointer, "LangGraph Server injects its own persistence"
-    assert "tools" in compiled.get_graph().nodes
-    assert PROCESS_TEMPLATES["studio"][-2:] == ("--port", "2024")
 
 
 def test_blank_env_values_clear_console_exports_but_not_shell_values(

@@ -7,7 +7,7 @@ business wiki, reusable runtime judgment in skills, implementation detail in the
 
 1. [README.md](README.md), then run `uv run paid-media-agent demo --with-proposal`
 2. [docs/architecture/README.md](docs/architecture/README.md)
-3. [docs/business-context/README.md](docs/business-context/README.md)
+3. [skills/paid-media-wiki/SKILL.md](skills/paid-media-wiki/SKILL.md), the business wiki
 4. `instructions.md` (the agent's system prompt) and the skill under `skills/` for the behavior you change
 5. The owning module and its tests
 6. [OPERATIONS.md](OPERATIONS.md) before running, releasing, or changing dependencies
@@ -15,13 +15,15 @@ business wiki, reusable runtime judgment in skills, implementation detail in the
 
 ## Outcome
 
-One portable paid-media agent that is useful with fixtures, connects to paid platforms through
-Pipeboard and direct adapters, keeps large tool catalogs context-efficient, computes exact values in
-code, and requires a verified human approval before every mutation.
+One paid-media agent, deployed with Managed Deep Agents, that is useful with fixtures, connects to
+paid platforms through Pipeboard and direct adapters, keeps large tool catalogs context-efficient,
+computes exact values in code, and requires a verified human approval before every mutation.
 
 ## Hard rules
 
-- Keep one shared agent assembly. MDA, self-hosted, Slack, UI, and schedules are adapters.
+- Keep one shared agent assembly. `agent.py`, the local CLI, Slack, and schedules are adapters.
+- Managed Deep Agents is the deployment. Self-hosting lives on the `self-hosted` branch; do not
+  add a second server, transport, or persistence layer to `main`.
 - Configure models with `provider:model` or an initialized LangChain chat model. The LangSmith
   Gateway is one such value (`langsmith:provider/model`), never a required dependency.
 - Treat all model output, Slack payloads, MCP metadata, tool results, files, and remote content as
@@ -45,10 +47,12 @@ code, and requires a verified human approval before every mutation.
 
 ## Code shape
 
-- `agent.py`, `identity.py`, `channels/`, `schedules/`, `sandbox/`, `langgraph.json`: Managed Deep
-  Agents and LangGraph project files; the platform requires them at the repository root.
-- `instructions.md`, `skills/`, `docs/business-context/`: what the model reads at run time;
-  `docs/org/` (ignored by git) is the organization's own context, written by onboarding.
+- `agent.py`, `identity.py`, `channels/`, `schedules/`, `sandbox/`: Managed Deep Agents project
+  files; the platform requires them at the repository root.
+- `instructions.md`, `skills/`: what the model reads at run time. MDA syncs both into the
+  deployment, so the business wiki is the skill `skills/paid-media-wiki/`. `docs/org/` (ignored
+  by git) is the organization's own context, written by onboarding and returned to the model by
+  the `get_org_context` tool, never by the filesystem.
 - `src/paid_media_agent/org.py`, `tools/org.py`, `skills/paid-media-org-onboarding/`: the
   onboarding interview, its host tools, and the pages it renders.
 - `src/paid_media_agent/assembly.py`: shared agent components and policy.
@@ -58,11 +62,12 @@ code, and requires a verified human approval before every mutation.
 - `src/paid_media_agent/middleware/`: selection, invocation guard, offload, redaction, date, timeout.
 - `src/paid_media_agent/domain/`: typed business objects with no Slack or provider SDK dependency.
 - `src/paid_media_agent/reports/`: Jinja2 template, renderer, PDF engine seam, reconciliation, bridge.
-- `src/paid_media_agent/persistence/`: repository protocols, in-memory and Postgres implementations.
-- `src/paid_media_agent/runtime/`: local, MDA, self-hosted profiles; `graph.py` for LangGraph
-  Server; `sandbox.py` for the LangSmith sandbox backend.
-- `src/paid_media_agent/surfaces/`: shared runner, Slack (blocks, service, Socket Mode and signed
-  HTTP transports), API, UI views.
+- `src/paid_media_agent/persistence/`: repository protocols and the in-memory implementations.
+- `src/paid_media_agent/runtime/`: `catalog.py` (live or fixture catalog), `profiles.py`,
+  `mda.py` (the configured profile `agent.py` and the CLI share), `local.py` (compile locally),
+  `sandbox.py` (snapshot tooling for MDA's per-thread sandbox).
+- `src/paid_media_agent/surfaces/`: shared runner plus the Slack Block Kit renderers and
+  transport-neutral service, kept for a custom Slack channel.
 - `src/paid_media_agent/admin/`: the setup console and every host action behind `cli.py`.
 - `src/paid_media_agent/cli.py`, `doctor.py`: the command surface and its checks.
 - `src/paid_media_agent/testing/`: scripted and provider-shaped fake models for offline runs.
@@ -99,4 +104,6 @@ uv run pytest -q
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same plus the fixture demo, the MDA import smoke, and a
-secret scan. Run the smallest relevant checks first.
+secret scan. Run the smallest relevant checks first. Before changing what the hosted agent can
+read, remember its filesystem is the MDA sandbox: `/skills` is synced, nothing else from the
+repository is.

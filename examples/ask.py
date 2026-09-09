@@ -1,4 +1,4 @@
-"""Ask the agent one question with the configured model against the fixture catalog."""
+"""Ask the agent one question with the configured model, locally, through the deployment's profile."""
 
 from __future__ import annotations
 
@@ -8,20 +8,14 @@ from pathlib import Path
 
 from langchain_core.runnables import RunnableConfig
 
-from paid_media_agent.assembly import resolve_model
 from paid_media_agent.config import Settings
-from paid_media_agent.runtime.local import build_local_runtime
+from paid_media_agent.runtime.local import build_configured_runtime
 
 
 async def main(question: str) -> None:
     settings = Settings()
     root = Path(__file__).resolve().parents[1]
-    model = resolve_model(
-        settings.model_settings(),
-        api_key_env=settings.paid_media_model_api_key_env,
-        timeout_seconds=settings.paid_media_model_timeout_seconds,
-    )
-    runtime = build_local_runtime(settings, project_root=root, model=model)
+    runtime = build_configured_runtime(settings, project_root=root)
     config = RunnableConfig(configurable={"thread_id": "example", "caller_ref": "local-user"})
     state = await runtime.graph.ainvoke(
         {"messages": [{"role": "user", "content": question}]}, config=config

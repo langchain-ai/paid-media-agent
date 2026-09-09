@@ -23,7 +23,7 @@ code; surfaces only translate inputs and presentation.
 7. Read-only tools direct; mutations behind exact approval.
 8. Account identity and credentials remain host-owned.
 9. One mutation attempt and bounded readback.
-10. Same domain and presentation objects across Slack, UI, API, and schedules.
+10. Same domain and presentation objects across Slack, the CLI, and schedules.
 11. Public context only. Private company evidence never enters the repository.
 12. Add complexity only after a measured failure in the simpler design.
 

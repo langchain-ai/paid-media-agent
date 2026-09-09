@@ -1,7 +1,7 @@
 [project]
 name = "paid-media-agent"
 version = "0.1.0"
-description = "A portable Deep Agents application for governed paid-media analysis and management."
+description = "A Managed Deep Agents application for governed paid-media analysis and management."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -35,9 +35,11 @@ dependencies = [
     "fastapi>=0.115,<1",
     "uvicorn>=0.35,<1",
     # Managed Deep Agents builds install core dependencies only, so the two providers every
-    # path can select (Anthropic, and OpenAI for the LangSmith Gateway) ship in core.
+    # path can select (Anthropic, and OpenAI for the LangSmith Gateway) ship in core, and so
+    # does the HTML report template engine the scheduled reports need.
     "langchain-anthropic>=1.4,<2",
     "langchain-openai>=1.1,<2",
+    "jinja2>=3.1,<4",
 ]
 
 [project.urls]
@@ -52,18 +54,8 @@ paid-media-agent = "paid_media_agent.cli:main"
 anthropic = ["langchain-anthropic>=1.4,<2"]  # kept for compatibility; now in core
 openai = ["langchain-openai>=1.1,<2"]  # kept for compatibility; now in core
 google = ["langchain-google-genai>=4,<5"]
-slack = ["slack-bolt>=1.30,<2"]
-self-host = [
-    "langgraph-checkpoint-postgres>=3,<4",
-    "psycopg[binary,pool]>=3.2,<4",
-    "uvicorn[standard]>=0.35,<1",
-]
-reports = [
-    "jinja2>=3.1,<4",
-    "weasyprint>=68,<69",
-]
-# Local LangGraph Server + Studio for testing the graph before deploying.
-studio = ["langgraph-cli[inmem]>=0.3,<1"]
+# PDF rendering on the host. Needs Pango and Cairo; the sandbox snapshot bakes them in instead.
+reports = ["weasyprint>=68,<69"]
 # Extra model providers. Each adds a `provider:` prefix for PAID_MEDIA_MODEL.
 groq = ["langchain-groq>=1,<2"]
 xai = ["langchain-xai>=1,<2"]

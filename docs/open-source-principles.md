@@ -27,7 +27,7 @@ Conventional Commits (release notes that write themselves).
 ## 2. Documentation is the product surface
 
 7. **One canonical page per question.** Commands live in `OPERATIONS.md`; architecture in
-   `docs/architecture/`; the agent's knowledge in `docs/business-context/`. Nothing restates another
+   `docs/architecture/`; the agent's knowledge in `skills/`. Nothing restates another
    page.
 8. **A map for coding agents.** `AGENTS.md` names every directory and the verification commands;
    `CLAUDE.md` only points at it. Frontier repos now ship this alongside the human README.
@@ -54,9 +54,10 @@ Conventional Commits (release notes that write themselves).
 
 ## 4. Run it anywhere, honestly
 
-18. **Self-hosting is one file.** A `Dockerfile` for the service and a `docker-compose.yml` that
-    brings up the dependencies with sensible defaults. PostHog and Supabase built their communities
-    on this.
+18. **Self-hosting is one file, or one branch.** When a project ships its own server, a
+    `Dockerfile` and a `docker-compose.yml` with sensible defaults (PostHog, Supabase). When it
+    deploys on a managed platform instead, the self-hosted path is preserved on a branch with a
+    written note on why and how to use it, not deleted.
 19. **Managed and self-hosted share one code path.** Adapters differ; business logic does not.
 20. **Telemetry is off, and the policy is written down.** This repository sends nothing anywhere
     except the providers you configure. Say so where people look. A pre-release plan for opt-out
@@ -90,7 +91,7 @@ Conventional Commits (release notes that write themselves).
 | 15 | done | `uv.lock`, `.github/dependabot.yml` |
 | 16 | done | `.github/workflows/release.yml` on `v*` tags |
 | 17 | done | `RUF100` in `pyproject.toml` |
-| 18 | done | `Dockerfile`, `docker-compose.yml` for `serve` with Postgres |
+| 18 | done | `self-hosted` branch (Dockerfile, compose, API, Postgres); `docs/self-hosting.md` |
 | 19-21 | done | one assembly; no telemetry; `.env` handling |
 | 22-25 | done | `instructions.md`, `skills/`, `tests/eval/`, `docs/audits/` |
 

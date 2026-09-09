@@ -30,7 +30,7 @@ The suite is offline by design. Live checks are opt-in (`PAID_MEDIA_LIVE_TESTS=1
 - Missing data stays missing. Do not convert unavailable metrics to zero.
 - Every governed-write change ships with the real-graph rejection tests it needs.
 - No customer data, account identifiers, private thresholds, or internal links in the repository.
-- Update the owning architecture page, business-context page, and skill in the same change, and
+- Update the owning architecture page, wiki page, and skill in the same change, and
   append to `log.md`.
 
 ## Commit and pull request hygiene

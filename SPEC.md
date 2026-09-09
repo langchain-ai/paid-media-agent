@@ -18,7 +18,7 @@ the approved change at most once, verify the provider state with bounded readbac
 - Run `uv run paid-media-agent demo` with no external credentials.
 - Set `PAID_MEDIA_MODEL` to a LangChain `provider:model` value or configure a compatible base URL.
 - Add a scoped Pipeboard token and map local account aliases to connected provider accounts.
-- Run `mda dev` or `uv run paid-media-agent serve`.
+- Run `uv run paid-media-agent ask` locally, `mda dev` with Studio, and `mda deploy .` to Slack.
 - Use `uv run paid-media-agent doctor` to diagnose configuration without leaking secrets.
 
 ### Paid-media operator
@@ -53,10 +53,8 @@ the approved change at most once, verify the provider state with bounded readbac
 - Generic public paid-media business wiki and progressive skills.
 - Deterministic cross-platform analysis and report rendering.
 - Typed proposals, durable approval state, provider execution, readback, and receipts.
-- MDA native Slack and a rich Slack adapter.
-- Local Socket Mode and hosted signed HTTP Slack transport.
-- Self-hosted API and persistence profile.
-- Agent UI compatibility where the selected runtime exposes the required Agent Server protocol.
+- MDA native Slack, and Block Kit renderers kept for a custom Slack channel.
+- Deployment through Managed Deep Agents; self-hosting preserved on the `self-hosted` branch.
 - Source-blind tests, deterministic oracles, security rejection tests, and context-cost checks.
 
 ### Not included in v1
@@ -81,7 +79,7 @@ instructions, skills, interrupt policy, and typed response contracts. Runtime ad
 persistence, filesystem backend, caller identity, and transport.
 
 ```text
-agent.py (MDA)                 self_hosted.py
+agent.py (MDA)              runtime/local.py (CLI, demo, tests)
        \                         /
         build_agent_components(settings, runtime)
                          |
@@ -92,9 +90,9 @@ agent.py (MDA)                 self_hosted.py
       Pipeboard / deterministic compute / write executor
 ```
 
-`agent.py` must remain a small MDA entry that exports one named `agent`. The self-hosted entry may
-compile the same components with `create_deep_agent`. Shared behavior lives under
-`src/paid_media_agent/`; surface-specific code does not enter the domain or policy modules.
+`agent.py` must remain a small MDA entry that exports one named `agent`. The local entry compiles
+the same components with `create_deep_agent` for the CLI and the tests. Shared behavior lives
+under `src/paid_media_agent/`; surface-specific code does not enter the domain or policy modules.
 
 The assembly API should look like this:
 
@@ -140,7 +138,7 @@ number that code can assert.
 ### 4.3 Context architecture
 
 Keep the always-loaded prompt small and stable. It contains role, source precedence, safety boundaries,
-completion rules, and links to skills. Business doctrine lives in `docs/business-context/`. Reusable
+completion rules, and links to skills. Business doctrine lives in `skills/paid-media-wiki/`. Reusable
 task workflows live in `skills/<name>/SKILL.md` with references, scripts, and templates loaded on
 demand.
 
@@ -392,11 +390,10 @@ capability; no business behavior exists only in the UI.
 
 ### Local
 
-- fixture catalog and fake provider by default;
-- local filesystem rooted at the project workspace;
-- in-memory checkpointer for tests only;
-- optional Pipeboard reads after explicit configuration;
-- optional Slack Socket Mode.
+- fixture catalog and fake provider by default; the live catalog when credentials are configured;
+- local filesystem rooted at the repository, writes only under the workspace;
+- in-memory checkpointer; not a production persistence profile;
+- used by the demo, the tests, `paid-media-agent ask` and `report`.
 
 ### MDA
 
@@ -409,15 +406,12 @@ capability; no business behavior exists only in the UI.
 
 ### Self-hosted
 
-- compile the same agent components with `create_deep_agent`;
-- use Postgres-backed checkpointer and store in production;
-- expose a small FastAPI boundary for threads, streaming, artifacts, approvals, and health;
-- use explicit auth middleware and per-caller thread ownership;
-- run rich Slack through Socket Mode or signed HTTP;
-- treat Agent Server protocol compatibility as a separate adapter, not a reason to fork the agent.
+Preserved on the `self-hosted` branch, not on `main`: the same components compiled with
+`create_deep_agent`, Postgres persistence, a FastAPI boundary, and the rich Slack transports.
+See `docs/self-hosting.md`.
 
-No production profile uses in-memory state. Stable `thread_id`, proposal id, and run id are required
-for resume and recovery.
+Managed Deep Agents owns thread and checkpoint durability. Proposals, approval claims, and receipts
+are process-owned objects today; making them durable across restarts is an open question.
 
 ## 11. Sandbox and snapshot
 
@@ -465,8 +459,8 @@ specification no longer duplicates it.
 ## 14. Dependencies
 
 Use Python 3.11+, `uv`, Pydantic v2, current compatible Deep Agents/MDA/LangChain/LangGraph packages,
-`langchain-mcp-adapters`, `httpx`, and optional provider packages. Slack, self-hosting, and report
-dependencies remain optional extras so the core install stays small.
+`langchain-mcp-adapters`, `httpx`, Jinja2, and the Anthropic and OpenAI provider packages (the
+managed build installs core only). PDF rendering and other providers remain optional extras.
 
 Commit `uv.lock` after the first working vertical slice. Use explicit upper bounds on fast-moving
 pre-1.0 packages, Dependabot or Renovate, and a scheduled compatibility test. Do not hand-maintain two
@@ -525,7 +519,7 @@ The first public release is done when:
 - deterministic analysis and reports reconcile;
 - all writes are typed, interruptible, durable, exact, and at most once;
 - Slack and UI use shared presentation contracts;
-- MDA and self-hosted paths use one agent assembly;
+- the MDA definition and the local CLI use one agent assembly;
 - sandbox and secrets boundaries pass rejection tests;
 - public docs contain no private data;
 - commands, links, install steps, and examples work from a clean environment;

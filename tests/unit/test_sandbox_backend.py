@@ -1,4 +1,4 @@
-"""Sandbox mode keeps the model's world identical to production without a live sandbox here."""
+"""The snapshot probe, exercised against an in-memory stand-in for a LangSmith sandbox."""
 
 from __future__ import annotations
 
@@ -14,11 +14,9 @@ from paid_media_agent.runtime.sandbox import (
     WORKSPACE,
     Sandbox,
     SandboxPdfEngine,
-    WorkspaceMirror,
     probe_sandbox,
     snapshot_reference,
 )
-from paid_media_agent.tools.artifacts import ArtifactStore
 
 
 class FakeSandboxBackend:
@@ -49,7 +47,7 @@ class FakeSandboxBackend:
         if command.startswith("ls /skills"):
             names = {p.split("/")[2] for p in self.files if p.startswith("/skills/")}
             return ExecuteResponse(output="\n".join(sorted(names)), exit_code=0)
-        if command.startswith("ls /docs"):
+        if command.startswith("ls /skills/paid-media-wiki"):
             return ExecuteResponse(output="9", exit_code=0)
         if command.startswith("env |"):
             return ExecuteResponse(output="0", exit_code=0)
@@ -63,26 +61,16 @@ def _sandbox(backend: FakeSandboxBackend) -> Sandbox:
 def test_mount_uses_the_same_absolute_paths_as_the_repository(tmp_path: Path) -> None:
     (tmp_path / "skills" / "paid-media-analysis").mkdir(parents=True)
     (tmp_path / "skills" / "paid-media-analysis" / "SKILL.md").write_text("# skill")
-    (tmp_path / "docs" / "business-context").mkdir(parents=True)
-    (tmp_path / "docs" / "business-context" / "goals.md").write_text("# goals")
+    (tmp_path / "skills" / "paid-media-wiki").mkdir(parents=True)
+    (tmp_path / "skills" / "paid-media-wiki" / "goals.md").write_text("# goals")
     backend = FakeSandboxBackend()
 
     count = _sandbox(backend).mount_project(tmp_path)
 
     assert count == 2
     assert backend.files["/skills/paid-media-analysis/SKILL.md"] == b"# skill"
-    assert backend.files["/docs/business-context/goals.md"] == b"# goals"
+    assert backend.files["/skills/paid-media-wiki/goals.md"] == b"# goals"
     assert backend.commands[0].startswith("mkdir -p /workspace/in")
-
-
-def test_artifacts_written_by_host_tools_appear_in_the_sandbox(tmp_path: Path) -> None:
-    backend = FakeSandboxBackend()
-    store = ArtifactStore(tmp_path / "workspace", mirror=WorkspaceMirror(_sandbox(backend)))
-
-    metadata = store.write_json("analysis", {"rows": 3}, schema_version="test/1")
-
-    mirrored = backend.files[f"{WORKSPACE}/{metadata.path}"]
-    assert mirrored == (tmp_path / "workspace" / metadata.path).read_bytes()
 
 
 def test_pdf_renders_inside_the_sandbox_and_lands_on_the_host(tmp_path: Path) -> None:
@@ -98,7 +86,7 @@ def test_pdf_renders_inside_the_sandbox_and_lands_on_the_host(tmp_path: Path) ->
 
 
 def test_probe_reports_a_missing_pdf_renderer(tmp_path: Path) -> None:
-    for directory in ("skills", "docs/business-context", "workspace/out"):
+    for directory in ("skills/paid-media-wiki", "workspace/out"):
         (tmp_path / directory).mkdir(parents=True)
     checks = {
         c.name: c for c in probe_sandbox(_sandbox(FakeSandboxBackend(weasyprint=False)), tmp_path)

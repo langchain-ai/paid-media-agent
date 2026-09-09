@@ -12,4 +12,7 @@ Fill it three ways, all producing the same files:
 - the agent itself: ask it to "learn about my business" and it runs the interview and saves
 
 Files: `profile.json` (source of truth), `goals.md` and `conventions.md` (rendered for the agent),
-`sources.md` and `sources/` (links and files). Delete a file to forget it.
+`sources.md` and `sources/` (links and files). Delete a file to forget it. The agent reads all
+of it through the `get_org_context` tool, so the same context is available locally and in the
+deployment. `mda deploy` uploads this folder with the project; run the interview before you
+deploy, because answers saved by the hosted agent live on that deployment until the next deploy.

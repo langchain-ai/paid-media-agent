@@ -8,9 +8,9 @@ description: Analyze paid-media performance, compare periods or entities, diagno
 Use this skill for performance questions, audits, comparisons, diagnosis, budget reasoning, and
 recommendations.
 
-1. Read `/docs/org/goals.md` and `/docs/org/conventions.md` if they exist; they carry this
-   organization's targets, conversions, and naming and override generic doctrine. Then read
-   `/docs/business-context/decision-model.md` and the page the question calls for:
+1. Call `get_org_context` first; it returns this organization's goals, targets, conversions,
+   and naming, which override generic doctrine ("Not provided" means ask, not guess). Then read
+   `/skills/paid-media-wiki/decision-model.md` and the page the question calls for:
    `benchmarks.md` for "is this good", `anomaly-and-significance.md` for spikes and drops,
    `bidding-and-budget.md` for pacing or budget changes, `platform-playbooks.md` for a platform's
    grains and caveats, and `answer-style.md` before the final answer.

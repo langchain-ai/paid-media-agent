@@ -3,73 +3,58 @@
 ## Shared assembly
 
 `build_agent_components` is the center. It receives typed settings, a runtime profile, and an
-authorized tool catalog. It returns the model, tools, middleware, interrupt policy, and response
-schema. It performs no network calls and stores no process-global mutable state.
+authorized tool catalog. It returns the model, tools, middleware, and interrupt policy. It performs
+no network calls and stores no process-global mutable state.
 
-## Local
+## One configured profile
 
-Local mode is the default development path. It uses fixtures and an in-memory checkpointer for tests.
-Developers may opt into live read-only Pipeboard calls. Slack uses Socket Mode when configured.
+`runtime/mda.py::configured_profile` resolves what a process runs: the live Pipeboard catalog and
+direct adapters when their credentials exist, the fixture catalog otherwise; the reviewed write
+policy validated against that catalog; the approval policy from `PAID_MEDIA_APPROVER_IDS`. Two
+callers compile it:
 
-Local mode is not a production persistence profile. Restart recovery tests use a persistent test
-store or Postgres container.
+- `agent.py` hands the components to `define_deep_agent`. Managed Deep Agents supplies the
+  checkpointer, the per-thread sandbox, identity, schedules, and Slack.
+- `runtime/local.py::build_configured_runtime` compiles the same components with
+  `create_deep_agent`, the repository as the model's filesystem, and an in-memory checkpointer,
+  for `paid-media-agent ask`, `report`, and the console's "Try it".
 
-## Managed Deep Agents
+`build_local_runtime` is the fixture-only variant that takes an injected model: the demo and the
+test suite.
 
-The root `agent.py` exports one named MDA agent. MDA project files configure instructions, skills,
-connectors, sandbox, schedules, identity, memory, and native Slack. MDA is optional. It simplifies
-operations but does not own the product's tools, business rules, or approval contracts.
+## What the model can read
 
-The native Slack channel is the simple managed surface. Use the external rich Slack adapter when
-Block Kit review, streamed progress, files, edited proposals, or custom receipts are required.
-
-## Self-hosted
-
-The self-hosted profile compiles the same components with `create_deep_agent`. Postgres owns
-checkpoints, store data, proposals, approval claims, receipts, and dedupe records. FastAPI exposes a
-small authenticated boundary. Slack can use Socket Mode or signed HTTP events.
-
-Agent UI support depends on an Agent Server-compatible endpoint. Protocol compatibility is an adapter;
-it must not fork graph behavior.
+In the deployment the model's filesystem is the MDA sandbox: `/skills` (synced by MDA, the wiki
+included as `skills/paid-media-wiki/`) and `/workspace` (the thread's scratch space). Nothing else
+from the repository is present. Every other input reaches the model through host tools: the
+organization profile through `get_org_context`, artifacts through their ids, files through
+`render_report`. Locally the repository is the filesystem, with writes allowed only under
+`/workspace`, and the same tools are used, so a prompt or skill never names a path that exists in
+only one world.
 
 ## Parity contract
 
-For the same model, fixture catalog, thread state, and user request, every profile must expose the same
-authorized domain capabilities and terminal domain objects. Timing, trace metadata, and presentation
-may differ. Capability and approval policy may not.
+For the same model, catalog, thread state, and user request, the deployment and the local CLI
+expose the same authorized capabilities and terminal domain objects. Timing, trace metadata, and
+presentation may differ. Capability and approval policy may not.
 
-## Tradeoffs
+## Self-hosting
 
-| Profile | Main advantage | Main cost or limit |
-|---|---|---|
-| Local | fastest development and no hosted runtime dependency | not a durable production setup |
-| MDA | smallest production operations burden and native Slack | managed public beta, current US-region boundary, simpler Slack UX |
-| Self-hosted | full control over data, auth, Slack, persistence, and deployment | the operator owns uptime, upgrades, backups, security, and incident response |
+The self-hosted profile (Postgres, FastAPI boundary, rich Slack transports, per-process sandbox
+backend, LangGraph Server factory) lives on the `self-hosted` branch. See
+[docs/self-hosting.md](../self-hosting.md).
 
-MDA is a deployment option, not a product dependency. Self-hosting does not require an MDA or
-LangSmith account when the operator uses the custom graph/API profile. A separate LangSmith or Agent
-Server deployment may be supported as another adapter under its own current licensing and service
-terms.
-
-## Implementation notes (2026-09-01)
+## Implementation notes (2026-09-08)
 
 - `runtime/profiles.py` defines `RuntimeProfile`: artifacts, accounts, catalog provider, read and
   write providers, write policy, approval policy, signer, repositories, and run mode.
-- `runtime/local.py` compiles the components with `create_deep_agent`, a `FilesystemBackend` rooted
-  at the checkout, skills from `/skills/`, and permissions that deny `.env`, `.venv`, `.git`, and any
-  write outside `/workspace/`.
-- `runtime/self_hosted.py` reuses `compile_graph`, switches repositories and the checkpointer to
-  Postgres when `DATABASE_URL` is set, and loads the live catalog when a Pipeboard token exists.
-- `agent.py` calls `runtime/mda.py`, which builds the same components; MDA supplies the backend,
-  checkpointer, store, instructions, and skills. The live catalog is loaded at import only when a
-  token is configured; otherwise the fixture catalog is used.
+- `runtime/catalog.py::load_catalog` applies the admitted names from the write-policy file to the
+  local policy before the live catalog is classified, so the catalog, the policy, and the gate
+  agree on one reviewed set. With a live catalog the profile uses `PipeboardReadProvider` and the
+  gated `PipeboardWriteProvider` and marks the provider as not fake; the fixture fake is used only
+  with the fixture catalog, so a production receipt can never come from a fake.
+- `runtime/local.py::compile_graph` uses a `FilesystemBackend` rooted at the checkout, skills from
+  `/skills/`, and permissions that deny `.env`, `.venv`, `.git`, `.mda`, and any write outside
+  `/workspace/`.
 - `connectors/mcp.py` is intentionally absent: MDA's MCP connector would bind provider tools to the
   model directly, bypassing the authorized catalog. Tools always enter through the assembly.
-
-## Live-catalog notes
-
-- With a live catalog, `self_hosted` and `mda` profiles use `PipeboardReadProvider` and the gated
-  `PipeboardWriteProvider` and mark the provider as not fake. The fixture fake is used only with the
-  fixture catalog, so a production receipt can never come from a fake.
-- `load_catalog` applies the admitted names from the write-policy file to `LocalPolicy` before the
-  live catalog is classified, so the catalog, the policy, and the gate agree on one reviewed set.

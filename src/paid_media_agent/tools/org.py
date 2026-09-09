@@ -1,14 +1,14 @@
-"""Model-facing tools that save what the organization tells the agent during onboarding.
+"""Model-facing tools for the organization's own context: read it, save answers, store links.
 
-Both write host-side under `docs/org/` and mirror the result into the sandbox when one is active,
-so the model can read back exactly what it saved. No approval step: this is the user's own context,
-and every write is echoed to them.
+The pages live under `docs/org/` on the host. The model reaches them through `get_org_context`
+rather than the filesystem, so the same call works locally and inside the sandbox Managed Deep
+Agents gives each thread. No approval step: this is the user's own context, and every write is
+echoed back to them.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -21,14 +21,25 @@ from paid_media_agent.org import (
     SourceError,
     add_link,
     load_profile,
+    org_dir,
+    render_conventions,
+    render_goals,
     save_profile,
 )
 
+GET_ORG_CONTEXT_TOOL = "get_org_context"
 UPDATE_ORG_PROFILE_TOOL = "update_org_profile"
 ADD_ORG_SOURCE_TOOL = "add_org_source"
-ORG_TOOLS: tuple[str, ...] = (UPDATE_ORG_PROFILE_TOOL, ADD_ORG_SOURCE_TOOL)
+ORG_TOOLS: tuple[str, ...] = (GET_ORG_CONTEXT_TOOL, UPDATE_ORG_PROFILE_TOOL, ADD_ORG_SOURCE_TOOL)
+SOURCE_TEXT_CHARS = 12_000
+"""A shared brief is returned in one piece up to this size; longer ones are cut with a note."""
 
-Publish = Callable[[Path], None]
+
+class OrgContextArgs(BaseModel):
+    source: str | None = Field(
+        default=None,
+        description="Name of a shared source (from the sources list) to read in full.",
+    )
 
 
 class OrgProfileUpdate(BaseModel):
@@ -54,11 +65,33 @@ class OrgSourceArgs(BaseModel):
     )
 
 
-def build_org_tools(root: Path, publish: Publish | None = None) -> list[BaseTool]:
-    def _publish(paths: list[Path]) -> None:
-        if publish is not None:
-            for path in paths:
-                publish(path)
+def _sources(root: Path) -> list[str]:
+    directory = org_dir(root) / "sources"
+    return sorted(p.name for p in directory.iterdir() if p.is_file()) if directory.exists() else []
+
+
+def build_org_tools(root: Path) -> list[BaseTool]:
+    def _context(**kwargs: Any) -> str:
+        args = OrgContextArgs.model_validate(kwargs)
+        names = _sources(root)
+        if args.source:
+            if args.source not in names:
+                return json.dumps({"error": True, "detail": "unknown source", "sources": names})
+            text = (org_dir(root) / "sources" / args.source).read_text(encoding="utf-8")
+            cut = len(text) > SOURCE_TEXT_CHARS
+            return json.dumps(
+                {"source": args.source, "text": text[:SOURCE_TEXT_CHARS], "truncated": cut}
+            )
+        profile = load_profile(root)
+        return json.dumps(
+            {
+                "answered": profile.answered(),
+                "of": len(QUESTIONS),
+                "goals": render_goals(profile),
+                "conventions": render_conventions(profile),
+                "sources": names,
+            }
+        )
 
     def _update(**kwargs: Any) -> str:
         update = OrgProfileUpdate.model_validate(kwargs)
@@ -66,15 +99,9 @@ def build_org_tools(root: Path, publish: Publish | None = None) -> list[BaseTool
         if not changes:
             return json.dumps({"error": True, "detail": "nothing to update"})
         profile = load_profile(root).model_copy(update=changes)
-        written = save_profile(root, profile)
-        _publish(written)
+        save_profile(root, profile)
         return json.dumps(
-            {
-                "saved": sorted(changes),
-                "answered": profile.answered(),
-                "of": len(QUESTIONS),
-                "pages": ["/docs/org/goals.md", "/docs/org/conventions.md"],
-            }
+            {"saved": sorted(changes), "answered": profile.answered(), "of": len(QUESTIONS)}
         )
 
     def _add_source(**kwargs: Any) -> str:
@@ -85,17 +112,27 @@ def build_org_tools(root: Path, publish: Publish | None = None) -> list[BaseTool
             return json.dumps({"error": True, "detail": str(exc)})
         except Exception as exc:
             return json.dumps({"error": True, "detail": sanitize_exception(exc)})
-        _publish([stored, stored.parent.parent / "sources.md"])
         preview = stored.read_text(encoding="utf-8")[:400]
-        return json.dumps({"stored": f"/docs/org/sources/{stored.name}", "preview": preview})
+        return json.dumps({"stored": stored.name, "preview": preview})
 
     return [
+        StructuredTool(
+            name=GET_ORG_CONTEXT_TOOL,
+            description=(
+                "This organization's own context: goals, the conversion that counts, targets, "
+                "budget, markets, seasonality, naming, approvers, and the names of shared sources. "
+                "Call it before an analysis; it overrides the generic wiki. Pass `source` to read "
+                "one shared brief or export in full."
+            ),
+            args_schema=OrgContextArgs,
+            func=_context,
+        ),
         StructuredTool(
             name=UPDATE_ORG_PROFILE_TOOL,
             description=(
                 "Save answers from the organization onboarding interview (business, conversion that "
                 "counts, targets, budget, markets, seasonality, naming, approvers). Pass only the "
-                "fields just answered. The pages under /docs/org are re-rendered."
+                "fields just answered; get_org_context returns the result."
             ),
             args_schema=OrgProfileUpdate,
             func=_update,
@@ -104,7 +141,7 @@ def build_org_tools(root: Path, publish: Publish | None = None) -> list[BaseTool
             name=ADD_ORG_SOURCE_TOOL,
             description=(
                 "Store the text of a public https link the user shared (a brief, a plan, a dashboard "
-                "export) under /docs/org/sources and list it on /docs/org/sources.md."
+                "export) so get_org_context can return it later."
             ),
             args_schema=OrgSourceArgs,
             func=_add_source,

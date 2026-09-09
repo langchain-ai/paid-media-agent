@@ -65,9 +65,7 @@ def _get(detail: dict[str, JsonValue], *path: str) -> JsonValue:
 def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     env = _get(detail, "env") or {}
     model = _get(detail, "model") or {}
-    slack = _get(detail, "slack") or {}
     mda = _get(detail, "mda") or {}
-    self_hosted = _get(detail, "self_hosted") or {}
     writes = _get(detail, "writes") or {}
     accounts = _get(detail, "accounts") or []
     token_set = bool(_get(detail, "pipeboard", "token_set"))
@@ -89,9 +87,6 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     accounts_path = str(_get(detail, "accounts_path") or "")
     real_accounts = accounts_path.endswith("config/accounts.toml")
     snapshot = str(env.get("PAID_MEDIA_SANDBOX_SNAPSHOT") or "") if isinstance(env, dict) else ""
-    sandbox_backend = (
-        isinstance(env, dict) and str(env.get("PAID_MEDIA_BACKEND") or "local") == "sandbox"
-    )
 
     local = Route(
         id="local",
@@ -155,9 +150,9 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             Step(
                 id="ask",
                 title="Ask a question",
-                description="Run one real question through the shared assembly against the fixture accounts.",
+                description="One real question through the same profile the deployment runs: live accounts when connected, the fixture accounts otherwise.",
                 status="optional",
-                cli='uv run python examples/ask.py "Which fixture campaign moved the most in the last two weeks?"',
+                cli='uv run paid-media-agent ask "Which campaign moved the most in the last two weeks?"',
                 action=StepAction(kind="command", label="Copy command"),
             ),
         ),
@@ -231,11 +226,6 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         ),
     )
 
-    socket_ready = bool(slack.get("bot_token_set")) and (
-        bool(slack.get("app_token_set"))
-        if slack.get("transport") == "socket_mode"
-        else bool(slack.get("signing_secret_set"))
-    )
     org = _get(detail, "org") or {}
     org_configured = bool(isinstance(org, dict) and org.get("configured"))
     org_route = Route(
@@ -331,28 +321,16 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     sandbox_route = Route(
         id="sandbox",
         title="Sandbox",
-        tagline="The model's files in a LangSmith sandbox, locally and in production",
-        description="Build the image from sandbox/Dockerfile on LangSmith (no local Docker), point every runtime at it, and prove it can host the agent before you deploy.",
+        tagline="The image behind the sandbox MDA gives every thread",
+        description="Optional. Build sandbox/Dockerfile on LangSmith (no local Docker) so PDF rendering and the pinned toolchain travel with the deployment, then prove the snapshot before you deploy.",
         steps=(
             Step(
                 id="sb_publish",
                 title="Publish the snapshot",
-                description="LangSmith builds sandbox/Dockerfile and the result is declared for our runtimes and for MDA.",
+                description="LangSmith builds sandbox/Dockerfile; the snapshot id is written to sandbox/__init__.py for MDA and to .env for the probe.",
                 status="done" if snapshot else "todo",
                 cli="uv run paid-media-agent sandbox publish --name paid-media-agent-sandbox",
                 action=StepAction(kind="command", label="Copy command"),
-            ),
-            Step(
-                id="sb_backend",
-                title="Run against the sandbox",
-                description="langgraph dev, serve, and the console then mount skills and the wiki in the sandbox, mirror artifacts, and render PDFs inside it.",
-                status="done" if sandbox_backend else "optional",
-                cli="uv run paid-media-agent config set PAID_MEDIA_BACKEND=sandbox",
-                action=StepAction(
-                    kind="form",
-                    label="Save",
-                    keys=("PAID_MEDIA_BACKEND", "PAID_MEDIA_SANDBOX_SNAPSHOT"),
-                ),
             ),
             Step(
                 id="sb_test",
@@ -365,78 +343,14 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         ),
     )
 
-    slack_route = Route(
-        id="slack",
-        title="Slack (rich adapter)",
-        tagline="Block Kit review cards, edits, receipts, and files",
-        description="Socket Mode needs no public URL. Signed HTTP is the hosted alternative. Both use the same application service.",
-        steps=(
-            Step(
-                id="sl_app",
-                title="Create the Slack app from the manifest",
-                description="Use config/slack-manifest.example.yaml, install it to your workspace, and copy the tokens.",
-                status="done" if slack.get("bot_token_set") else "todo",
-                cli="open https://api.slack.com/apps?new_app=1",
-                action=StepAction(
-                    kind="link", label="Open Slack API", href="https://api.slack.com/apps?new_app=1"
-                ),
-            ),
-            Step(
-                id="sl_tokens",
-                title="Store the tokens",
-                description="Bot token, and either the app-level token (Socket Mode) or the signing secret (HTTP).",
-                status="done" if socket_ready else "todo",
-                cli="uv run paid-media-agent config set SLACK_BOT_TOKEN=... SLACK_APP_TOKEN=... SLACK_TRANSPORT=socket_mode",
-                action=StepAction(
-                    kind="form",
-                    label="Save Slack settings",
-                    keys=(
-                        "SLACK_TRANSPORT",
-                        "SLACK_BOT_TOKEN",
-                        "SLACK_APP_TOKEN",
-                        "SLACK_SIGNING_SECRET",
-                    ),
-                ),
-            ),
-            Step(
-                id="sl_test",
-                title="Test the connection",
-                description="auth.test with the bot token and a Socket Mode ticket with the app token.",
-                status="blocked" if not socket_ready else "todo",
-                cli="uv run paid-media-agent test slack --json",
-                action=StepAction(kind="test", label="Test Slack", action="slack_test"),
-            ),
-            Step(
-                id="sl_approvers",
-                title="Name the approvers",
-                description="Refs look like slack:<team_id>:<user_id>. Card location is never authorization.",
-                status="done" if writes.get("approvers") else "todo",
-                cli="uv run paid-media-agent config set PAID_MEDIA_APPROVER_IDS=slack:T123:U456",
-                action=StepAction(
-                    kind="form",
-                    label="Save approvers",
-                    keys=("PAID_MEDIA_APPROVER_IDS", "PAID_MEDIA_ALLOW_SELF_APPROVAL"),
-                ),
-            ),
-            Step(
-                id="sl_run",
-                title="Run the adapter",
-                description="Starts Socket Mode locally and keeps the log here.",
-                status="blocked" if not socket_ready else "todo",
-                cli="uv run paid-media-agent slack",
-                action=StepAction(kind="process", label="Start Slack adapter", action="slack"),
-            ),
-        ),
-    )
-
     mda_ready = (
         bool(mda.get("cli_installed")) and bool(mda.get("langsmith_key_set")) and model_ready
     )
     mda_route = Route(
         id="mda",
         title="Deploy to MDA",
-        tagline="Managed threads, sandbox, schedules, and native Slack",
-        description="agent.py, instructions.md, skills/, and channels/slack.py are the managed project files. Secrets travel from .env at deploy time.",
+        tagline="Managed threads, sandbox, schedules, identity, and Slack",
+        description="agent.py, instructions.md, skills/, channels/slack.py, identity.py, and schedules/ are the project files. Secrets travel from .env at deploy time; the first deploy provisions the Slack app.",
         steps=(
             Step(
                 id="mda_key",
@@ -466,72 +380,11 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 ),
             ),
             Step(
-                id="mda_check",
-                title="Preflight",
-                description="CLI present, agent.py imports, channels/slack.py declared, provider key available.",
-                status="todo" if mda_ready else "blocked",
-                cli="uv run paid-media-agent mda check --json",
-                action=StepAction(kind="test", label="Run preflight", action="mda_check"),
-            ),
-            Step(
-                id="mda_dev",
-                title="Run locally with LangSmith Studio",
-                description="mda dev runs the managed runtime locally against your .env.",
-                status="optional",
-                cli="uv run mda dev",
-                action=StepAction(kind="process", label="Start mda dev", action="mda-dev"),
-            ),
-            Step(
-                id="mda_deploy",
-                title="Deploy",
-                description="Builds and deploys to LangSmith Cloud (US). The first deploy prints a Slack authorization link in the log.",
-                status="blocked" if not mda_ready else "todo",
-                cli="uv run mda deploy .",
-                action=StepAction(
-                    kind="process", label="Deploy", action="mda-deploy", payload={"confirm": True}
-                ),
-            ),
-        ),
-    )
-
-    db_set = bool(self_hosted.get("database_url_set"))
-    api_set = bool(self_hosted.get("api_tokens_set"))
-    self_route = Route(
-        id="self_hosted",
-        title="Self-host",
-        tagline="Postgres, your API, your Slack app, your infrastructure",
-        description="The same assembly compiled with create_deep_agent, durable state in Postgres, and a small authenticated FastAPI boundary.",
-        steps=(
-            Step(
-                id="sh_db",
-                title="Postgres",
-                description="DATABASE_URL for checkpoints, proposals, approvals, receipts, and dedupe.",
-                status="done" if db_set else "todo",
-                cli="uv run paid-media-agent config set DATABASE_URL=postgresql://...",
-                action=StepAction(kind="form", label="Save database URL", keys=("DATABASE_URL",)),
-            ),
-            Step(
-                id="sh_db_test",
-                title="Test the database",
-                description="Connects and reads the server version.",
-                status="blocked" if not db_set else "todo",
-                cli="uv run paid-media-agent test db --json",
-                action=StepAction(kind="test", label="Test database", action="database_test"),
-            ),
-            Step(
-                id="sh_tokens",
-                title="API tokens and signing key",
-                description="Generate a caller token for the API and the HMAC key that signs approvals.",
-                status="done" if api_set and writes.get("signing_key_set") else "todo",
-                cli="uv run paid-media-agent config generate PAID_MEDIA_API_TOKENS && uv run paid-media-agent config generate PAID_MEDIA_APPROVAL_SIGNING_KEY",
-                action=StepAction(kind="run", label="Generate secrets", action="generate_secrets"),
-            ),
-            Step(
-                id="sh_approvers",
-                title="Approvers",
-                description="API caller names or Slack refs that may approve, edit, or reject.",
+                id="mda_approvers",
+                title="Name the approvers",
+                description="Identity refs allowed to approve changes. A refused approval names the ref the platform presented, so paste that. Card location is never authorization.",
                 status="done" if writes.get("approvers") else "todo",
-                cli="uv run paid-media-agent config set PAID_MEDIA_APPROVER_IDS=operator",
+                cli="uv run paid-media-agent config set PAID_MEDIA_APPROVER_IDS=<ref>,<ref>",
                 action=StepAction(
                     kind="form",
                     label="Save approvers",
@@ -539,23 +392,29 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 ),
             ),
             Step(
-                id="sh_serve",
-                title="Run the API",
-                description="Serves threads, proposals, approvals, artifacts, and health on the configured host and port.",
-                status="todo",
-                cli="uv run paid-media-agent serve",
-                action=StepAction(kind="process", label="Start API", action="serve"),
+                id="mda_check",
+                title="Preflight",
+                description="CLI present, agent.py imports, Slack channel and identity declared, provider key available, sandbox declaration consistent.",
+                status="todo" if mda_ready else "blocked",
+                cli="uv run paid-media-agent mda check --json",
+                action=StepAction(kind="test", label="Run preflight", action="mda_check"),
             ),
             Step(
-                id="sh_http_slack",
-                title="Slack over signed HTTP",
-                description="For a hosted deployment, set the signing secret and point the Slack request URL at your public endpoint.",
+                id="mda_dev",
+                title="Run locally with LangSmith Studio",
+                description="mda dev runs the managed runtime locally against your .env and opens LangSmith Studio.",
                 status="optional",
-                cli="uv run paid-media-agent config set SLACK_TRANSPORT=http SLACK_SIGNING_SECRET=...",
+                cli="uv run mda dev",
+                action=StepAction(kind="process", label="Start mda dev", action="mda-dev"),
+            ),
+            Step(
+                id="mda_deploy",
+                title="Deploy",
+                description="Builds and deploys to LangSmith Cloud (US). The first deploy prints a Slack authorization link; open it, approve, then press Enter in the terminal.",
+                status="blocked" if not mda_ready else "todo",
+                cli="uv run mda deploy .",
                 action=StepAction(
-                    kind="form",
-                    label="Save HTTP transport",
-                    keys=("SLACK_TRANSPORT", "SLACK_SIGNING_SECRET"),
+                    kind="process", label="Deploy", action="mda-deploy", payload={"confirm": True}
                 ),
             ),
         ),
@@ -608,14 +467,4 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             ),
         ),
     )
-    return [
-        local,
-        pipeboard,
-        org_route,
-        direct,
-        sandbox_route,
-        slack_route,
-        mda_route,
-        self_route,
-        writes_route,
-    ]
+    return [local, pipeboard, org_route, direct, sandbox_route, mda_route, writes_route]

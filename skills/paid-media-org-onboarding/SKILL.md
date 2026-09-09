@@ -1,17 +1,17 @@
 ---
 name: paid-media-org-onboarding
-description: Learn an organization's goals, conversions, targets, budget, markets, naming, and approvers through a short interview, accept links and files, and save them under /docs/org so every later analysis uses them.
+description: Learn an organization's goals, conversions, targets, budget, markets, naming, and approvers through a short interview, accept links and files, and save them so every later analysis uses them.
 ---
 
 # Organization onboarding
 
-Use this skill when `/docs/org/goals.md` is missing or mostly "Not provided", when the user asks
+Use this skill when `get_org_context` returns mostly "Not provided", when the user asks
 to set up, onboard, or "tell you about the business", or when an analysis needs a fact only the
 organization knows (a target, the conversion that counts, a naming convention).
 
 ## How to run the interview
 
-1. Read `/docs/org/goals.md` and `/docs/org/conventions.md` first. Ask only about empty fields.
+1. Call `get_org_context` first. Ask only about empty fields.
 2. Ask at most two questions per turn, in plain language, each with one short example. The eight
    questions, in order, are the ones `update_org_profile` accepts: what you sell and to whom; the
    conversion that counts per platform; targets or "directional"; monthly budget and currency;
@@ -21,9 +21,8 @@ organization knows (a target, the conversion that counts, a naming convention).
    Files are attached through the setup console or `paid-media-agent org add-file`; say so.
 4. Save after every answer with `update_org_profile`, passing only the fields just answered.
    Never rewrite a field the user did not change.
-5. Confirm in one sentence what was saved and where (`/docs/org/goals.md`,
-   `/docs/org/conventions.md`), then ask the next question or offer a first analysis that uses
-   the new context ("Want the last complete week against your CPA target?").
+5. Confirm in one sentence what was saved, then ask the next question or offer a first
+   analysis that uses the new context ("Want the last complete week against your CPA target?").
 
 ## Rules
 

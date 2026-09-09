@@ -67,17 +67,27 @@ def test_only_public_https_links_are_fetched() -> None:
             fetch_text(url)
 
 
-def test_tool_merges_answers_and_publishes_the_pages(tmp_path: Path) -> None:
-    published: list[Path] = []
-    tools = {t.name: t for t in build_org_tools(tmp_path, publish=published.append)}
+def test_tools_merge_answers_and_return_the_context_without_the_filesystem(tmp_path: Path) -> None:
+    tools = {t.name: t for t in build_org_tools(tmp_path)}
     save_profile(tmp_path, OrgProfile(business="B2B software"))
+    add_file(tmp_path, _brief(tmp_path), note="Q4 plan")
 
     result = json.loads(tools["update_org_profile"].invoke({"targets": "directional for now"}))
+    context = json.loads(tools["get_org_context"].invoke({}))
+    brief = json.loads(tools["get_org_context"].invoke({"source": "brief.md"}))
 
     assert result["saved"] == ["targets"] and result["answered"] == 2
     assert load_profile(tmp_path).business == "B2B software", "untouched fields keep their value"
-    assert {p.name for p in published} >= {"goals.md", "conventions.md", "profile.json"}
+    assert "directional for now" in context["goals"] and "Not provided" in context["conventions"]
+    assert context["sources"] == ["brief.md"] and brief["text"].startswith("# Q4 plan")
+    assert json.loads(tools["get_org_context"].invoke({"source": "nope.md"}))["error"] is True
     assert json.loads(tools["update_org_profile"].invoke({}))["error"] is True
+
+
+def _brief(tmp_path: Path) -> Path:
+    brief = tmp_path / "brief.md"
+    brief.write_text("# Q4 plan\n\nDouble LinkedIn in October.")
+    return brief
 
 
 def test_console_actions_validate_fields(tmp_path: Path) -> None:

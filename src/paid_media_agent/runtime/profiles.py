@@ -17,8 +17,6 @@ from paid_media_agent.persistence.memory import (
     InMemoryProposalRepository,
     InMemoryReceiptRepository,
 )
-from paid_media_agent.reports.render import HostPdfEngine, PdfEngine
-from paid_media_agent.runtime.sandbox import Backend
 from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import CatalogProvider
 from paid_media_agent.tools.fixtures import FakeWriteProvider, FixtureReadProvider, FixtureState
@@ -31,7 +29,7 @@ from paid_media_agent.tools.write_policy import (
 )
 from paid_media_agent.tools.writes import ApprovalPolicy, ApprovalSigner, WriteGate
 
-ProfileName = Literal["local", "mda", "self_hosted"]
+ProfileName = Literal["local", "mda"]
 RunMode = Literal["conversation"]
 """Reserved for a future read-only mode; every current entry point is a conversation."""
 
@@ -58,12 +56,6 @@ class RuntimeProfile:
     skills_root: Path | None = None
     extra_secrets: tuple[str, ...] = field(default_factory=tuple)
     write_policy_issues: tuple[PolicyIssue, ...] = field(default_factory=tuple)
-    backend: Backend | None = None
-    """None means the repository filesystem; see `runtime.sandbox.build_backend`."""
-
-    @property
-    def pdf_engine(self) -> PdfEngine:
-        return self.backend.pdf_engine if self.backend is not None else HostPdfEngine()
 
     def write_gate(self, settings: Settings) -> WriteGate:
         kill_switch = settings.paid_media_kill_switch_path
@@ -134,7 +126,6 @@ def fixture_profile(
     catalog_provider: CatalogProvider,
     name: ProfileName = "local",
     workspace_root: Path | None = None,
-    backend: Backend | None = None,
     fixture_state: FixtureState | None = None,
     write_provider: FakeWriteProvider | None = None,
     approval_policy: ApprovalPolicy | None = None,
@@ -149,7 +140,7 @@ def fixture_profile(
     return RuntimeProfile(
         name=name,
         workspace_root=root,
-        artifacts=ArtifactStore(root, mirror=backend.mirror if backend else None),
+        artifacts=ArtifactStore(root),
         accounts=load_accounts(settings, project_root),
         catalog_provider=catalog_provider,
         read_provider=FixtureReadProvider(state),
@@ -164,5 +155,4 @@ def fixture_profile(
         receipts=receipts or InMemoryReceiptRepository(),
         run_mode=run_mode,
         skills_root=project_root,
-        backend=backend,
     )

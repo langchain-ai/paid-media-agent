@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from deepagents.backends.protocol import BackendProtocol
 from langchain.agents.middleware import (
     AgentMiddleware,
     InterruptOnConfig,
@@ -98,8 +97,6 @@ class AgentComponents:
     interrupt_on: Mapping[str, InterruptOnConfig]
     system_prompt: str
     skills: tuple[str, ...]
-    backend: BackendProtocol | None
-    """The model's filesystem; None means the repository (see runtime.sandbox)."""
     metadata: AssemblyMetadata
     proposal_service: ProposalService
     write_executor: WriteExecutor
@@ -201,11 +198,6 @@ def build_agent_components(
     services = _build_services(settings, runtime)
 
     project_root = runtime.skills_root or Path.cwd()
-    backend = runtime.backend
-
-    def publish_project_file(path: Path) -> None:
-        if backend is not None:
-            backend.publish(project_root, path)
 
     platform_tools = build_platform_read_tools(catalog, services.read_dispatcher)
     core_tools: list[BaseTool] = [
@@ -213,8 +205,8 @@ def build_agent_components(
         build_discover_tools_tool(runtime.catalog_provider),
         build_compare_periods_tool(runtime.artifacts),
         build_summarize_window_tool(runtime.artifacts),
-        build_render_report_tool(runtime.artifacts, pdf_engine=runtime.pdf_engine),
-        *build_org_tools(project_root, publish=publish_project_file),
+        build_render_report_tool(runtime.artifacts),
+        *build_org_tools(project_root),
     ]
     write_tools: list[BaseTool] = []
     if runtime.run_mode == "conversation":
@@ -287,7 +279,6 @@ def build_agent_components(
         interrupt_on=interrupt_on,
         system_prompt=prompt,
         skills=("/skills/",),
-        backend=runtime.backend.model_fs if runtime.backend is not None else None,
         metadata=metadata,
         proposal_service=services.proposal_service,
         write_executor=services.write_executor,
@@ -300,11 +291,6 @@ def _secret_values(settings: Settings) -> tuple[str, ...]:
     for secret in (
         settings.pipeboard_api_token,
         settings.paid_media_approval_signing_key,
-        settings.slack_bot_token,
-        settings.slack_app_token,
-        settings.slack_signing_secret,
-        settings.database_url,
-        settings.paid_media_api_tokens,
     ):
         if secret is not None:
             values.append(secret.get_secret_value())

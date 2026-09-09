@@ -26,12 +26,7 @@ def workspace(tmp_path: Path, project_root: Path) -> Path:
 
 @pytest.fixture
 def client(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    for name in (
-        "ANTHROPIC_API_KEY",
-        "PIPEBOARD_API_TOKEN",
-        "SLACK_BOT_TOKEN",
-        "LANGSMITH_API_KEY",
-    ):
+    for name in ("ANTHROPIC_API_KEY", "PIPEBOARD_API_TOKEN", "LANGSMITH_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     app = create_console_app(workspace, token=TOKEN)
     return TestClient(app, base_url="http://127.0.0.1:8765")
@@ -63,18 +58,10 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
         "org",
         "direct",
         "sandbox",
-        "slack",
         "mda",
-        "self_hosted",
         "writes",
     ]
-    assert {p["name"] for p in data["processes"]} == {
-        "serve",
-        "slack",
-        "mda-dev",
-        "mda-deploy",
-        "studio",
-    }
+    assert {p["name"] for p in data["processes"]} == {"mda-dev", "mda-deploy"}
     posted = client.post(
         "/api/config",
         headers=headers,
@@ -133,8 +120,10 @@ def test_actions_accounts_policy_and_kill_switch(client: TestClient, workspace: 
     assert client.post(
         "/api/kill-switch", headers=headers, json={"engaged": False, "confirm": True}
     ).json()["ok"]
-    generated = client.post("/api/actions/generate_secrets", headers=headers, json={}).json()
-    assert generated["ok"] and generated["detail"]["api_token_show_once"].endswith(":operator")
+    generated = client.post(
+        "/api/config/generate", headers=headers, json={"key": "PAID_MEDIA_APPROVAL_SIGNING_KEY"}
+    ).json()
+    assert generated["ok"] and "show_once" not in generated["detail"]
 
 
 def test_demo_runs_through_the_console(client: TestClient) -> None:
@@ -156,5 +145,5 @@ def test_process_endpoints_guard_deploy(client: TestClient) -> None:
         == 409
     )
     assert client.post("/api/processes/unknown/start", headers=headers, json={}).status_code == 409
-    log = client.get("/api/processes/serve/log", headers=headers).json()
-    assert log["name"] == "serve" and log["running"] is False
+    log = client.get("/api/processes/mda-dev/log", headers=headers).json()
+    assert log["name"] == "mda-dev" and log["running"] is False

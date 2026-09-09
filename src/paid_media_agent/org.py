@@ -151,7 +151,7 @@ def render_goals(profile: OrgProfile) -> str:
     return (
         "# Goals and economics for this organization\n\n"
         "Answers given during onboarding. They override the generic doctrine in\n"
-        '`/docs/business-context` wherever the two differ. Say "not provided" when a field is empty;\n'
+        '`/skills/paid-media-wiki` wherever the two differ. Say "not provided" when a field is empty;\n'
         "never fill it with an industry guess.\n\n"
         + _section("What we sell and to whom", profile.business, "Not provided.")
         + _section(

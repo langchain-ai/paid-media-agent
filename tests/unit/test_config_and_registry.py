@@ -49,14 +49,13 @@ def test_plan_selection_paths() -> None:
 def test_settings_secret_helpers_never_expose_values(tmp_path: Path) -> None:
     settings = Settings(
         _env_file=None,  # type: ignore[call-arg]
-        paid_media_api_tokens="tok-abc:alice,tok-def:bob,malformed",
         paid_media_approver_ids="alice, bob",
         pipeboard_api_token="",
+        paid_media_approval_signing_key="signing-secret-value",
     )
-    assert settings.api_token_map() == {"tok-abc": "alice", "tok-def": "bob"}
     assert settings.approver_refs() == frozenset({"alice", "bob"})
     assert settings.pipeboard_api_token is None
-    assert "tok-abc" not in repr(settings)
+    assert "signing-secret-value" not in repr(settings)
 
 
 def test_account_registry_from_toml(project_root: Path) -> None:

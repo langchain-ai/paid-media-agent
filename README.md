@@ -6,8 +6,10 @@
 [![Built with Deep Agents](https://img.shields.io/badge/built%20with-Deep%20Agents-1c3c3c.svg)](https://docs.langchain.com/oss/python/deepagents/overview)
 
 Paid Media Agent is an open-source Deep Agents application for analyzing and safely managing paid
-platforms through Pipeboard. One shared agent core powers local development, Managed Deep Agents
-(MDA), self-hosted deployments, Slack, and an Agent UI.
+platforms through Pipeboard. It deploys with Managed Deep Agents (MDA), which runs the agent in
+Slack with managed threads, a sandbox per thread, scheduled reports, and identity. The repository
+holds the agent: its instructions, skills, business wiki, tools, and write policy, plus a local
+console and CLI for onboarding.
 
 A developer should be able to:
 
@@ -17,9 +19,10 @@ A developer should be able to:
 - ask business questions across campaigns, audiences, creatives, spend, conversions, and pipeline;
 - generate reconciled reports from deterministic calculations;
 - review an exact proposed change before any provider mutation runs;
-- deploy the simple Slack experience through MDA or use the rich Slack adapter locally and in a
-  self-hosted environment;
-- use the same threads, proposals, reports, and receipts from an Agent UI.
+- deploy to Slack with one command and get weekly and monthly reports on a schedule.
+
+Self-hosting (own API, Postgres, rich Slack adapter, Docker) lives on the `self-hosted` branch;
+see [docs/self-hosting.md](docs/self-hosting.md).
 
 ## Architecture
 
@@ -28,13 +31,13 @@ account identity, arithmetic, validation, reconciliation, approval state, provid
 and report layout.
 
 ```text
-Slack / Agent UI / API / schedule
+Slack (MDA channel) / schedule / local CLI
               |
-       shared agent assembly
+       shared agent assembly (agent.py)
               |
-  skills + business wiki + middleware
+  skills + business wiki + organization context + middleware
               |
- authorized Pipeboard catalog + deterministic tools
+ authorized Pipeboard catalog + direct adapters + deterministic tools
               |
  proposal -> approval -> one mutation -> readback -> receipt
 ```
@@ -43,20 +46,17 @@ Provider-native deferred tool search is used only when the selected OpenAI or An
 it. Other models use `LLMToolSelectorMiddleware`. Both paths finish by resolving the selected name and
 schema against the same host-owned authorized catalog.
 
-## Runtime profiles
+## Where it runs
 
-| Profile | Best for | What it provides |
+| Entry | What runs it | What it is for |
 |---|---|---|
-| Local | development and demos | fixture data, local filesystem, local graph, optional Slack Socket Mode |
-| MDA | fastest managed deployment | managed threads, checkpoints, sandbox, schedules, observability, and native Slack |
-| Self-hosted | full infrastructure and UX control | Postgres-backed state, rich Slack, custom auth, custom API, and optional Agent UI |
+| `paid-media-agent demo` | your machine, scripted model, fixture accounts | prove the install with no credentials |
+| `paid-media-agent ask` / `report` | your machine, your model, the same profile the deployment runs | try questions and reports before deploying |
+| `mda dev` | your machine, Managed Deep Agents runtime, LangSmith Studio | step through tool calls and approvals |
+| `mda deploy .` | LangSmith Cloud | Slack, schedules, threads, sandbox per thread, identity |
 
-The profiles share business logic and tool policy. A surface adapter may render differently, but it
-cannot grant a capability or bypass an approval.
-
-Independently of the profile, `PAID_MEDIA_BACKEND=sandbox` moves the model's filesystem into a
-LangSmith sandbox built from `sandbox/Dockerfile`, with the same paths as the repository, so local
-runs use the same world as production. See [sandbox/README.md](sandbox/README.md).
+Every entry compiles the same components from `agent.py`, so what you try locally is what runs in
+Slack. Business logic and tool policy never depend on where the agent runs.
 
 ## Quick start
 
@@ -69,22 +69,22 @@ uv run paid-media-agent demo --with-proposal   # fixture data through the real g
 uv run paid-media-agent setup                  # local page: model, ad accounts, try it, where it lives
 ```
 
-`setup` opens a local-only onboarding page (127.0.0.1, per-run token, writes only your `.env`):
-pick a model provider and test one call, paste a scoped Pipeboard token and tick the accounts the
-agent may read, answer eight plain questions about your business (or share links and files) so
-the agent knows your goals, conversions, targets, and naming, ask a question or open LangGraph
-Studio, then choose Managed Deep Agents or self-hosting. The agent can run that same interview in
-chat: ask it to learn about your business, and it saves the answers under `docs/org/`, which stays
-out of git. Every step shows the CLI command it runs, so a coding agent can do the same without
-a browser. The full command reference is in [OPERATIONS.md](OPERATIONS.md#command-reference).
+`setup` opens a local-only onboarding page (127.0.0.1, per-run token, writes only your `.env`)
+with six steps: Model (pick a provider, test one call), Ad accounts (a scoped Pipeboard token and
+the accounts the agent may read), Your business (eight plain questions, links, and files so the
+agent knows your goals, conversions, targets, and naming), Try it (one real question, locally),
+Deploy (LangSmith key, who may approve changes, preflight, `mda dev`, `mda deploy`), Done. The
+agent can run the business interview in chat as well: ask it to learn about your business and it
+saves the answers under `docs/org/`, which stays out of git. Every step shows the CLI command it
+runs, so a coding agent can do the same without a browser. The full command reference is in
+[OPERATIONS.md](OPERATIONS.md#command-reference).
 
 ```bash
 uv run paid-media-agent doctor --json           # every check, machine-readable
 uv run paid-media-agent ask "How did spend move week over week?"
 uv run paid-media-agent report --cadence weekly # deterministic HTML and PDF report
-uv run langgraph dev                            # LangGraph Server and Studio (studio extra)
-uv run paid-media-agent serve                   # self-hosted API, plus signed Slack HTTP when configured
-uv run paid-media-agent mda dev                 # managed run, same graph
+uv run mda dev                                  # the managed runtime locally, with LangSmith Studio
+uv run mda deploy .                             # deploy; the first run provisions Slack
 ```
 
 ![Setup welcome](docs/screenshots/setup-welcome.png)
@@ -116,41 +116,36 @@ last complete window with the one before, and renders HTML and PDF with no model
 MDA project ships the same runs as schedules in `schedules/`. A platform whose read fails stays
 visible as unavailable and suppresses the cross-platform total.
 
-## Self-host with Docker
+## Deploying with Managed Deep Agents
+
+`agent.py` exports the definition MDA needs. `instructions.md` and `skills/` (the business wiki is
+the skill `paid-media-wiki`) are synced as managed context; `channels/slack.py`, `identity.py`,
+`schedules/` (weekly and monthly reports), and `sandbox/` are the managed configuration. With a
+LangSmith API key in `.env`:
 
 ```bash
-cp .env.example .env            # add a model key; everything else has a default
-docker compose up               # API on :8080 with Postgres for proposals, approvals, receipts
-```
-
-The image includes Pango and Cairo, so PDF reports render without a sandbox. `SLACK_TRANSPORT=http`
-with a signing secret and bot token mounts the rich Slack transport on the same server.
-
-## Managed Deep Agents path
-
-`agent.py` exports the definition MDA needs; `instructions.md`, `skills/`, `channels/slack.py`,
-`identity.py` (the LangSmith identity Slack ingress requires), `schedules/` (weekly and monthly
-reports), and the generated `sandbox/__init__.py` (written by `paid-media-agent sandbox publish|use`)
-are the managed project files. With a LangSmith API key in `.env`:
-
-```bash
-uv run mda dev        # local managed run with LangSmith Studio
-uv run mda deploy .   # hosted deployment; provisions native Slack from channels/slack.py
+uv run paid-media-agent mda check   # preflight
+uv run mda dev                      # local managed run with LangSmith Studio
+uv run mda deploy .                 # hosted deployment; provisions Slack from channels/slack.py
 ```
 
 The managed build installs core dependencies only, so the Anthropic and OpenAI integration
-packages (the latter also serves `langsmith:` gateway models) ship in core; other providers stay
-optional extras and are unavailable in a managed build unless you move them into core.
-`mda deploy` needs a LangSmith key with deployment permissions; a key that can only trace or
-call the gateway fails with `403 deployments:read`.
+packages (the latter also serves `langsmith:` gateway models) and Jinja2 ship in core; other
+providers stay optional extras and are unavailable in a managed build unless you move them into
+core. `mda deploy` needs a LangSmith key with deployment permissions; a key that can only trace
+or call the gateway fails with `403 deployments:read`.
 
-After the first deploy the agent DMs you in Slack; reply there or mention it in a channel. Native Slack supports approve and reject on `execute_change`. Use the rich adapter
-(`paid-media-agent slack`) when reviewers need edits, receipts, and files in Block Kit.
+After the first deploy the agent DMs you in Slack; reply there or mention it in a channel. Every
+proposed change arrives with Approve and Reject; only the identities in `PAID_MEDIA_APPROVER_IDS`
+can approve, and a refused click names the identity it saw so you can add it. MDA renders that
+card itself today; the Block Kit review cards with edits live in `surfaces/slack/` for a custom
+channel and on the `self-hosted` branch.
 
 ## Start here
 
 - [Architecture](docs/architecture/README.md) and [operations](OPERATIONS.md)
-- [Paid-media business context](docs/business-context/README.md) the agent reads at run time
+- [Paid-media business wiki](skills/paid-media-wiki/SKILL.md) the agent reads at run time
+- [Self-hosting](docs/self-hosting.md) on the `self-hosted` branch
 - [Operating contract for humans and coding agents](AGENTS.md)
 - [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [changelog](CHANGELOG.md)
 - [Open-source principles this repository follows](docs/open-source-principles.md)

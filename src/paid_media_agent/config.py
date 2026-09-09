@@ -6,16 +6,11 @@ import tomllib
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
-from typing import Literal
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from paid_media_agent.domain.common import Platform
-
-RuntimeName = Literal["local", "mda", "self_hosted"]
-BackendName = Literal["local", "sandbox"]
-SlackTransport = Literal["socket_mode", "http"]
 
 DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
 
@@ -116,13 +111,10 @@ class Settings(BaseSettings):
     """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_max_model_calls: int = Field(default=40, ge=5)
     """Model calls per run before the agent stops and reports; bounds runaway tool loops."""
-    paid_media_runtime: RuntimeName = "local"
-    """Which path the setup console guides you through; the command you run selects the runtime."""
-    paid_media_backend: BackendName = "local"
-    """Where the model's files live: the repository, or a LangSmith sandbox per process."""
     paid_media_sandbox_snapshot: str | None = None
-    """Snapshot built from sandbox/Dockerfile. Empty means the platform default image."""
+    """Snapshot built from sandbox/Dockerfile and declared to MDA. Empty means the platform image."""
     paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
+    """Idle seconds before MDA deletes a thread's sandbox; written into sandbox/__init__.py."""
     paid_media_log_level: str = "INFO"
     paid_media_workspace_root: Path = Path("workspace")
     paid_media_fixture_anchor: date | None = None
@@ -160,16 +152,6 @@ class Settings(BaseSettings):
     paid_media_approval_ttl_seconds: int = Field(default=900, ge=60, le=86400)
     paid_media_allow_self_approval: bool = False
 
-    slack_bot_token: SecretStr | None = None
-    slack_app_token: SecretStr | None = None
-    slack_signing_secret: SecretStr | None = None
-    slack_transport: SlackTransport = "socket_mode"
-
-    database_url: SecretStr | None = None
-    paid_media_api_tokens: SecretStr | None = None
-    paid_media_api_host: str = "127.0.0.1"
-    paid_media_api_port: int = Field(default=8080, ge=1, le=65535)
-
     @field_validator(
         "paid_media_model_base_url",
         "paid_media_tool_selector_model",
@@ -195,11 +177,6 @@ class Settings(BaseSettings):
         "x_ads_access_token_secret",
         "openai_ads_api_key",
         "paid_media_approval_signing_key",
-        "slack_bot_token",
-        "slack_app_token",
-        "slack_signing_secret",
-        "database_url",
-        "paid_media_api_tokens",
         mode="before",
     )
     @classmethod
@@ -249,17 +226,6 @@ class Settings(BaseSettings):
         if self.openai_ads_api_key is not None:
             platforms.append(Platform.OPENAI_ADS)
         return tuple(platforms)
-
-    def api_token_map(self) -> dict[str, str]:
-        """Parse `token:caller_ref,token:caller_ref` into a lookup. Values stay in memory only."""
-        if self.paid_media_api_tokens is None:
-            return {}
-        result: dict[str, str] = {}
-        for pair in self.paid_media_api_tokens.get_secret_value().split(","):
-            token, sep, caller = pair.strip().partition(":")
-            if sep and token and caller:
-                result[token] = caller
-        return result
 
 
 def project_root(start: Path | None = None) -> Path:

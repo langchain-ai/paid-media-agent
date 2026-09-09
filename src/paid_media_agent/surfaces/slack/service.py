@@ -1,4 +1,8 @@
-"""Slack application service: dedupe, thread mapping, mention policy, and proposal actions."""
+"""Slack application service: dedupe, thread mapping, mention policy, and proposal actions.
+
+Transport-neutral Block Kit logic kept for a custom Slack channel. Managed Deep Agents' native
+channel (`channels/slack.py`) is the deployed surface today.
+"""
 
 from __future__ import annotations
 
@@ -45,7 +49,7 @@ def strip_mention(text: str, bot_user_id: str | None) -> str:
 
 
 class SlackApplicationService:
-    """Transport-neutral. Socket Mode and signed HTTP both call `handle_event` and `handle_action`."""
+    """Transport-neutral: a transport calls `handle_event` for messages and `handle_action` for buttons."""
 
     def __init__(
         self,
@@ -197,16 +201,3 @@ class SlackApplicationService:
         except WriteDenied as exc:
             return render_answer(f"Edit refused: {exc.reason}. {exc.detail}".strip())
         return render_proposal(view, can_act=True)
-
-
-def build_slack_service(runtime: Any) -> SlackApplicationService:
-    """One Slack service over a built runtime, shared by Socket Mode and the HTTP transport."""
-    from paid_media_agent.surfaces.runner import AgentRunner
-
-    runner = AgentRunner(
-        graph=runtime.graph,
-        service=runtime.components.proposal_service,
-        receipts=runtime.profile.receipts,
-        threads=runtime.threads,
-    )
-    return SlackApplicationService(runner=runner, dedupe=runtime.dedupe)

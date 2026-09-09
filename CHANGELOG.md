@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Changed (Managed Deep Agents only)
+
+- `main` deploys with Managed Deep Agents and nothing else. The self-hosted API, Postgres
+  persistence, the rich Slack transports (Socket Mode, signed HTTP), the local LangGraph Server
+  and Studio factory, `PAID_MEDIA_BACKEND`, `PAID_MEDIA_RUNTIME`, and the Docker files moved to
+  the `self-hosted` branch (frozen at `a5477d9`); `docs/self-hosting.md` explains why and how to
+  use it. The Block Kit renderers, the transport-neutral Slack service, and the runner stay for a
+  custom Slack channel.
+- The business wiki is now the skill `skills/paid-media-wiki/` (was `docs/business-context/`),
+  because MDA syncs `skills/` into the deployment and nothing else from the repository: in the
+  hosted sandbox `/docs/business-context` did not exist.
+- New `get_org_context` tool returns the organization profile and shared briefs to the model, so
+  the same context is available locally and inside the per-thread sandbox; skills and
+  `instructions.md` call it instead of reading `/docs/org` files.
+- `paid-media-agent ask`, `report`, and the console's "Try it" compile the deployment's profile
+  (live catalog when credentials exist) instead of a fixture-only runtime.
+- Console: the wizard is Model, Ad accounts, Your business, Try it, Deploy, Done; the Deploy step
+  collects the approver identities next to the LangSmith key. Jinja2 moved into core so the
+  scheduled reports render in the managed build. Extras `slack`, `self-host`, and `studio` are
+  gone.
+
 ### Added (organization onboarding)
 
 - `docs/org/`: the organization's own context (business, conversion that counts, targets, budget,

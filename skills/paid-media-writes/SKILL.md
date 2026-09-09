@@ -8,7 +8,7 @@ description: Prepare, review, edit, approve, reject, or reconcile a paid-media c
 Use this skill whenever a request would change campaign, budget, bid, status, targeting, creative,
 conversion, audience, or another provider resource.
 
-1. Read `/docs/business-context/write-safety.md`.
+1. Read `/skills/paid-media-wiki/write-safety.md`.
 2. Confirm the user asked for a change, not only an analysis.
 3. Call `discover_write_operations`. It lists the admitted operations with their editable fields,
    units, risk, and the current execution gate. Never guess a mutation name or field.

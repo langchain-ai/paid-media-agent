@@ -39,13 +39,12 @@ from paid_media_agent.admin.model_presets import (
     _module_available,
     model_key_env,
 )
-from paid_media_agent.config import AccountBinding, Settings
+from paid_media_agent.config import AccountBinding, ModelConfig, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.middleware.tool_selection import capabilities_for, plan_selection
 from paid_media_agent.org import org_summary
-from paid_media_agent.runtime.graph import STUDIO_PORT, STUDIO_URL
 from paid_media_agent.runtime.profiles import load_write_policy_file
 from paid_media_agent.surfaces.runner import _content_text
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog
@@ -93,6 +92,14 @@ def load_settings(root: Path) -> Settings:
     return Settings(_env_file=str(root / ".env"))
 
 
+def model_or_invalid(settings: Settings) -> tuple[ModelConfig, str]:
+    """The parsed model, or a placeholder plus the reason, so a typo in `.env` is shown, not a crash."""
+    try:
+        return settings.model_settings(), ""
+    except ValueError as exc:
+        return ModelConfig(provider="", model=settings.paid_media_model), str(exc)
+
+
 # ---------------------------------------------------------------- status and configuration
 
 
@@ -134,34 +141,28 @@ def status(root: Path) -> ActionResult:
     kill_switch = settings.paid_media_kill_switch_path
     if not kill_switch.is_absolute():
         kill_switch = root / kill_switch
-    model = settings.model_settings()
+    model, model_error = model_or_invalid(settings)
     caps = capabilities_for(model)
     plan = plan_selection(model, max_tools=settings.paid_media_max_selected_tools)
+    key_env = settings.paid_media_model_api_key_env if model_error else model_key_env(settings)
     failing = [c.name for c in checks if c.status == "fail"]
     detail: dict[str, JsonValue] = {
         "checks": _checks_json(checks),
         "env": env,
         "org": org_summary(root),
-        "runtime": settings.paid_media_runtime,
         "model_presets": [dict(p) for p in MODEL_PRESETS],
-        "model_key_env": model_key_env(settings),
-        "model_key_set": bool(
-            model_key_env(settings) and env.get(model_key_env(settings) or "", False)
-        ),
+        "model_key_env": key_env,
+        "model_key_set": bool(key_env and env.get(key_env, False)),
         "model_base_url": settings.paid_media_model_base_url or "",
-        "studio": {
-            "installed": importlib.util.find_spec("langgraph_cli") is not None,
-            "url": STUDIO_URL,
-            "server_url": f"http://127.0.0.1:{STUDIO_PORT}",
-        },
         "model": {
-            "spec": model.spec,
+            "spec": settings.paid_media_model if model_error else model.spec,
+            "error": model_error,
             "provider": model.provider,
             "verified": caps.verified,
             "native_tool_search": caps.native_tool_search,
             "selection": plan.strategy.value,
             "selection_reason": plan.reason,
-            "package_installed": _module_available(model.provider),
+            "package_installed": bool(model.provider) and _module_available(model.provider),
         },
         "pipeboard": {
             "token_set": settings.pipeboard_api_token is not None,
@@ -190,26 +191,13 @@ def status(root: Path) -> ActionResult:
             "allow_self_approval": settings.paid_media_allow_self_approval,
             "signing_key_set": settings.paid_media_approval_signing_key is not None,
         },
-        "slack": {
-            "transport": settings.slack_transport,
-            "bot_token_set": settings.slack_bot_token is not None,
-            "app_token_set": settings.slack_app_token is not None,
-            "signing_secret_set": settings.slack_signing_secret is not None,
-            "package_installed": importlib.util.find_spec("slack_bolt") is not None,
-        },
-        "self_hosted": {
-            "database_url_set": settings.database_url is not None,
-            "api_tokens_set": settings.paid_media_api_tokens is not None,
-            "psycopg_installed": importlib.util.find_spec("psycopg") is not None,
-            "api_host": settings.paid_media_api_host,
-            "api_port": settings.paid_media_api_port,
-        },
         "mda": {
             "cli_installed": importlib.util.find_spec("managed_deepagents") is not None,
             "langsmith_key_set": env.get("LANGSMITH_API_KEY", False),
             "agent_entry": (root / "agent.py").exists(),
             "slack_channel": (root / "channels" / "slack.py").exists(),
             "instructions": (root / "instructions.md").exists(),
+            "sandbox_declared": (root / "sandbox" / "__init__.py").exists(),
         },
         "tooling": {"uv": shutil.which("uv") is not None, "python": sys.version.split()[0]},
         "pdf": next((c.status == "ok" for c in checks if c.name == "report_pdf"), False),
@@ -256,25 +244,14 @@ def config_set(root: Path, updates: Mapping[str, str]) -> ActionResult:
 
 def generate_secret(root: Path, key: str) -> ActionResult:
     """Create a strong value for a host-owned secret and store it. The value is never returned."""
-    if key == "PAID_MEDIA_APPROVAL_SIGNING_KEY":
-        value = secrets.token_urlsafe(48)
-    elif key == "PAID_MEDIA_API_TOKENS":
-        value = f"{secrets.token_urlsafe(32)}:operator"
-    else:
+    if key != "PAID_MEDIA_APPROVAL_SIGNING_KEY":
         return _result("generate_secret", "fail", f"{key} cannot be generated")
-    write_env(root, {key: value})
-    shown = value if key == "PAID_MEDIA_API_TOKENS" else ""
-    detail: dict[str, JsonValue] = {"key": key}
-    if shown:
-        # An API token is shown once so the operator can store it in their client; it is not logged.
-        detail["show_once"] = shown
-        # `.env` stores `token:caller`; clients send only the token part as the bearer.
-        detail["usage"] = f"Authorization: Bearer {shown.split(':', 1)[0]}"
+    write_env(root, {key: secrets.token_urlsafe(48)})
     return _result(
         "generate_secret",
         "ok",
         f"{key} generated and stored in .env",
-        detail,
+        {"key": key},
         command=f"paid-media-agent config generate {key}",
     )
 
@@ -359,7 +336,7 @@ class LiveCatalog(BaseModel):
 
 
 async def _load_live(settings: Settings, root: Path) -> LiveCatalog:
-    from paid_media_agent.runtime.self_hosted import load_catalog
+    from paid_media_agent.runtime.catalog import load_catalog
 
     loaded = await load_catalog(settings, project_root=root)
     return LiveCatalog(catalog=loaded.catalog, loader=loaded.provider)
@@ -692,87 +669,10 @@ def policy_validate(
     )
 
 
-def slack_test(root: Path, *, client_factory: Callable[[str], Any] | None = None) -> ActionResult:
-    settings = load_settings(root)
-    if settings.slack_bot_token is None:
-        return _result("slack_test", "fail", "SLACK_BOT_TOKEN is not set")
-    if importlib.util.find_spec("slack_sdk") is None:
-        return _result("slack_test", "fail", "slack extra not installed; run uv sync --extra slack")
-    try:
-        if client_factory is None:
-            from slack_sdk import WebClient
-
-            client_factory = lambda token: WebClient(token=token)  # noqa: E731
-        bot = client_factory(settings.slack_bot_token.get_secret_value()).auth_test()
-        detail: dict[str, JsonValue] = {
-            "team": bot.get("team"),
-            "bot_user": bot.get("user"),
-            "transport": settings.slack_transport,
-        }
-        if settings.slack_transport == "socket_mode":
-            if settings.slack_app_token is None:
-                return _result(
-                    "slack_test", "fail", "SLACK_APP_TOKEN is required for Socket Mode", detail
-                )
-            app_token = settings.slack_app_token.get_secret_value()
-            client_factory(app_token).apps_connections_open(app_token=app_token)
-            detail["socket_mode"] = "connection ticket issued"
-        elif settings.slack_signing_secret is None:
-            return _result(
-                "slack_test",
-                "fail",
-                "SLACK_SIGNING_SECRET is required for the HTTP transport",
-                detail,
-            )
-    except Exception as exc:
-        return _result(
-            "slack_test", "fail", f"Slack rejected the credentials: {sanitize_exception(exc)}"
-        )
-    return _result(
-        "slack_test",
-        "ok",
-        f"connected to {detail.get('team')} as {detail.get('bot_user')}",
-        detail,
-        command="paid-media-agent test slack --json",
-    )
-
-
-def database_test(root: Path, *, connect: Callable[[str], Any] | None = None) -> ActionResult:
-    settings = load_settings(root)
-    if settings.database_url is None:
-        return _result(
-            "database_test",
-            "warn",
-            "DATABASE_URL is not set; the self-hosted runtime uses in-memory state",
-        )
-    if importlib.util.find_spec("psycopg") is None:
-        return _result(
-            "database_test", "fail", "psycopg not installed; run uv sync --extra self-host"
-        )
-    try:
-        if connect is None:
-            import psycopg
-
-            with psycopg.connect(
-                settings.database_url.get_secret_value(), connect_timeout=10
-            ) as conn:
-                version = conn.execute("SELECT version()").fetchone()
-        else:
-            version = connect(settings.database_url.get_secret_value())
-    except Exception as exc:
-        return _result("database_test", "fail", f"connection failed: {sanitize_exception(exc)}")
-    return _result(
-        "database_test",
-        "ok",
-        "Postgres reachable",
-        {"version": str(version[0])[:60] if version else ""},
-        command="paid-media-agent test db --json",
-    )
-
-
 def mda_check(root: Path) -> ActionResult:
     settings = load_settings(root)
     env = read_env(root)
+    model, model_error = model_or_invalid(settings)
     items: dict[str, JsonValue] = {
         "cli_installed": importlib.util.find_spec("managed_deepagents") is not None,
         "langsmith_key_set": bool(env.get("LANGSMITH_API_KEY") or _os_env("LANGSMITH_API_KEY")),
@@ -783,9 +683,9 @@ def mda_check(root: Path) -> ActionResult:
         "identity": (root / "identity.py").exists(),
         "sandbox_declared": (root / "sandbox" / "__init__.py").exists(),
         "sandbox_snapshot": settings.paid_media_sandbox_snapshot or "",
-        "model": settings.model_settings().spec,
-        "model_package": _module_available(settings.model_settings().provider),
-        "provider_key_set": _provider_key_set(settings, env),
+        "model": model_error or model.spec,
+        "model_package": not model_error and _module_available(model.provider),
+        "provider_key_set": not model_error and _provider_key_set(settings, env),
         "import_smoke": _agent_import_smoke(root),
         "deploy_command": "uv run mda deploy .",
         "dev_command": "uv run mda dev",
@@ -807,7 +707,7 @@ def mda_check(root: Path) -> ActionResult:
     if items["import_smoke"] != "ok":
         blocking.append("import_smoke")
     if items["sandbox_snapshot"] and not items["sandbox_declared"]:
-        # Our runtimes read the snapshot from .env; MDA reads only the literal in sandbox/__init__.py.
+        # `.env` names the snapshot for the CLI; MDA reads only the literal in sandbox/__init__.py.
         blocking.append("sandbox_declared (run `paid-media-agent sandbox use <name>`)")
     summary = "ready to deploy" if not blocking else f"blocked by {', '.join(blocking)}"
     return _result(
@@ -874,7 +774,7 @@ MAX_QUESTION_CHARS = 2000
 
 
 def ask_question(root: Path, question: str, *, model: Any | None = None) -> ActionResult:
-    """Run one question through the local runtime with the configured model."""
+    """Run one question locally through the same profile the deployment runs."""
     settings = load_settings(root)
     text = question.strip()
     if not text or len(text) > MAX_QUESTION_CHARS:
@@ -883,7 +783,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
         from langchain_core.runnables import RunnableConfig
 
         from paid_media_agent.assembly import resolve_model
-        from paid_media_agent.runtime.local import build_local_runtime
+        from paid_media_agent.runtime.local import build_configured_runtime
 
         chat = (
             model
@@ -894,14 +794,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
                 timeout_seconds=settings.paid_media_model_timeout_seconds,
             )
         )
-        from paid_media_agent.runtime.sandbox import build_backend
-
-        runtime = build_local_runtime(
-            settings,
-            project_root=root,
-            model=chat,
-            backend=build_backend(settings, project_root=root),
-        )
+        runtime = build_configured_runtime(settings, project_root=root, model=chat)
         config = RunnableConfig(
             configurable={
                 "thread_id": f"console-{secrets.token_hex(4)}",
@@ -926,7 +819,7 @@ def ask_question(root: Path, question: str, *, model: Any | None = None) -> Acti
             "selection": runtime.components.metadata.selection.strategy.value,
             "catalog_revision": runtime.catalog.revision,
         },
-        command='uv run python examples/ask.py "..."',
+        command='paid-media-agent ask "..."',
     )
 
 
@@ -981,10 +874,10 @@ def as_json(result: ActionResult) -> str:
 
 # ---------------------------------------------------------------- sandbox
 
-SANDBOX_DECLARATION = '''"""Managed sandbox for Managed Deep Agents. Generated by `paid-media-agent sandbox use`.
+SANDBOX_DECLARATION = '''"""The sandbox Managed Deep Agents gives every thread. Generated by `paid-media-agent sandbox use`.
 
-MDA reads this file statically, so the snapshot name must be a literal. Our own runtimes read
-`PAID_MEDIA_SANDBOX_SNAPSHOT` from `.env`; `mda check` reports when the two disagree.
+MDA reads this file statically, so the snapshot must be a literal. `.env` carries the same value
+as `PAID_MEDIA_SANDBOX_SNAPSHOT` for `sandbox test`; `mda check` reports when the two disagree.
 """
 
 from managed_deepagents import define_sandbox
@@ -1000,7 +893,7 @@ SNAPSHOT_HTTP_TIMEOUT = 120.0
 
 
 def sandbox_use(root: Path, name: str) -> ActionResult:
-    """Point both worlds at one snapshot: `.env` for our runtimes, `sandbox/__init__.py` for MDA.
+    """Declare one snapshot: `sandbox/__init__.py` for MDA, `.env` for `sandbox test`.
 
     `name` is a snapshot id (preferred, immutable) or a snapshot name.
     """
@@ -1078,7 +971,7 @@ def sandbox_publish(
 
 
 def sandbox_test(root: Path) -> ActionResult:
-    """Open one sandbox from the configured snapshot, run the probe, and delete it."""
+    """Open one sandbox from the declared snapshot, run the probe, and delete it."""
     from paid_media_agent.runtime.sandbox import (
         SandboxError,
         open_sandbox,

@@ -10,19 +10,22 @@
    provider-native fields under `source_fields` instead of widening the common model.
 4. Replace "are you sure?" confirmations with `propose_change` and `execute_change`: persisted
    ChangeSet, signed single-use approval, one attempt, readback, receipt.
-5. Encode business judgment in `skills/` and `docs/business-context/`; keep organization-specific
-   goals, thresholds, and account ids in host configuration.
+5. Encode business judgment in `skills/` (the wiki is `skills/paid-media-wiki/`); keep
+   organization-specific goals, thresholds, and account ids in host configuration and `docs/org/`.
 
-## Between runtime profiles
+## From the self-hosted profile to Managed Deep Agents
 
-- Local to self-hosted: set `DATABASE_URL` and `PAID_MEDIA_API_TOKENS`; proposals, claims, and
-  receipts move from memory to Postgres with the same objects and ids.
-- Self-hosted to MDA: keep `agent.py`, `identity.py`, `instructions.md`, `skills/`, `schedules/`,
-  `channels/slack.py`, and the generated `sandbox/__init__.py`;
-  MDA supplies the backend, threads, identity, and native Slack. The rich Slack adapter stays an
-  external service when Block Kit review or edits are required.
+The self-hosted profile is on the `self-hosted` branch. Moving a deployment to `main`:
+
+- keep `agent.py`, `identity.py`, `instructions.md`, `skills/`, `schedules/`, `channels/slack.py`,
+  `config/`, and `docs/org/`; MDA supplies threads, checkpoints, the sandbox, identity, and Slack;
+- drop `DATABASE_URL`, `PAID_MEDIA_API_TOKENS`, `SLACK_*`, `PAID_MEDIA_BACKEND`, and
+  `PAID_MEDIA_RUNTIME` from `.env`; `config show` lists what is still read;
+- replace `slack:<team>:<user>` approver refs with the identities MDA presents (a refused
+  approval names one);
+- wiki links change from `/docs/business-context/<page>` to `/skills/paid-media-wiki/<page>`.
 
 ## Version 0.1.0
 
-First implementation. There are no stored-format migrations yet; the Postgres tables are created by
-`PostgresRepositories.setup()` and the LangGraph checkpointer's own setup.
+First implementation. There are no stored-format migrations; proposals, approval claims, and
+receipts are in-memory objects owned by the running process.

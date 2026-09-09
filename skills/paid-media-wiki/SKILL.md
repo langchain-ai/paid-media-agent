@@ -1,7 +1,13 @@
+---
+name: paid-media-wiki
+description: The paid-media business wiki the other skills route to. General doctrine on goals, metrics and attribution, the decision model, platform differences, benchmarks, anomalies, bidding and budget, reporting, write safety, and answer style. Read the page a question calls for, never the whole wiki.
+---
+
 # Paid-media business context
 
 This wiki gives the agent enough general business context to analyze paid media without pretending
-every company has the same goals, attribution model, sales cycle, or risk tolerance.
+every company has the same goals, attribution model, sales cycle, or risk tolerance. Pages live
+next to this file at `/skills/paid-media-wiki/<page>.md`.
 
 ## Read order
 
@@ -27,8 +33,8 @@ for unresolved doctrine. Append material changes to [log.md](log.md).
 ## The organization layer
 
 Generic doctrine lives here. The organization's own goals, conversions, targets, budget,
-naming, and approvers live in `/docs/org` (ignored by git, written during onboarding) and take
-precedence wherever the two differ.
+naming, and approvers are written during onboarding and returned by the `get_org_context` tool;
+they take precedence wherever the two differ.
 
 ## Boundaries
 

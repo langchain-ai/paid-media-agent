@@ -1,4 +1,4 @@
-"""Command-line entry: setup console, fixture demo, doctor, tests, accounts, and runtimes.
+"""Command-line entry: setup console, fixture demo, doctor, tests, accounts, org, sandbox, MDA.
 
 Every console action has a subcommand with `--json`, so coding agents and humans share one path.
 """
@@ -380,28 +380,11 @@ def test_pipeboard(as_json: bool) -> None:
     _emit(actions.pipeboard_test(project_root()), as_json)
 
 
-@test.command("slack")
-@click.option("--json", "as_json", is_flag=True)
-def test_slack(as_json: bool) -> None:
-    _emit(actions.slack_test(project_root()), as_json)
-
-
-@test.command("db")
-@click.option("--json", "as_json", is_flag=True)
-def test_db(as_json: bool) -> None:
-    _emit(actions.database_test(project_root()), as_json)
-
-
 @test.command("all")
 @click.option("--json", "as_json", is_flag=True)
 def test_all(as_json: bool) -> None:
     root = project_root()
-    results = [
-        actions.model_test(root),
-        actions.pipeboard_test(root),
-        actions.slack_test(root),
-        actions.database_test(root),
-    ]
+    results = [actions.model_test(root), actions.pipeboard_test(root)]
     if as_json:
         click.echo(json.dumps([r.model_dump(mode="json") for r in results], indent=2, default=str))
     else:
@@ -476,7 +459,7 @@ def writes_kill_switch(state: str, yes: bool, as_json: bool) -> None:
 @click.argument("question")
 @click.option("--json", "as_json", is_flag=True)
 def ask(question: str, as_json: bool) -> None:
-    """Run one question through the configured model and the same graph the deployment uses."""
+    """Run one question locally through the same profile the deployment runs."""
     result = actions.ask_question(project_root(), question)
     if as_json:
         _emit(result, True)
@@ -511,7 +494,7 @@ def report(
     from datetime import date, timedelta
 
     from paid_media_agent.reports.cadence import run_cadence_report
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
+    from paid_media_agent.runtime.local import build_configured_runtime
 
     settings = Settings()
     _configure_logging(settings)
@@ -519,7 +502,7 @@ def report(
     end = date.fromisoformat(end_date) if end_date else date.today() - timedelta(days=1)
 
     async def _run() -> Any:
-        runtime = await build_self_hosted_runtime(settings, project_root=root)
+        runtime = await asyncio.to_thread(build_configured_runtime, settings, project_root=root)
         return await run_cadence_report(
             cadence=cadence,  # type: ignore[arg-type]
             end=end,
@@ -575,42 +558,6 @@ def report(
         )
     if not run.reconciled:
         sys.exit(1)
-
-
-# ---------------------------------------------------------------- runtimes
-
-
-@main.command()
-@click.option("--host", default=None, help="Bind address (default PAID_MEDIA_API_HOST).")
-@click.option("--port", type=int, default=None, help="Port (default PAID_MEDIA_API_PORT).")
-def serve(host: str | None, port: int | None) -> None:
-    """Serve the self-hosted API (Postgres when DATABASE_URL is set, else in-memory state)."""
-    settings = Settings()
-    if host is not None:
-        settings = settings.model_copy(update={"paid_media_api_host": host})
-    if port is not None:
-        settings = settings.model_copy(update={"paid_media_api_port": port})
-    _configure_logging(settings)
-    import uvicorn
-
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
-    from paid_media_agent.surfaces.api.app import create_app
-
-    runtime = asyncio.run(build_self_hosted_runtime(settings, project_root=project_root()))
-    app = create_app(runtime)
-    uvicorn.run(app, host=settings.paid_media_api_host, port=settings.paid_media_api_port)
-
-
-@main.command()
-def slack() -> None:
-    """Run the rich Slack adapter in Socket Mode against the local or self-hosted runtime."""
-    settings = Settings()
-    _configure_logging(settings)
-    from paid_media_agent.runtime.self_hosted import build_self_hosted_runtime
-    from paid_media_agent.surfaces.slack.socket_mode import run_socket_mode
-
-    runtime = asyncio.run(build_self_hosted_runtime(settings, project_root=project_root()))
-    run_socket_mode(settings, runtime)
 
 
 if __name__ == "__main__":

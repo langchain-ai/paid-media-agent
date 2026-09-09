@@ -1,4 +1,9 @@
-"""MDA profile: managed backend, threads, and identity; the same assembly and policy."""
+"""The configured profile: live catalog when credentials exist, fixtures otherwise.
+
+`agent.py` hands these components to Managed Deep Agents, which supplies the checkpointer, the
+per-thread sandbox, identity, schedules, and Slack. The CLI compiles the same profile locally for
+`ask` and `report`, so what you try on your machine is what the deployment runs.
+"""
 
 from __future__ import annotations
 
@@ -11,21 +16,23 @@ from typing import Any
 
 from paid_media_agent.assembly import AgentComponents, build_agent_components
 from paid_media_agent.config import Settings
+from paid_media_agent.runtime.catalog import LoadedCatalog, load_catalog
 from paid_media_agent.runtime.profiles import (
+    RuntimeProfile,
     approval_policy_from_settings,
     fixture_profile,
     resolve_write_policy,
 )
-from paid_media_agent.runtime.sandbox import Backend
-from paid_media_agent.runtime.self_hosted import load_catalog
+
+Loop = Callable[[Coroutine[Any, Any, Any]], Any]
 
 
 def run_coroutine(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run a coroutine to completion from sync code, inside or outside an event loop.
 
-    The CLI has no loop, so `asyncio.run` is right. LangGraph Server and `mda dev` import the
-    graph factory from inside their own loop, where `asyncio.run` raises; a short-lived worker
-    thread with its own loop keeps the catalog load blocking and identical on both paths.
+    The CLI has no loop, so `asyncio.run` is right. `mda dev` imports `agent.py` from inside its
+    own loop, where `asyncio.run` raises; a short-lived worker thread with its own loop keeps the
+    catalog load blocking and identical on both paths.
     """
     try:
         asyncio.get_running_loop()
@@ -35,19 +42,10 @@ def run_coroutine(coro: Coroutine[Any, Any, Any]) -> Any:
         return executor.submit(asyncio.run, coro).result()
 
 
-def build_mda_components(
-    settings: Settings,
-    *,
-    project_root: Path,
-    loop: Callable[[Coroutine[Any, Any, Any]], Any] = run_coroutine,
-    backend: Backend | None = None,
-) -> AgentComponents:
-    """Build components for the managed runtime. Live catalog only when a token is configured.
-
-    `backend` is for hosts that run this assembly themselves (LangGraph Server). Managed Deep
-    Agents provisions its own per-thread sandbox from `sandbox/__init__.py`, so `agent.py`
-    leaves it unset.
-    """
+def configured_profile(
+    settings: Settings, *, project_root: Path, loop: Loop = run_coroutine
+) -> tuple[RuntimeProfile, LoadedCatalog]:
+    """The profile every entry point runs: live providers only when their credentials exist."""
     loaded = loop(load_catalog(settings, project_root=project_root))
     write_policy, issues = resolve_write_policy(settings, project_root, loaded.provider)
     profile = fixture_profile(
@@ -56,14 +54,21 @@ def build_mda_components(
         catalog_provider=loaded.provider,
         name="mda",
         approval_policy=approval_policy_from_settings(settings),
-        backend=backend,
     )
     overrides: dict[str, Any] = {"write_policy": write_policy, "write_policy_issues": issues}
-    if loaded.read_provider is not None and loaded.write_provider is not None:
+    if loaded.live:
+        # Live catalog: live reads and the gated live write adapter. The fake is never used here.
         overrides.update(
             read_provider=loaded.read_provider,
             write_provider=loaded.write_provider,
             write_provider_is_fake=False,
         )
-    profile = replace(profile, **overrides)
+    return replace(profile, **overrides), loaded
+
+
+def build_mda_components(
+    settings: Settings, *, project_root: Path, loop: Loop = run_coroutine
+) -> AgentComponents:
+    """Components for `define_deep_agent`. Managed Deep Agents owns everything around them."""
+    profile, loaded = configured_profile(settings, project_root=project_root, loop=loop)
     return build_agent_components(settings=settings, runtime=profile, catalog=loaded.catalog)

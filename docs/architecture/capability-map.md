@@ -9,14 +9,15 @@
 | `compare_periods` | `tools/compute.py` | `PeriodComparison` artifact | incompatible window, grain, unit, or currency |
 | Generate report | `render_report` | `reports/render.py` + bridge | artifact receipt | reconciliation or render failure |
 | Propose change | `propose_change` | `tools/writes.py` `ProposalService` | persisted ChangeSet | invalid target or policy denial |
-| Edit proposal | UI/Slack | proposal revision service | new digest and revision | stale approval |
-| Approve or reject | UI/Slack | approval service | signed claim or rejection | identity, expiry, replay, or signature failure |
+| Edit proposal | a new proposal in chat (Block Kit edit on a custom channel) | proposal revision service | new digest and revision | stale approval |
+| Approve or reject | the Slack card (MDA) | approval service | signed claim or rejection | identity, expiry, replay, or signature failure |
 | Execute change | `execute_change` after interrupt | `WriteExecutor` behind `WriteGate` | attempt record | kill switch, gate refusal, stale catalog or policy, provider error |
 | Discover admitted mutations | `discover_write_operations` | validated `WritePolicyFile` | policy issues in `doctor` | row fails validation against the current catalog |
 | Verify change | resumed graph | bounded readback adapter | WriteReceipt | mismatch or unknown outcome |
-| Deliver artifact | Slack/UI/API | host artifact bridge | artifact receipt | unsafe path, type, size, or delivery error |
-| Run on MDA | `agent.py` | shared components + MDA config | managed thread | deployment/config mismatch |
-| Run self-hosted | API/CLI | shared components + Postgres | self-hosted thread | auth, persistence, or adapter mismatch |
+| Deliver artifact | `render_report` files | host artifact bridge | artifact receipt | unsafe path, type, size, or delivery error |
+| Read organization context | `get_org_context` | `org.py` profile and shared sources on the host | `docs/org/` | empty profile reported as "Not provided" |
+| Run on MDA | `agent.py` | shared components + MDA config | managed thread and sandbox | deployment/config mismatch |
+| Run locally | `paid-media-agent ask`, `report`, `mda dev` | the same components compiled by `runtime/local.py` | in-memory thread | model key or catalog mismatch |
 | Onboard and operate | `setup` console or CLI groups | `admin/actions.py` (host-side, no model) | `.env`, `config/accounts.toml`, process logs | doctor failures, invalid key, gate refusal |
 
 Update this table whenever a capability, entry point, state owner, or terminal condition changes.

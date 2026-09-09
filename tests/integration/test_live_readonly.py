@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
 
@@ -29,23 +28,3 @@ async def test_pipeboard_catalog_loads_and_denies_mutations() -> None:
     )
     for entry in catalog.read_entries():
         assert entry.read_only_hint is True and entry.account_arg is not None
-
-
-def test_postgres_repositories_roundtrip(project_root: Path) -> None:
-    settings = Settings()
-    if settings.database_url is None:
-        pytest.skip("DATABASE_URL not configured")
-    pytest.importorskip("psycopg")
-    from paid_media_agent.domain.proposals import ProposalRecord, ProposalState
-    from paid_media_agent.persistence.postgres import PostgresRepositories
-    from tests.unit.test_proposals_and_security import _changeset
-
-    repos = PostgresRepositories(settings.database_url.get_secret_value())
-    repos.setup()
-    record = ProposalRecord(
-        changeset=_changeset(), state=ProposalState.AWAITING_APPROVAL, routing_id="rt-int"
-    )
-    repos.proposals.save(record)
-    assert repos.proposals.get(record.changeset.proposal_id) == record
-    assert repos.dedupe.seen("k") is False and repos.dedupe.seen("k") is True
-    repos.close()

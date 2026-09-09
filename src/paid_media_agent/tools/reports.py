@@ -55,10 +55,8 @@ def run_render_report(
     rendered = renderer.render(payload)
     bridge = ArtifactBridge(out_dir)
     receipts = [bridge.validate(rendered.html_path)]
-    artifacts.publish(rendered.html_path)
     if rendered.pdf_path is not None:
         receipts.append(bridge.validate(rendered.pdf_path))
-        artifacts.publish(rendered.pdf_path)
     payload_meta = artifacts.write_json(
         "report",
         payload.model_dump(mode="json"),
