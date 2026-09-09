@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c25ef2261c4d0489c879a2a81d5c2787daeef73261a25a9bc6d659e5914f35a2",
+  "claims": [
+    {
+      "id": "claim_11e835c0ee924679a08fbee6cd2645da",
+      "statement": "In the Managed Deep Agents deployment, MDA supplies the managed envelope including the per-thread sandbox, checkpointing, identity, schedules, and Slack, while `agent.py` supplies the assembled model, tools, middleware, and approval interrupts to `define_deep_agent`.",
+      "evidence": [
+        {
+          "resource": "repo://agent.py#L1-L21",
+          "version": "repo-lines-v1:sha256:3c5318969e028e8bfa3a2cec178af686bf66df766c32a8b9f7999b0e5467d9b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzYTRjOTk5OWNmNzkzMjA5MjczMDI1Yjg5ZjAxMjExYmFiYjY2OGNiZTY2YTcyM2NjMGVjNjNlNTBkNWVhNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/mda.py#L1-L5",
+          "version": "repo-lines-v1:sha256:187eb61f54e91e8cd67120ffe61dfb673e2e0e08ed1a5ab54e20afb90b4bc13e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEyOGI2YmFhYzA3ZDY1ZDZkY2IxNDEyM2M3ZTZkMmJjN2MxODQzYzQ3OTQ4ZDJmNDViNmI4NGVkY2RiM2E3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTg1ZGU0NzU5ZGEwYWU1YWI3NzFkYWNhZDhjNzgwYWNiOTQwOTEzYmRiMzE2MjA0NDRiYWZhMDQ0NGI4ZjBmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWFhZjc2MzdjYjZlN2U1ZGI4NWQ2MzQyNzQ2MDE0ZGYwNDFjY2Q1NThhOTIwYjI5ZWI2YWM3MTlkN2JhZjVjMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_26e5ce57f911471a9946f5825d4fd8cd",
+      "statement": "The hosted model's readable filesystem is the per-thread MDA sandbox containing synced `/skills` and that thread's `/workspace`; it does not contain the repository checkout, and organization context and host artifacts are reached through host tools rather than an implicit filesystem mount.",
+      "evidence": [
+        {
+          "resource": "repo://OPERATIONS.md#L77-L87",
+          "version": "repo-lines-v1:sha256:90a23d9518288e2953d912b8367ad96c3a377874e1b12140203c5c6121c13a87:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkM2FjMTkyZTI0MTgxZGIzYWE3NWM1YjY1ZWExODUwOGQzYTZkZGJhMjU5MGI4YTExMjMwM2RmNDg5YjAwYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0NTM4NjNkMjEwNTFhOWYzMDMxZjA2MzhiZGNjYTdkYmNjZmI0M2EwZjE1OWJiYzVjZDAzNzAzYmQ0ODYzNzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3ZDhlYmYxNjMyY2E1MWMwZGZmYjdjODgyYmNhOGRiMTJmYjdjMjJmZjhhNTYzYmExMTRjMTlkMWU1ZGQzNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA0NDU2ZTViZmJmZTMyZjA3NzNmYTIyODFkOGZjNmMzZDhjNWJhZWJhOWViZTc3MmNlOTg2NDYyY2UyZjU2MDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bd60513624c14012b9ba66d3a10f6743",
+      "statement": "The local runtime is not equivalent to the hosted filesystem: it uses a project-rooted `FilesystemBackend` with deny rules for environment, virtual-environment, Git, and MDA paths and permits writes only under `/workspace`.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L28-L38",
+          "version": "repo-lines-v1:sha256:c986b16a21d96c0c171d10197b03db0eb9a6ae91f9763340b59c4ae9a5bbd781:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNTU5YWYzZmRjN2U2YzVkYTg4NzNhZWIxMWU2NWVkNjFiZmQ1MzY1MTcwZDEzNmY1ZDZlNjZiNTVjNjIzODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZDI0NDU4MmI2ZmIwM2QyM2I4NDE1YWJlY2QzNDZiMGM5ZjQ2NmI2Zjc1MmIwNjgxODljZTdlOWEyZGMzNTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUwOTVmNDJhMGZhZDJhYWJlMThjMWVjZWY0ZmY1MzNhODZlZTJiOThhNjViYWE4NTlkYTEyMzIwOTQ3ZWE5ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L51-L70",
+          "version": "repo-lines-v1:sha256:a89b43dd33ede9ba8f3a16910213f13c1f70abc85edbacad15e0b1ae55b4dfea:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3Y2M4MzI5ODNmYjM1YjExZDU5NTE2YmFkOTQxNjBlYTlkZDI1MDFiMWYxNzQ5MmY3MmE5ZDY1ZThmMTg3M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3YjFhMWMyYjljNzU0NzE0ZTFhZmNiNmY4NmVhOGJmYWQzODliNzE2YTc0YzE0YmZmZDhjMTAwMzA4NWRhNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzMmQ5ZjIyZmZiNmY0N2FjNTA2YzA2ZTdjZDZhZTk3N2FkYzM1OTE2ZDkwYzU5M2RhYmM2YjA2MDQwYTU2ZTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3205266ff83d44f5b8823e3e1339c095",
+      "statement": "The optional snapshot image contains only system Python, command-line utilities, and pinned WeasyPrint/Pango/Cairo-related rendering dependencies plus empty sandbox directories; it does not copy repository content, skills, workspace content, or secrets into the image.",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/Dockerfile#L1-L14",
+          "version": "repo-lines-v1:sha256:9a55cb3a13592a78c449c6eeaf019438f321deab9ebff7358ef289b21c4afe82:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlOWEwZDM2M2EyM2NiYjE1ZjgyODU1MTEyZWIzNzliODZiMTEyZGJjZDk0ZmI5MGJiMmEyZjMwNzc4YmM1ZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiNDUyNzQ1NzgwODhjMTY2YjEzNGIxOWMwNGRlMzYyNzEwY2QzNDgzNmUzOTg4OWM2NjU2NmExNDJkMDA2MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dceda12bbdc647efb263522f62088a33",
+      "statement": "`sandbox use` writes the snapshot setting and a literal `define_sandbox` declaration for MDA, while `mda check` flags a snapshot setting without that declaration; UUID snapshot values are treated as immutable IDs and other values as names.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/admin/actions.py#L672-L719",
+          "version": "repo-lines-v1:sha256:f573788ab015bc11a5891246278b42a5b57114d5f65020d1ffcaff11921abedc:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ZDU0OGE3NjI3ZjRiOGQ1NWNjYzJiMjQ2MWQ2YjZiOWI0MmNmM2Y4NjUyNTk5NjRhMDVkM2ViODdlMWM2ODIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlNDYyNmI2MTZjODA0Mjc2MTM1NjUxMzkzZTE3Y2RkZjNkZTRkMjhiNDQ2ZWIzY2ExOWQ0YjgyNDFiMGNhOWUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/admin/actions.py#L877-L918",
+          "version": "repo-lines-v1:sha256:51df82aa7b9ea2efd9ae579a117fc23dee51a2ff34a1e9e4abe0ee7784a20528:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQxYzg4NWMwZTRkNDZjOGVmZjRhZDUxOWEwZmVkNjZiMjVmZTRkYzkwYTRmNjFlOWZlMDJlMzFlZTYxYTI4YWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmZWFiZTgwYjMyYWQ1MjFlYTNlYTgyN2UyYzE4NmU2ZGFlMWIyNzhjMmJhOWU3YTliZjJhZGU0NGJjNzEwMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlMTg0MDc2MTBhN2JiNDcwZTU2ZDBiNDkxOWEyZDZiYjc4ZjM0ZTZhMmQ0NGMyY2IzNjFiYTBkYTc0YmQ5Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L36-L45",
+          "version": "repo-lines-v1:sha256:fe52186e44737e5cc95ee00f40ef7a8df4086b104824e639dbc7d5555c35b7e6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlMTg1YTMxZGQ3ZmQzMmEzY2FlNzg4Y2YyZDhlNDg4MGY0Yjk1YTU0N2I1ZGM4ZjVmZTM3MzkzYjg0MDAxNTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgyMWExZjEwMTY5NDgxZjBlY2Q4YWIxYzFiMjEwMzEzNDM5YjYxM2Q3NDM3YWU2ODQ3YjdiNjg5MDg3MWUzNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlMWNkYjBlYzhjYzM1ZTQ5ZGJjZjg2N2M4Nzc2YWFiODQ1OTY0MzhiYzM0NjhiNDYwZGZhMGNmNGE4ZGJlYWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_61660fd12abc490a852cd97fdffec0b0",
+      "statement": "Organization context remains host-resident and is exposed through `get_org_context`; it returns rendered profile information or a named source, rejects unknown sources, and limits returned source text, while updates and public-link ingestion are also host tools.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/org.py#L231-L258",
+          "version": "repo-lines-v1:sha256:a4b3bd7dee2e99bcb5d2f3912e184bd62f2c0a6cd4a7e64dc122e21a0a89ec10:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwOTJkOWNlZDY4ODAzM2ZiYjk1ZTJhY2QwMzY2ZmZmODZhMzFlNDIzNTZhMjA3ZGEzN2UzMjY4YjZhOTA5ODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhYjhmNGY0MTM1OWY2YzBiZjdhYmMwNDdkNGM1Nzc0NTcyMjMzNGY1ZDJkNmU3MmUxNjZhNTViM2EwOTc0NzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1NDEyNzMwOWZkZTJiZWUxOWQzODY1MWRkOWU5ZmJiZmQzM2E5MGM2Yjc1ODk4NjY4MzM3N2U1YmNjNzUyOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZjE4NjM0NzM4ZGI0ZWQ1MWQ0ZDRlYmY4OTUzNzhlZDEzYzM4ODYyM2JiNDNkM2ViMDAwOGE2OGRmNmE4ZjQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/org.py#L1-L6",
+          "version": "repo-lines-v1:sha256:e037f9a9eaa96e6bef93b834dc2ce3bd2adb593b0ab9eb07db676e71d965f985:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWNkYzRmYTM4YzZjMzUwYTIzMjExZmUxMDBkYTE4OTViZDI0N2Q1Njk1Nzc4YmQxOTk5YzgzOWE1YTA1YzZlNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTdhNzJmOGI2NTE3NzU5MDcxYTI2ZThkNjEyYWMyZDljYjgwOTBmNDUxYzBhYjk4NzQwOTI2NDUwMzMxN2U0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWFhZjc2MzdjYjZlN2U1ZGI4NWQ2MzQyNzQ2MDE0ZGYwNDFjY2Q1NThhOTIwYjI5ZWI2YWM3MTlkN2JhZjVjMiJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/org.py#L68-L149",
+          "version": "repo-lines-v1:sha256:2dd0ce3aa9f93c860286f44a3fac75c3d1330fe18e0413f3a863645f3e545b33:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZWVmZjBiZjI3MDI5MmViM2M1YmIzZGFlZTdlZjAyYmEwNjcxY2UzYjBiNDQ2NmMxYzE1YWM2YzBjMTVlYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZDI0NDU4MmI2ZmIwM2QyM2I4NDE1YWJlY2QzNDZiMGM5ZjQ2NmI2Zjc1MmIwNjgxODljZTdlOWEyZGMzNTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0001e19ec6044f979411b7025a813c86",
+      "statement": "Provider reads execute host-side through a dispatcher that re-resolves the authorized catalog, scopes calls by a configured account alias, rejects raw provider IDs, validates the provider schema, applies a timeout, and stores the result off the event loop.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/reads.py#L119-L214",
+          "version": "repo-lines-v1:sha256:8c67fcd404e5019706bcd7ce1d5ac3f76e93cc8a254f4eb329dfc6c6012f25cf:eyJzZWxlY3RlZExpbmVDb3VudCI6OTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1OWI4ODYyNTIyODRlYTEwYTE4MjUxNzExMDBjMWQ0MDY1MWRkZDU5ZTBjZDFiNTdhYjk5NzkzMmFhMDg1NjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjNmQwYzJkNjcwYzZhNWY1YWRmNjQxMDliYjUyMmE2MjYyMWEyYjk3NzBiZTRlYTdjMzJlZTc1ZTY1MWU4YmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4MGMzMTliMzg4OTRiMTdiZmI1ODVmMzJhMmI1MGNhMzQyN2E5YmU0YTBlMzFmOWMzMGIyODhiYWQ5NjUxNDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmYjRkODIzMmRmN2ExMmUyMTQ0ODhkMTBkODM5N2NlN2NkOTQyNTRkMTg4NjgzZWNiMzAzM2FiZTc5NGQzZGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_96385929805742bb96153b30e4712526",
+      "statement": "The host artifact store uses generated artifact IDs and workspace-contained paths, records a SHA-256 digest, and verifies that digest when reading; platform reads return compact metadata and artifact IDs while normalized rows remain in artifacts.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/artifacts.py#L61-L145",
+          "version": "repo-lines-v1:sha256:ae68a91495f79a378cbb3912c9c80a2b6dffd5f08869cf0ae2dde1e5b5359121:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmMDY0MzU2MTk3NTA1NDMzMzQ0MzM5NjJkNWRjZmU1MDdhYzU3Yzg5MWU3ZGQ4MTliODNlNzg5MGY0MDlmMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ZTUwYTk4YzU0OGY2NzAzOWMyNzI0ZmVhZTA4MzE0ZmNhYjVkODdhZTMwNGQ1YjNkODAwZDg1ZTc3NTU4YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1NDEyNzMwOWZkZTJiZWUxOWQzODY1MWRkOWU5ZmJiZmQzM2E5MGM2Yjc1ODk4NjY4MzM3N2U1YmNjNzUyOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NGIwZmQ4NjkyZmZiMWRjNTQxYTJjNGI0MjgzOWQ3Mjc1ZDI0NzI1NmM4Y2ExMDk2MTg4YTVkNWM4OGZkNWIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/reads.py#L234-L324",
+          "version": "repo-lines-v1:sha256:b553350299d792e5f18832bfb92b2ae96803a397da3ce17b6e2e657722686fc5:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkMmQ0MmM5M2ZiNWQ2YTVmMWE5OTlhZjhjNzhiM2NjNzQ2N2RhYzc5OWMwOTFhZGE0ZTc0OGE3MGY5ZmVmMzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5NzkxMDZmNzI4MjFiNDRkZDMyM2NiNDM0NDg3YmVjMjgzYjFkNDU2NjhhMGQzNmQyYzY1YTM5NDg3OTg4ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0YmY2MGM1M2JkZTA4ZDdkZDcyYWNjZmVkZjBlNDZhNDI1MzZhYzQ4NDM5NjQ1YzYzNzllYTk1YmE0NTZlOTIifQ"
+        },
+        {
+          "resource": "repo://tests/unit/test_proposals_and_security.py#L110-L124",
+          "version": "repo-lines-v1:sha256:a86e29d7a483dec5ad1e762ace3b7f3df0aad0c1b36711575f8e310e6a801dd6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkNzlkZGExOTQzZTU2MmE1ZGNhYzE4MjJkMDZjYWRhMzZiNTllNTlhZTQ1ZjUwYmUzMGZlOTM5MmQxOGRiZTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2MTRkMjVhM2FhNGE0N2UzMWQxMDY1ZTg1MjM3ZTM2NzhlMGM0NGEwMjQ4NGJlNWYxODMyOGJjMTU3ZGY4MjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2ODM1Y2MxYTRkMjNiM2NkMmUzZmUxMGRmNjZiM2ZiODRmMTdmZTYxNDYzOWRkZjFjNWE5ZDUzMzMyYzc1MTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlOWY1NTYxY2FiNTYxNmJlMmY5ZWU5ODZkYmJhZWY3Y2Y0NzUzZTg2NDYzNDU3MDRiOTA1ZGY4YjZiNjViMDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c2bc182307324c30b18829189fd737dd",
+      "statement": "Deterministic analysis tools reload host artifacts by ID and reject invalid comparison windows, non-performance-row artifacts, insufficient coverage, and empty windows rather than treating unavailable data as zero.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/compare_periods.py#L43-L124",
+          "version": "repo-lines-v1:sha256:132695864c6678c06f4ed05cb75d44b42b688a41b7d97b567d89669d370ff0a1:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwZjkwMjhhNGZmNWVjOGU1ODkxZjYyYWE0MzA5ODk4ZGQwZjg0NDYwNjg5NmY0MTc1NTJiYmIxNWEzOTJhOTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MjQ5MzcwZTE5MmRlZmI3ZTQxYjE3NTZjYTQ2YTM1NGVjNmIzMDQxYzdjZjFmMDhhMjBmNTkwMmYwYTI0YjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkM2Y2YmIwYzZhYzc3Nzg1MmYyOGRlNzhjOWI4MTExZDdjOGNiNGI4OTNlZTQwYzFjZDQ3YTQwNGIwNGU2OTcifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/summary.py#L147-L170",
+          "version": "repo-lines-v1:sha256:9e7891be65eb472f72bdfd8a8f255ffe7a03068b901c1f52cd144ce3412ab39d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZGFiOWNiOWYyNWExMmViMTJkMDk3Mzg1MjY3YjdiZjgzZjRiOGRkMjkwNGEwOWUyZmNiNTg3NDFlZTBhMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyODIwMzkyN2NkOTE2ODAxYjQ0YzE2NzljMDJiOTQzYmQ1MmQzY2YzMzExY2I2Mzc4ODc4NDMxOTNjNzE0MjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmYmQwMDkzMTRiYzI3MDg0MTY3MzRhMDJhZTVmZjM5YTFlNDhhMDUwYmU5MWY0M2IyZmFhOTIwMDJjNjJiZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmYmY4YjkyNWQ3NDg5N2ExMDVjMzVlODBjOGU0YzE2MzU3ODgxZWNiMjJmZGVkNzllYzljMzQ3YmZkOWMwMTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_893b841a510a46ceadc3aa36f3082fd9",
+      "statement": "Report delivery is host-controlled: reports are reconciled against their analysis before rendering, and `ArtifactBridge` only delivers non-symlinked HTML, PDF, or JSON files inside the output root and within the configured size range.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/reports/bridge.py#L10-L60",
+          "version": "repo-lines-v1:sha256:8bbc844b66e8701752314c6eb8aef56cf60f439f42506b7ba70d5ed161c699ca:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4NGZlNmNmMzBjMmU2NThjMDdiMzQzZTRmNGMzZjAzOThjM2QxYjIwYjljMGZjNDQwOTBjY2M1ZDQ1OTBiN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNDY2MTc4N2VhNzQ3OGZmODYyY2FjOTQyMDAzZjNhOTc2NDFmNGU5NzFkOGUxMTFkOGU5ODgwMDBmMTEyNTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MDA1Yzc5NGY5NmUxYmExZDAwNGFmYjBlNmM3MTQxNGNmZmFkOGI2Nzc2ZmEwNmE4ZDhjODc4NWFiZDllMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/reports.py#L36-L76",
+          "version": "repo-lines-v1:sha256:b90c7d81921cc893ba39331226dbee433103567c216e55548b889e468ef1e0ed:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1YTRhODY4NDVkNTgxNmYxZWE2NTZiNGE5MmQ4MzVmMDg0OWM2NjIwOWMwZGZmMjJmYzYwOTM1YjBiNmIzOTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQzZDMyNGI1YTRmZTIzZmQ5NmU5MjAxOWE2MWQyOTEwOWEzZTcxZGQ2ZTc4MTEzNDc5YzljYTcwNmZhM2RhMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFjZDNiZDNhMDk5MjkzNjA4MjgyYWE0NjIwNDUyYmM3YmVmMTNiZDQ2YjIzNDhkOGJkZDZiMzE2ZjUxYmM4ZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c37d56c899fa4515937cdbf379f34840",
+      "statement": "`sandbox publish` builds through LangSmith using a temporary context containing only `sandbox/Dockerfile`, waits for a ready snapshot, and records it; `sandbox test` creates a short-lived, localhost-egress-restricted sandbox, probes it, and deletes it in a `finally` block.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/admin/actions.py#L922-L970",
+          "version": "repo-lines-v1:sha256:49055c41e7918e8225a4f42097dbc8f8cbc21d00752021f57dafbc9db23ad80c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YmEyMTViZWQ2MzY4ZGU4ZjdhYTA3Y2FkYzdiODFjNTg4NmYwMWFmNDZiOGM0NGU3NzEyOTEwZGUwODcxNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4ZjFlMDdhOTdiMTgzMzNhZDZkNmQyMDc5NzRiMWY1MGQyNDM0NzdlYmExMjZiNmY4NjA3NGY5MjI5NDM0NjEifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/admin/actions.py#L973-L1004",
+          "version": "repo-lines-v1:sha256:12cfe037985cb5de2bda81aaf4332e84671147d36b00b9e7ecd8588026841cab:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhNDU0NmYwZmY4NDI1OWM0ZjdhYzc2YzU2MDE5NGQ2ZTc4MjJlNTQ5MzQ3NzJhNTU4ZWZlYTdmY2MwNDUzZjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0NTM0OTVjY2UwZTIyZWJkMmI4ZmJjMzgzMmI4NGE3NTRhMzg2NmNkMTkyYWUwY2IzYTAzZDRlODA5YjQ1ZjIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L123-L146",
+          "version": "repo-lines-v1:sha256:f04d3a579992c88e4c4fc623c2e4318eab6908a5d3f0d3e648fa9cae7e06cc80:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3YmU3ODc0MDNiZTcwZjc0ODFlODViY2Q1OTgwZGY0N2JmN2Y4ZjRiNDQ4MWE2ZTI0MGFjZmYwZWQyM2FkMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjNDQ2Y2E3YmRmY2E5YjJlMTljZmZjNjUyNDUwZjRiOWMzM2I2ZWU3NjFiMTMxNzViMGQ4M2ZmODZjMjZjMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE1OTQxZTg1MzJhYmU5ZWI2OTc1ZTI5ODU1MzBmY2IwZDBlYzAxNGQ2ZGRkYTJlNzFjZGEwNDcxMzE5MWY1OWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_712c71c89f6846ddb8a563c2c00b26f4",
+      "statement": "The sandbox probe uploads skills, verifies workspace and wiki visibility, renders and validates a PDF, and fails when key-like environment values are visible; the local snapshot diagnostic treats network policy as not verifiable from inside the sandbox.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/doctor.py#L246-L311",
+          "version": "repo-lines-v1:sha256:e0ad6aa0f036b2d69b5e7ef23056d49058f60697ec254aa07c05b00e03e6bb15:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhMjhiOTJhZTk1NzU4NjExYzgyMzZkNDFmZWYyYTA2MmJiMDliNDMwZjIzZWVjZWY0MGM5ZDIyNWU1NzY5MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0MTg0ZjFlYjVlNjlhMWU1MmIyMmY0ODQ1ZjkxYmU3M2RhNmFkZGFkNDZmNzViOTZmNzc4ZmU0NjI1ZjdiYjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMxYzM4YzhiODA0ZGU0MWQ2Y2JmNmUwMjdiNmZhMGE2Njc1MjIyOWQ3NmYxYWE3OWU1OGVmYjdmZTU0ZDY4MDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4ZWI0MGYxYzM5ZjliNzU0N2UzZGFmNWQwOWVkMWVjNTM1NjAyMzU2MjdjZDFmZGUxZTZjZmRmZTEzYjYwMzMifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L155-L190",
+          "version": "repo-lines-v1:sha256:35614598654883c7aa5b2c5a840124dc48dc3cacb5db767c7c2ab62f65d7393b:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlNTFmNjFhMTcyMDlkM2E1NjIwMmYzOTYxODAxMmI3ZGVhMDY2YThhZWY4Yjc5Zjg4NGM5M2VlMTllMmQ3NzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNGJhMWU0NzVmODdkYzQwNWZmNmRiMzNmMzIyNDA2YmNkNzZhZTNlMmIxZDkyYzIxYTUzNjkxZTg5MmZjMzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4MmE1ODRjMzhhODBhMTE3NDIzZmVjMGU1OTMwNGY5NjhmMjI2MDEyMjQwYzU2N2VlZmE0NmQ1M2FiZWZkNWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0MTg0ZjFlYjVlNjlhMWU1MmIyMmY0ODQ1ZjkxYmU3M2RhNmFkZGFkNDZmNzViOTZmNzc4ZmU0NjI1ZjdiYjQifQ"
+        },
+        {
+          "resource": "repo://tests/integration/test_live_sandbox.py#L1-L26",
+          "version": "repo-lines-v1:sha256:8242c09c146f66036db7334ad94f6e0451047509c5d552f0517834c04c2fa50c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmN2I5ZDk3NDQxNTU4NjY1YTRmMDU3ODFhNWZjNDEyMzliMmE4MDZiM2Q0ZmJlY2NiZDkzZmE5Y2M4NTcxOTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViNGRhYjM2ZDYzYzQ5ZWEwNzE3YTg3ZjEyYWY3ZWQxOWQ0MWQyZjlmNDk2ZTMzZGVlZTczOGEwOWExZTBlZDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyNzkzMjI2OTVjNzUxMjYxZmU5NTk4MGM2YTA1NjIzNjQyY2FkMDk1OTVjZTg1MzllNjhmYmJhZThmMDkxYzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_377310da4457413fb0f3fa52c15d679a",
+      "statement": "A successful sandbox PDF probe establishes that the snapshot can render PDF content, but the standard agent assembly constructs `render_report` without the probe-only `SandboxPdfEngine`, so it does not itself prove that production report rendering runs inside the sandbox.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L202-L214",
+          "version": "repo-lines-v1:sha256:0251b8e3a2165c89d457c4ad9aa045e41341d0acbefddfaec2dff14307bd73ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwYjZlZjQxNjNjMWExYWM1ZjZiMDExOTQ3MzJiZjg0OTM5NWUzZTA5MGEyZjBiNDk3YjdmM2U5YzZkNTU4NjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzYzliYjQ1ZDE4NzU2ZWU4ZTkzNzMyZTZkM2RlYzM1NzM5ZDExNGY1OTAxN2ZkY2M3NTQxZWE1MmIyNDNkMzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmYmQ5MTA2MDk4MTMwMTU1MDBiNzcwYTA5MGVkNTg2ZjZlZDFjZWM0OGM0OTlhMDkyNjczZTU4OTE4ODg2MGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4MmJiMjBlMmY4ZjBlYmE4YjEzNWMyZjhlNDkzYzM1NTZhNGEzYTYxMmU5YmMwMWRkMWFkMmExMjVmYWEzMzgifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L98-L120",
+          "version": "repo-lines-v1:sha256:c272841f7ef03ed644925546dd03ecbe0b6ca1d4ee3000766ec2c9def7fbeb48:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiODI5YTQ3NzM1YWYxODA3OTk5Nzk4MmM3ZGQ4NDJjZDYwMWEyNWYxODc3MjkzOWZjNzRjNzYxNTViZmExMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5MWNkNjVlNTZlNWFmOGM5MTdkNDZiZmVmYWViMjBhZWQ3MWIzNzgzNzYxN2Y2YzgwYzYxYjI3N2JkY2M1ZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YjUwYWI3NWRlN2Y1NmJkN2YwNWRmZDQwNTU5ZTNjZTg5ZTQ5Y2RkMmU3YTM4N2JkZDJmMmM3Yjg1MzJmZmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDFjODUyYWIzNDM4MzY4ZGMxZDY3N2Q2NzE5ZTlmMGVkYTdkNjhmM2I0ZTg3MTZlZWMyMGJjZmVlZGJkMTAifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-09T17:45:08.888Z"
+  }
+}

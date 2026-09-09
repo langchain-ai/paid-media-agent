@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c319da9235b4670c921ecddcf9ace76b8c125a9a9bf23c902173f0bd314725ba",
+  "claims": [
+    {
+      "id": "claim_f62a3e777f734b0b9c3fcf8a0757fcc5",
+      "statement": "The repository uses one shared agent assembly: the root MDA entry builds shared components and passes their model, tools, middleware, and interrupt configuration to `define_deep_agent`, while local compilation consumes `AgentComponents` to create a Deep Agents graph.",
+      "evidence": [
+        {
+          "resource": "repo://agent.py#L1-L21",
+          "version": "repo-lines-v1:sha256:3c5318969e028e8bfa3a2cec178af686bf66df766c32a8b9f7999b0e5467d9b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzYTRjOTk5OWNmNzkzMjA5MjczMDI1Yjg5ZjAxMjExYmFiYjY2OGNiZTY2YTcyM2NjMGVjNjNlNTBkNWVhNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L92-L103",
+          "version": "repo-lines-v1:sha256:598c3212debb5be5b1ef66c3001bbda11e1a3b36b0ac454454be893640fa0553:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2OWExMzk3NWMyNTZlYzgzMjBlMjAxNjA4M2M5NmRmNjM3Y2EzZDM1YmViZGUyMzE0YmVlM2E0NzExYjU2Y2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNGNjMGIwM2JlMmM2ZDg1ZTFlZTIwNTIzMDE1YmY1YjgxNTRjOGUzYzUwOTUzN2Q2NjhjMWQ0NTlmZDllZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEyYjFjMDcwNmYwZWY5OTg5MjQxODVlZWRmZGNhMDY4ODU1MjAzY2Y0N2VlZDA0NDVjMzg3MjUxMDViMTIyOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L51-L70",
+          "version": "repo-lines-v1:sha256:a89b43dd33ede9ba8f3a16910213f13c1f70abc85edbacad15e0b1ae55b4dfea:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3Y2M4MzI5ODNmYjM1YjExZDU5NTE2YmFkOTQxNjBlYTlkZDI1MDFiMWYxNzQ5MmY3MmE5ZDY1ZThmMTg3M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3YjFhMWMyYjljNzU0NzE0ZTFhZmNiNmY4NmVhOGJmYWQzODliNzE2YTc0YzE0YmZmZDhjMTAwMzA4NWRhNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzMmQ5ZjIyZmZiNmY0N2FjNTA2YzA2ZTdjZDZhZTk3N2FkYzM1OTE2ZDkwYzU5M2RhYmM2YjA2MDQwYTU2ZTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4147c2a555224bf4bd6ff54d51dc1a60",
+      "statement": "`build_agent_components` constructs shared read, proposal, and write services; creates core, optional conversational write, and platform read tools; constrains the model-facing tool surface; and configures middleware plus an interrupt only for `execute_change`.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L115-L145",
+          "version": "repo-lines-v1:sha256:f1691d180ea787e960b65de927096a1d26237533f5ed6c716dc91178f5dab2ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkYWJmNjQxYTBlMWFlNTk1YTYyYTM0NjIwMjU5Zjg5OTI1ZGZhYmY5MGU1MGNkOTNkZTQ0ZTBlNzE0Yjk3YmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlNjcyYTNiNTQ1NGE3NDc0ZTEwMGVkOWE5NmMxMmY0NDJjOTdmOTEwYTcwNzdhMzRmMmI5Njc3NDQ5NTYyNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5N2Q1NGU0ZWU0MWU1YzEzN2NjZmY5NjNlMWEyMmRjNGNlMWYyZDlhZjliOWFlZDE0NjFkYmM1Y2E2MTg4ODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L181-L285",
+          "version": "repo-lines-v1:sha256:4afcbac0879640b7ef34205eb95d978d8691419b6b6304b113b5db2a95b29ad3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyZTlkZGY2NjU3MzM0YjViMjBmMDZmZjdiNDI5ZWM4NTU2MjA3MWRjMWMyZWI5Y2NkODk1OTI5YzdhZjM0YjE1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2YzY2ZTEyZDJkZWU2MmNiMGQwZjE0ZWM0MGZjNTgxYzIxMWJkZjc0MTRhNjYyNmQyNTc5NWNiOTYzZjRmN2FlIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiY2U2M2Q0NzM5MTk4ZTUxZTE2OWI1ZTg0YjM5MWNkYjE1MGVlYWFkNmVlZmQwNDU3N2VjZGE0ZGY5MDMxMDNmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4Y2M0YTdkMWNjNzk2YWJhM2U0NjcyMzMyN2Y1MTdlOWY4MTE5ODJkMjUwZjA3MDI5ODZlNGI1NzY0YWQ5NTg5In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_f1f5909c220040f59905e68cd7489abc",
+      "statement": "The configured runtime loads a live catalog and live read/write providers only when available, otherwise retains fixture providers; `build_configured_runtime` compiles that configured profile locally without changing the write gate.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L110-L132",
+          "version": "repo-lines-v1:sha256:9168d167935d964e610415cb9ee0c0086bc6bea408d3b32047b5ac47e789ae6d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyZDg5ZWQ0ZTBlNDQxMjc4OGRlZGU5NmU0YTQ2OTZlZTNiZGFlNmJmMDA1NDJhYjE0MDQ2NzU1YThhYzkwZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/mda.py#L45-L74",
+          "version": "repo-lines-v1:sha256:d738749ba8a2eeac8baf398221c16092d0c85c72599e42ae3b3d66f1c9861c78:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViYzUyZWEyZjU1ZjA0ZjAzMTM5YzliZWZkYTMwMDY1Nzg3N2Y4Mjk2ZjlmNzBmNGNlN2Q1MDk2Y2VhOWE3MDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyMTk2MzIxNTJkZTI1Zjc5OTEwMTEwYzUyYmY1NWU1YmY5MDI0MDU0MjUwNjEyMmYyMWMxZmFkNDRjNjE4MGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NzRkMmU5YzQwYzliMmIyYjdmYzQzMGM1NzY1MjlmNDAzZDk4MTNlMzg4MmNiMDViNWZkMjdkNGE0ZmExYzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_36207c6c201b419e84935594f1a84951",
+      "statement": "Provider mutations are governed by persisted approval: execution checks proposal state, revision and digest, signed fresh unused scoped approval, identity, account, catalog/schema, policy, and kill switch, then makes one provider attempt and bounded readback; post-call timeout is reconciled without retry.",
+      "evidence": [
+        {
+          "resource": "repo://docs/architecture/writes-and-approvals.md#L39-L53",
+          "version": "repo-lines-v1:sha256:577cb1a5e81e41e2e97b942dac642d46f427225d77b8601e58e1d5af2cea8008:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MzQ4MGQ4MTE5NmQ4ZDE4ZjAyNGRlYjJiZmUxMzNjZmU3ZDJhZWJkNmMwNDAzOWE2NGUyMmNmNTMwNDIxNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5MTM5MjJhYWJlNTkyMDZiOWMzN2Y3YmQ2MTJjMmIwNDRlZWMzMDNlNmU4ODFkYjJkZmJjMTcxMjhkMmUyMDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI4YmRjNDJkOTA5MTc2MThiNGVjN2NiNjUwMDAxZjA4YmFjOGU5ZWFlYzMxYjBhYTU3MTg2MzViZTIyYWQ0ODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlNjhhNDUxMTllZWJjMWUwNzQ4ZmY0MzZkYTkwNjlmYjJhZGY2N2E0MWE2YWZmNTE0YzhjNWE3MzM1ZGRlOGUifQ"
+        },
+        {
+          "resource": "repo://docs/architecture/writes-and-approvals.md#L5-L29",
+          "version": "repo-lines-v1:sha256:875f267ac3f335d60d197d69d99965f754edbd67f1a8ad5c0a2f2330abfad170:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlNzc5YTc1NmU3YjVkMzE1NWY1Yjc2MTg1ZGQxMGJkYWNjNTk2OWM4YmRlOGZhNzRmNmNlMTEzYWZlMDE1N2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNmYzZGUwYTVhNDNiNmJkMzY0NWQxNzYxODdkYjFlMDFmZDUyMWZkYjYxZTg4OGZlZTBlNzc4MTFiOTNjZGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJmNjdjMDllZjIzYTAxMzc3NThjOTEzYzM3ZjI2YTE0NDJiNWE1MjRlNzdkMjc0YTljZmQ1NDc1ZTU0ZDk4OTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5NGQ1NjQzM2QxMzRkY2ZkZTZmMGZjNjZlOTkxNWZlZmY3MjYzMWM5YzJmYzEwZTUxMDUyZDRlYTAyODVmMmYifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L281-L307",
+          "version": "repo-lines-v1:sha256:7feea4650c887e45f903ba0c9c6232957e208611908b2b02df504fb986564886:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlM2FiMjhiNmI4YTFkY2JiYjA1NzBiOTA5NjExNDEyMmYwZmNjNDZkMzIzYmMyZTAzZGM1Yzg3ODhlMjk4ZmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ODczZTUxOGQwM2JlYzQ3ZjM0NTAyZGViYzAxZjA5NjliOWViY2Q2MWYyMjc1M2Q5OTUzNjVmYWY0NmZkYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmZDZhMzI4NGNkZDA4ZTE5ODVlNjVhYTRhYzZhY2EzOWRkZWJkMmEzNTFjNTY3ZmUzZTZiM2YxZWZmNGY1YTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2YWJiZjQ4MmE3YzgyZGVhYTE0MTRjYzYzZmE1ZDUyYmViYjY5MDNkMzZmMDk1NmY1NmVlMWEzODlmNzJjZDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3fa31bece84f4824a1e613f2f81c2084",
+      "statement": "Live writes require the write-enabled flag, a pinned current catalog revision, and a canary-tool allowlist after the kill-switch check; the kill switch also blocks fake execution.",
+      "evidence": [
+        {
+          "resource": "repo://OPERATIONS.md#L159-L166",
+          "version": "repo-lines-v1:sha256:2ba1eb1fe4dc079024ebec7f13782d32b4a06f86ac7718add307f956eb0867fa:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWQ2NzQ3ZWY5YTEzNDEzNWM3MWFlZDRhOTE0ZDhiNTE2Y2U0ZmRkYzNhMGM2Mjg2Y2M4ZjU1MmZjNWNlY2FjOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZhYTc5ZmJhZDMzNDZmYWVlMzUwMDRlYTJiMTE1MzE1ZjIxN2ZhMTRiNGQ1NDcxZDVjMWUzM2JjODE2MjU1YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjI3NzBiYWQ4ZDcxMmFkNjgyNjUyYjJjYjMzZDFiMzc0MWE1ODY1YzcyMTRkMmFjZWMyMDBhYjRiNThlN2NiNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjc1NzkzMjIzNDg0OTMyNGMzMDA2YTRiZWM0Y2U1N2ZlODcwMjQ5OGFlOTkzYTE1MTA3N2ZkMGFkYjRkNzUwZSJ9"
+        },
+        {
+          "resource": "repo://tests/contract/test_live_write_gates.py#L75-L167",
+          "version": "repo-lines-v1:sha256:8ed9d44298a2f4c1f30dcb574b24ca9d9084f5585410c45d81f2c95af739f7d8:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMTFjZGE0MGEwMTk2ZGM3Yjg0YWVhOTQ4YmNjOTYwY2UwMDc1ZTMxOWNlMDM2NTdjODU1YThkMzczNTk4MzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiNDk2YjllY2JjNGI4MGU5Yzc5MTAzOWNiNDJjN2U4ZWIwZGJjYmZkZGYwZDViMTQyMGY3NDIzNzgwZWExNDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNiNzczOGI0NDI3ZGEyM2E5NzQ2MDIxOWFjOTE0ZTNmMTM5NWUzMjRlMDQ1NTAxMDUwYzI4MGJhMGI3MWE0ZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxZjg4NGM1OWUyMmM1YWIwYWIyYmE5NGRhNjUwNDZhNjIwMzFlNzM3ODgyNDkxNWU4MDg5MjY0ZGFmMThjOTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_371a89ad4b3a4a2eb0773d3aa81d1bbb",
+      "statement": "The local graph uses a virtual repository filesystem with `.env`, virtual-environment, Git, and MDA paths denied and writes confined to `/workspace`, whereas the MDA deployment supplies the per-thread sandbox and syncs skills rather than the repository.",
+      "evidence": [
+        {
+          "resource": "repo://OPERATIONS.md#L77-L88",
+          "version": "repo-lines-v1:sha256:4d97ba873dc2c7347a3be37749e7cd6bf477f0ce51774c698644630ff36a1a54:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkM2FjMTkyZTI0MTgxZGIzYWE3NWM1YjY1ZWExODUwOGQzYTZkZGJhMjU5MGI4YTExMjMwM2RmNDg5YjAwYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0YjU4NGY3NjJlYTliODMyMmIxNTZiMjgzYmJkOTI3Y2ZjYmEyYWE5NTBjYTE3M2ExNzg4MWYyMzA0ZGJmZmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3ZDhlYmYxNjMyY2E1MWMwZGZmYjdjODgyYmNhOGRiMTJmYjdjMjJmZjhhNTYzYmExMTRjMTlkMWU1ZGQzNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0YzdiZmMzMjllMmYwY2U4NGExMzhjMjM0ZWEwYTY4OTYwMGFjMmRiZWE0MmJhZDM4OTM3YzY4YzU2MmNlOGYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L28-L38",
+          "version": "repo-lines-v1:sha256:c986b16a21d96c0c171d10197b03db0eb9a6ae91f9763340b59c4ae9a5bbd781:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNTU5YWYzZmRjN2U2YzVkYTg4NzNhZWIxMWU2NWVkNjFiZmQ1MzY1MTcwZDEzNmY1ZDZlNjZiNTVjNjIzODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZDI0NDU4MmI2ZmIwM2QyM2I4NDE1YWJlY2QzNDZiMGM5ZjQ2NmI2Zjc1MmIwNjgxODljZTdlOWEyZGMzNTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUwOTVmNDJhMGZhZDJhYWJlMThjMWVjZWY0ZmY1MzNhODZlZTJiOThhNjViYWE4NTlkYTEyMzIwOTQ3ZWE5ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/mda.py#L1-L6",
+          "version": "repo-lines-v1:sha256:2471caa4a8c65d56826fceb8027e5af78163db7f0883f384f65486c7b8dd0146:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEyOGI2YmFhYzA3ZDY1ZDZkY2IxNDEyM2M3ZTZkMmJjN2MxODQzYzQ3OTQ4ZDJmNDViNmI4NGVkY2RiM2E3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTMwM2VjZGQ0YTRkMTBmMTljNzNmZDQyZmQxMjQzN2ZkMzM1NGE4MjY4MTYwNWRhNTI1NWE5N2EzOTA2OGRiYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTViNmU4NzA2YjQzMDQ3ZjJhNmRiNjdmMTMyNjM4NTk1NjA0ZTY3ZjM2OTY2ODc2Y2UwMTU4ZjAwNTNlNmJkMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a1e02ee0653a4f729e55b44d76de7afe",
+      "statement": "Contract tests verify that the MDA definition exposes shared governed components and that the configured local runtime uses the MDA profile with fixture providers when live credentials are absent; graph tests also verify approval interruption, no pre-approval mutation, and a verified single mutation after approval.",
+      "evidence": [
+        {
+          "resource": "repo://tests/contract/test_surfaces_and_runtimes.py#L110-L156",
+          "version": "repo-lines-v1:sha256:9ebd3922ec5343d5ba084230235a85498b8c641e896c554bed7fa9dc878c8687:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1NDc1MWY0ZTFmZmQxMDMwZGRjNWE4Yzg4NTA3M2M2ZTc4NzU1ZTUyZDQ2ZDU2ZDMzOGRkMDY4ODY4MjFmYWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxZDdkMDE2YjhiZTI5ZTc5ZjdlNTkzMTY4OTc3NzM2NWJhZTE3MzhiYmFjMGU5YjM3NTQzMTUzMWUzYjg0MzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L45-L72",
+          "version": "repo-lines-v1:sha256:05a81dd17f110e6a169052bb7dc181133be2131977bd691dfebd883c55bda9bb:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZGFmODkxZTlhZDgzMDFkYzFhNTQ0MjJkOGIwZTIzZjQyMDdmMTJhNzUxNWQzODM1ZjA2ZjUzMDk5YjcxNjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1NGFjNmI0NTkwZmY1ZjBlMDZkMjhjOTA5NmUzZjU3ODk4YTkxZTVhZTNkYWYyNTVmNWRkYzVkMjIzNTVhMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0YjYyMzgxMDYyNGM4NjQzMDM1NjZiOTgyMzM3NzNjYjdhOTU3ZmY2NDhhMDc0NmU4N2VhN2M5NGViNmFlNzkifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-09T17:45:08.888Z"
+  }
+}

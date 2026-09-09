@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:3ad2056f69cafc10a3223c6997018cb189f121e7a1caaf5eada0c418e5c9a999",
+  "claims": [
+    {
+      "id": "claim_e817b90104364e65a804caf189429125",
+      "statement": "The deployed Managed Deep Agents Slack channel provides mentions, direct messages, threads, and an MDA-rendered approve/reject card for `execute_change`; its card is not currently customizable, while the retained Block Kit implementation is for a custom Slack channel.",
+      "evidence": [
+        {
+          "resource": "repo://channels/slack.py#L1-L8",
+          "version": "repo-lines-v1:sha256:9864739cb47cd320d399cec8db30188cd33ceef355a191be7c50cb0a26f496c2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzUzMDRjN2UwN2RhOGQzNjhkZGJlOThjYjA2NDhjZjRjMGJiYmRjMmY0ZWYxOWVlOGVhM2EzYzUwMjI4ZmZlNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmFmYmEwNTI3YzM5NTNjNGI2ZTBlNWI1NzM5YmE4MzYxMmY4MDUzYmNkYzk0NjY3MzAxOTNjZDFkNTkwYjQwOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://docs/architecture/surfaces-and-presentation.md#L9-L20",
+          "version": "repo-lines-v1:sha256:a768fbb4d3868ed8832b2e07e64851589762c2a1b4de9f5962c86cbe3fdbb366:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjNGQyYjNlM2NkMTA1YTk0NWRjYmNmMjVlOGIxZmE5MmY0ZThlMGE3ZGQyNjdlOGVhNTExODIzMGYwYjk1ZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyYTJjZTZlMTc2M2JmMTViYTRlODZiOGIyMzk0MzEwOTdlODVmZWEyZjc4ZjZhZDA0MTRmNTJhOTk3M2IxNmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiMDY1NTUzMzhhY2U2YWZlNjU5ODgxNjQyMmQwOTcwM2NlN2RkYzkwNWIyYmE3NWM5OGJlYmMwYjdhYTEyMzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI5NGI2NWQ0MWIyMzAzMzU2NDM4NmY0YzRhM2FmNGMwODRlYjE0NTNjZTdjODg3ZDJkZDFhNTI0ZWRhNzlmNGYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/service.py#L1-L5",
+          "version": "repo-lines-v1:sha256:fbb2af4f1895ae5bf72e8f347da281e428ce3d9181ff64d8bcf36c3d433d1dc1:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzhjZGI1MTFiNDUzOTBhMjJhOTQzODlhOGRlOTE2MjY5Mzc3MmVlYmRjOWM3MjE0N2I2ZGNhYTUxYjM3MjU3MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTMwM2VjZGQ0YTRkMTBmMTljNzNmZDQyZmQxMjQzN2ZkMzM1NGE4MjY4MTYwNWRhNTI1NWE5N2EzOTA2OGRiYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTViNmU4NzA2YjQzMDQ3ZjJhNmRiNjdmMTMyNjM4NTk1NjA0ZTY3ZjM2OTY2ODc2Y2UwMTU4ZjAwNTNlNmJkMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_aaabe5f1632d425eb20b95dee1864b91",
+      "statement": "`AgentRunner` is the shared surface application service: it invokes and resumes the graph using a caller-owned thread, exposes proposal actions and receipt lookup, and refuses a thread claimed by a different caller.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/persistence/interfaces.py#L43-L48",
+          "version": "repo-lines-v1:sha256:cf17202b0aa92bf62df4eb4854b8cfdc8dde5242daba83a0047f4959ad7a7e9f:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWE0MTEwOWNjZjI3MGM1NTBhNWNlMWQ0OTBhNTc0NjAwMDVlNDc3OTEzNGJhMTI5NzAxODFhNGQ0N2NmNmJlOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYyMGQ4NWRlNGVkN2FiODAyMWI0YThkZDRmYTE1ZWM1MTkyNWNkZmNjZGUxODA1ODk1YTRjOGEzYzNiYTQ4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGUxMDJhMTliYTY1NDBmYWEyM2ExNDg1NmRiYzQxMzJlNDkyMWRiMDg5YzU2MDk1OGNkZDZkOWRhMDBmOTI4NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/runner.py#L101-L166",
+          "version": "repo-lines-v1:sha256:effe039f8e29b74682670b0ad89461ae6905585c21ea304a3793e8c10739c68b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMmE4ZTY4ZjE4N2NmNGI3NGNlNDdmODY0ODUxNWYwYTU3Mjk1YWJiMmM0NmQ2OGU5ZWJmOWUwYjhlY2Y1YjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzNzQwY2IxZTBiYTEyZWMxN2EzMzZlZmRkNWY3NmNmMzQ5YzY3NjZhMzQ3MDE4ZDk4MDc0NjNhNTQ4ZWU1ZDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlYzEzMWFjZTRjMzc3MjNjOTA4MzliN2MyZDIxMDI4MjQxOTZjNzMzYzk4YTNlOTQ0YzZjODg5MDYwMmUzMjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/runner.py#L53-L72",
+          "version": "repo-lines-v1:sha256:d6ca42eccb20a9971438e1d21f07a961830cba6293a656618254033efc2f80a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5ZWE3YjkyMWY2MzZlYTZiZDdhMjM1NTE2ZjBhNDUyM2RiZTU4MTRkOTIzN2Y2NDU0ZjY3ZWM5MjYxYjBmYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1NTA1OWZjN2U2ZTE3OWM3ZDZmMWJkZmMzMWJhNDZmMzkwYTQ1MmM5YjJlMThjZWNhMWM5M2M3NmE1OGI5YWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlNGQ1YTY2MTVmMzczNGRjOGI5OTk5OWI3NGI2ODIyMmQxZWE4MWUwN2FhMTUxNWVlNTNkOGJlNDExNGI4YTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyMDMyN2IzY2UzNjU1ZWVjNGEyOTg0OTQ1OTE1ZmI0NGJkMTAwOGIyMTEzZGFmOTI1MmIzNzc2ZGU2ODczMTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6bdcbdc4d2174115a198cd26ca2211a3",
+      "statement": "Proposal staging admits only an authorized catalog mutation covered by write policy, validates host-scoped account and schema arguments, reads current target state, and persists an awaiting-approval changeset with before/after values, revision-bound metadata, requester, thread, digest, risk facts, and opaque routing ID; it makes no mutation.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/config.py#L52-L81",
+          "version": "repo-lines-v1:sha256:9637da7cd82b135ab2869669e4242350bdcf1c9eb263742dd636dfd72575f724:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkZDAwNmI1MjA4YzhjY2Q4MGYxMGUwOTZkYTRhZjNjZTA2YWI5NzNhZWJkMjJiNmRhZmZmYmFlMTQxMDJmMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlOTI0MmEwM2Y0ZWM5OWVhY2ExMmRiZThhZTY2MWZlNzIyZWUwYmNiN2NjOTczYmI4NzE3MTk3YTVmYzA3YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNkNTNlN2VkOTczYmEyNDk2YTUxYmRiZTAxNTBkNGRjMTdiMGNhNGU2N2QxNmEwYWQzMWMzN2M0NzIzZDA3NmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5ZDhkYmZlNWJlOWMxY2Y0NjM5NDQ0MjFhZDg5MmNhMWM2ZGUzMThlYmFjMTkzMDA1ZTQ5MjA5N2ExMjdkYmIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/domain/proposals.py#L85-L145",
+          "version": "repo-lines-v1:sha256:0ac2102a3e1b5e8d51da09fe6890de875d9e04af6970c0904f8d9cd120a6450c:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlN2UyNTUzZWNkNGJkMmNlYWE5MjA1YTQyNTZiNmQ5Y2UxMTc5MzI3NTE4OGVjZjBiMTU3MWJiNWNhZTIxMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlY2RmOTgxYTBlYTk3NTU5MzQ3OTg1ODA0OTY2YzI2YzFkNjE2MTcwMWI2NzYzYjcxOTVmMjA3ZDM0MjI0NDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyZjRjNjdmMTBkOGZkZjIwOTExNmQ4YjZiODdkYTk1MjZhYWYzYzVkNmFjYzQ5YWI4NjJkZWE1ZmJmZDU2Y2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJmYTE1ODA3YjU0ODlmZDYxMjRlZDExNDQxMjg5YTIxNDMwODJlMTNkMzljYzljZTVjNTQ4N2JlMjE0ZTkyYzgifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L325-L447",
+          "version": "repo-lines-v1:sha256:425155c4164dc5d4a8ca14cbc3a3c64fe250101b34217dd59e9d6e22804a25f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZGFlMTk5OWQ0Y2U3ODZiZTY5YTEzZTQzY2MyZjQxODhmY2FkMzg1YTQyYzQ4ZGFlMDlkNzI1MWY1Y2ZmZTRhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJmMjVmZjQ2YTQ5OThlYTQ5YTcyZjQ3ODk2MjQ3NTlhNWYwYWMzNDFiNWYyYzZkOWYwY2Y0NWM4OTAyYTdkZjk4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhODdkMzFlOTdkZDRmZjAyY2IxYjM2OTE4MWY3OGEzMmI1OWRjODZkMzBiYzk3NTc4ZDhkZDBmYWE2ZDc2ZmM2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwNzRiNWE3ZmM1MmQ1NmQ2YzlhMDhmMjliYTcxZWE3ZjYzY2E2M2E0ZTg2NzM4NDI5NWE5MzMwZDQyM2RiZGVlIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a18db3309054019ac5e9b47d138476a",
+      "statement": "The `execute_change` interrupt is limited to a proposal belonging to the current thread and offers approve/reject; the runner detects the persisted graph interrupt and returns the proposal with retained assistant prose for review.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/runner.py#L74-L99",
+          "version": "repo-lines-v1:sha256:e8a7939b99d2aba2da94ebf092e5e556e3c29dc2fc62dc945b8338b6735f3c2e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3MzE4NWRhODYzNjc3MjNiZjQ5NTY2OWI2NDVkMzI3NjZhY2ZmZDZiYjU1ZmRmMjczZTM5M2EwMWYzODAxNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQwNzU5MDU2NWY0M2U2M2Y3YzMzYTZiN2Y5ZWMxZTY4YjlkMWMxMTIwYzA0MmIzNGE0ZmVjNzllNGE4MDZmZGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVhODA5NTZjZmZlMDM4ZTE1YzFhOThhNGE4ZWViZmUwZTdiNDQyYTdlODJjZmI2ZWNjMDUxMjFmNGEzMTRhNWIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/write_tools.py#L86-L118",
+          "version": "repo-lines-v1:sha256:24bd671e94590e48fb9c644311d6a4579ba2c1fb4ebf053acd21f82182f66d95:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2M2UzM2YxOWM0MzlhNWEwNGExNTdhMTljYTQwM2RmOWY0YWVhYWVkNGZmM2IwYmZkMTZhZDgxZWZhZjhkNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczM2U4NDg3Yzg1ZGZkY2Y5ZmE3YjkzYzc0NmM5NDYyNWFlNDdlMTIwYzc5N2U3OTFlNzM3ZjllZDdmZmM3M2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyNmUzMzUyN2M4YTA5MzMzYWYzNTE1OTBhMWFlZTUzM2NmYzViY2ViZWU0NDEzMDljZGQxYmRiYWI1NTU4ZjcifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L45-L62",
+          "version": "repo-lines-v1:sha256:c55c8b1e21259b575f752e945160534215800060c432bc327975d0ef232b1aac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZGFmODkxZTlhZDgzMDFkYzFhNTQ0MjJkOGIwZTIzZjQyMDdmMTJhNzUxNWQzODM1ZjA2ZjUzMDk5YjcxNjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3NzQwNjE0NDFhYWJhZGRiZDAyNWM0ZGZmNzBiZWIyYjE0M2JlNzEwMzNjM2E2MjU3NTgyM2EyYzNiMTg3YjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyYzAwOWMzZjA2ZDMzZDZiODJkMjY3NzY4ODJkY2I2MDE3NTg4NjlmNzE4MjYxMzllYzI3Zjc4NDJkZWE4MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3901d7d6c59345d8a55426a0e9d892de",
+      "statement": "On a native MDA approval resume, the execution tool resolves acting identity from host runtime configuration, rejects a proposal that is not on its thread or whose displayed revision is stale, and creates a claim only if the surface did not already create one.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/write_tools.py#L155-L189",
+          "version": "repo-lines-v1:sha256:2c9d3529f6b50f607c9c14608ee09c5208374445b192d739b2a9637a8248264d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyOGE0YTJmOGNhNjkwM2FjOTM0Mzg1YjQ5ZWVlNmQwZDFmMDJlODZkYTZjYmEyNmZkY2U4NGFiNWE5ZjQ0MzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MGFjYTRiYTJmYjFlN2I5MTVhNzkzNzAyNDcyNWNkNjczMzg0YzI2N2Q0NDlmZGI4NDRhNDRjYjI2YTdhY2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkZjE2MjgwY2E1M2IyZGM2MjRjM2U5OTEzYjhhNWZhZGJjODk2NTVkYzk3MTAwNWQzNGJkNTk5YzljYTYzODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlNjVlYjE4YjQ4YjUwNDc1MmI2MGZhYmQxYmQyM2E0NDM3NmE4MmJhZGQxNTgwZmU4OWFhMDdjNmRiNzJiZTEifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/write_tools.py#L57-L71",
+          "version": "repo-lines-v1:sha256:58b9d6ef089fa2c508c3174e698087eee433512c5c2cfc6f3f380f2915b9f8c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjZmY4ZDljMDJhZmNlMGIxMGExZmU2YTZhMzhkZWFhN2Y1YjhjNzYxNDNhMWRmYmFhNDJmYTkzMjJiZmE5MmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0ZTQzZjk1NzdiZDliMGYxMDY3ZjcyNmE0N2VmZGI3M2IzOTEwNDJjYzZmZmE5YTgyYzFiNmE5YmViMWU3ZjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI1ZTIxMmE4NTg3YjQxY2M1YmMwZDZhNGNlMjcwNWE3ZmM5NzA5MmQ2NzYyYjRjODMyYmYwMGNjYzJkNzc1YjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b7f7afcd851e479893a26c9d6cb5b519",
+      "statement": "The custom Slack service drops duplicate events/actions, maps an app mention or DM to an opaque conversation thread and host-derived caller reference, reloads a proposal from the opaque routing ID in a button, and then dispatches runner approval or rejection rather than accepting a mutation payload from the action.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/runner.py#L129-L151",
+          "version": "repo-lines-v1:sha256:2835066796cf2fd360b692d77c08775266587f1ea92edf921c9b30836a29803b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4ZDM5MTU1OWI1NWQwZGYxMTIxY2VjMjNlYjQzYjBiMDM2NGZiZWI1MzA1YWU3YTViYzU3OGZhZGNhNTgxMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5NzcxODA5NDJmMzhiYzIyZGZhMjFmYmIxMGIxZWNiNzY4ZTlkODZkMzk0NjU4ZTZmZDllYWJmY2Q3Nzg3NGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwZWQ2ODY0MzBlM2IxMTI4ZGI3NjYzNjVlMTk1NDhmMTY1ZmU4ZWFiOTFiZGMxZjNlN2I2ZTRlOGY3M2U0MjMifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/service.py#L130-L183",
+          "version": "repo-lines-v1:sha256:f670ef6d1a729bf520ccd33f645cd54ac62c719b55558fad41733f309b6ce781:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyNjgyZjlhNzNiZTUyYTIyYjBkYjgwNDIxY2YyYzRjZjE3MmE3YTk1YzY1OTA3YWU1NzJmODg4MDJhNDFhZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5MTM0MzBhOTgwZWFmODIxOWY3MGZjOTlhNTQxMGU5NWUxODU5OTQyMmI0MTVhNWJhZWJiYjhlOWJiYmUzZjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MzhkZjg0MTJkNjExNzYxNzQ3NGI0NTAwMDk5ZWZjZDc3YjBlMTViMTk5NTg4ZGQxNmZiMDU1MzRiYjJlMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ5NDliZjYwNjhlMGI5NTZhZTgwMDI5NTNjM2FiMTU4NzdlNmI4MTBkOTUwMTg1YzI5NjMxMWVjNjkwZDg5NWMifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/service.py#L35-L117",
+          "version": "repo-lines-v1:sha256:ffe54da29fd05fa72f942275f41c9811b98bcbfc2a8f237c201e2c015db0e107:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTMwMTYyYWVmM2M5ZmJhYjgzOWJkMmE1MTg0MWFjNmVkNTI4NzFhNzg5OTBhYWY5MjQ3YmFlN2I5MTc3MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MDQ3NDMxNmRhMjExNDhkNGNjYTk5OGMzNzkwZGFkY2Y4M2JjMjUwZWFhOTk5MTBhZjM0NTMyMDUyZjlmM2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhYjVkNmQ2NGMzMjZjMzdjMzgwOGNiMjEyY2JmYWE5ZmU0ZTY3MjcwNTNlMDM0ZjRiMDVkMTk2YTMzNzg1MzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxYTBkZGM0ZDY5YTRhYWQ0NTA5NmM4NzM3NjY2MDk1YzVhM2QyOTg4MDk3N2ViYWQzM2M0NjMzNjVjNzk5NGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_50f96c03c8c24d8e83f25c283ab990ad",
+      "statement": "Custom-surface edits are allowed only while awaiting approval; a revision revalidates fields, increments revision, recomputes digest/risk metadata, returns to awaiting approval with a new routing ID, and earlier revision-bound approvals cannot authorize it.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/runner.py#L153-L162",
+          "version": "repo-lines-v1:sha256:2acfd26385113e966d41d639352f0ad375e001fcbf5828b5829bd537162bc3a9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2ZWRkYzJmMWZlMDkwYThmYjE3ZTJiNWI4YzFlNmE1MzQ2NTdhMjA2Mzc2Y2JmYWVmMmJmNTYyNWNlYjRiYTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViYzY0ZjVjMDg5NmI2OGNkN2FlNmRhZTQ5NjcwZWRmNGU0YWMxM2JmNWY1Mjg3Y2M3ZTMwNWM2ZDczN2EwYzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5NGFiMWRhOGMzMWI0YTY3MmI2M2E2N2E0NDQxZjAyM2MzZTI3Mjk2NjE2OTkyNzk0MzRmN2NmZDllZTU0ZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NWU2YWQ0MWNmM2Y2NDRhYThmOWUyOTY0MGMwMmJjOGIxYjJjMzAyNGViN2JmNWFhODBkNmU0YWZmNzEzN2UifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/service.py#L185-L203",
+          "version": "repo-lines-v1:sha256:eb83b935f8c37902236d9891760ed31ae78adb083a0321b887734e2a9e7a7d8a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlZjEzZDM1YWQxYjdkZTAzZjgzYzlhN2Y4NmY3MjUyOWJlMTY2ZDhlNjdmNDhhYzM0MGEyMDMzMTBhZGI3ZTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzOWMzZDQ4YTZjMjViYzM0ODQ1YzBiYzA4YzEzZGYyNzVjMTJmNDBiMzhlMWNjZjk4ZmI2MWEzYjI3ZDNlNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIxZWY5NzUwOTQyNjZjMGUwNWUxYWMxZWJkNmYzZDQzMWI0ODg3NGNiYTZkN2M0NmNkZWZjNjBhNWRhZjZjZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L456-L495",
+          "version": "repo-lines-v1:sha256:4c7ab59c4e6b009425b64207973d11d6644c9366b272336a86ccae38930709ec:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiNDcwM2E0NzdmODUzNjQwOGIwNTM2ZWZmNmM1OWNiMmFhNjg5MjY5YWM2MTgyNTBjZGJlMGE0MGNiYjQ0ODIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3OTdiOTZlN2ExZjVkZDg3ODA1MmY0MDRjYjUwYmE4MjQzNGQ5YTRkZDE1NWNiMzA4OGI5ZDFlZTkzYjgzZmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlhODYyZDFlN2I5ZjE2MDk5NDcyMTNiZDYzMzMxOGVjYmYzYzBiMDk1ZDVmZTUwNTliYWM3MTFlZGZlM2JiNzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlMGRkOWIzMDliNjc1MjkwNGM3NWEwYTE4NWRkZWZhNzYwNzE5YmYwMTc3YTQwYmMyZTdiNmE5ZDhhYjAwMmIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L612-L628",
+          "version": "repo-lines-v1:sha256:63524a0f4e89fb821c81b16aec731f205f677e48d2f8c86d7948dba088ccfc49:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMjJlNmI0YTE4ODllMzgwNTI3MDdkYzM5YTVkMzYwYjhiNmQ0Y2VjMDI1OWRmYWNlNGJkZDA3MzdiNDViYTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzODE0NjZkZTFkOWZmZmU3OWM3ZTM5MDQzY2VjN2ViMjNlMGE5NjExZWEzYWI1OWEzMmM2ZmRhYTY0Njg1MGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwYTYxNGMyN2RlMTM2YjY2N2FiMDg5OWVmY2U2NmJjZWM4NmZhOWI2ZDkyNzhiODU5ZGYyNzdlYjk1Yzc0YjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYzZDM5ZjQ1Y2RmZGJmODQ4ZmFmYjU0NmIwZGEzODM5NmMyZTM5YTUwMmE3MDc1ODU0NzAzNTk5ZjdjNmE0ZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_36ebcb9f4bd24503a92666e1e6ca5704",
+      "statement": "Approval claims are created by `ProposalService` only for an awaiting proposal and a host-established authorized approver under the self-approval policy; they are HMAC-signed, expire after the configured TTL, and bind proposal, revision, payload digest, account, tool, requester, approver, and nonce.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/domain/proposals.py#L148-L181",
+          "version": "repo-lines-v1:sha256:d9f5c95b2d310c3b11f6a3c8d81436597d59a584e7833582b635210771de744a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2Y2FlMGI0MTAzN2E2NzQ0NTMzMWFmOTNlYmJlNDIzOTA0NzgxMDE1ZWU3OWY5ZWRmZGY0NzZmYTgyMWZjZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlNmM2YzNhYTQyOWEzNWQ3Yzk4MDBhZmI1OGQwZDdmZmFmMjdiODRmMTY1ZGU3NjgyNzcwY2Q4MmNjYjJkYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI3ZTVkNjQ1NjY2ZmM4OTRlNjM1YTVjMGY4MzY2ZjA2NmEzMWE2NTJkZGU0M2Y1YzhlNTAwNTljZjFlYWE5YmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/profiles.py#L103-L119",
+          "version": "repo-lines-v1:sha256:9a4c7923e363239a0a0815ed85e9d91ded38e7558ad45c47ba9ac111a05a3a47:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlZTlkMGJmY2Q4N2ViZGU0YzUyZjE3OWVjMjEzNDljNjg0OWRlN2ZjZDg2N2MzZGRhZDg4NWZjNjE0MzBlNzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ4ZDNmZjUyOWMyMmYzYTM3ZGEzMjlhY2IzZWI5MWM4YjA2Yjk2MDc4NDE2Y2NhNzQ4Y2U0ZGM4NjNmMDcxNGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1NTllNWE5ZTAyYWFkNmNjNzRiMTNmYjVlNzIxOTFlYWRkNDg5MzQwODJkMjYzN2EwMzk1MGQwNmJkZDg2NjUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L128-L160",
+          "version": "repo-lines-v1:sha256:aa97a1517fe7049ea186b885d0590e5845da7f8c0d8ae7ddb4b0dc9c8ca7e3c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjMjExNzQwZDQ2YTMyM2UxNDU0NmM2MDJiN2YwOWQ1MjAyNjVmMDhlODZkNGMyYjFhZDFmZjM4MTM1OTUzMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1Zjg5ODY1NDg4ZGZjNzhjMzkzMDRmNjFmMDc3MjJmMWFlMzJkZmFhNjk5ZjQyNmUxM2FjMTliNDMyNGI4N2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEwNjVhMWI0MmVhNTA0MTEwNTUwYzJiZTdmM2VjZWIyMDllYTM0YjQxOGNlY2FkZjEyYTZiMDEwMmI2ZTg4ZjAifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L512-L549",
+          "version": "repo-lines-v1:sha256:510589cc84b1080ff0a001b57c381b8971d995e1ba4e7256cbe30c993037c479:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjYzBiNjgwZWNkMjBiMmY1Y2E0MmQ0MzE3MThiMTZmMjRiOGE4NWQ3YzlkMmU1MTU5ZDlhYzdhMzE1OTJiMGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiOTlmNTNlM2ZmZTkwMzI0OWU3OGI3MmRjOWRiYTk5MGUyZGMwNjIyYTJmZThhYTdkYTI4MGFkZWUxNDQxMDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxY2YyNTFiYTdiOWExNTU3YmE2ZjE1MWVlYTdhNDA4ZDcxYzc2ZDQ1M2I0YWY2MGYxNmVhNjg0ZWRmZjg5MmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmNDVmYzdhZjNjY2E4Mjc2ZWNiMmYwMzFmZjhiNWQ4M2QzMzc4YjI4MDQ5NzAxMzJiODUzMWI2M2M2OTRmMmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7b752ed1beb74e7fab1d24484abb8dc4",
+      "statement": "Before a provider mutation, `WriteExecutor` requires an unused current approval and verifies signature, proposal digest/scope/expiry, current catalog/schema/policy/account binding, and execution gate; it consumes the claim once, so replay cannot produce another mutation.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/persistence/interfaces.py#L21-L28",
+          "version": "repo-lines-v1:sha256:666ad60a3c06b2a33b1dcfd6e02ed1d162b4421affc0a160095d8145de6545cf:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRhMjZmOWRiZGE5MGU2NjUwNmNjNjJmMGQ4MGRlNzE2NDFjNDM3YzI4MWUzOTkzMGJkOTM3MjgwOWUzMWZiZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYyMGQ4NWRlNGVkN2FiODAyMWI0YThkZDRmYTE1ZWM1MTkyNWNkZmNjZGUxODA1ODk1YTRjOGEzYzNiYTQ4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTBjYzlkNzgzNDlmYmZiOWQzMjBmYzU3MzhlMTE4NDUzM2EzNWMwOTcyMzI1MTU2ODRhYzY1MjUzYTAyMmYwOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTY0MzM5ZmYyNDlmMmJlYzBmZjUwMTFmOTZlZTIxMTI2OWJiNGM3MzcwYTk3YzA1ZTMzZjg3NTkyMDFiOTFkNSJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L612-L661",
+          "version": "repo-lines-v1:sha256:1aa3be723c57b669c9b4066a7b865c499d247b7c56b64ef3ad3e8efee1be3c05:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMjJlNmI0YTE4ODllMzgwNTI3MDdkYzM5YTVkMzYwYjhiNmQ0Y2VjMDI1OWRmYWNlNGJkZDA3MzdiNDViYTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzYjM1N2QzYTMxMzBkOGMxYzRkOGZjZGE4OWRiODA4OWUzNTkyZTFkYTU3OWJkZWU5Yzk1ZjdjN2IxMzIxN2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwYTYxNGMyN2RlMTM2YjY2N2FiMDg5OWVmY2U2NmJjZWM4NmZhOWI2ZDkyNzhiODU5ZGYyNzdlYjk1Yzc0YjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyZTYzYWRiNmIxYWM4OGI2YWYzMzNhYjAwM2MyOTAxZTNhNjVjNGRkMmFjNjVhODI5YjY3ODAyNmI2YWJmNDUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L753-L788",
+          "version": "repo-lines-v1:sha256:fb7cee464c82d870d261ef92d7f9196b9e590a4a63f721c01dd0e98e51ac78d4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3YTMyZmM5NzY3ZjgyN2IyOThmOTM1ZWViODljZDJjMmY3YzUwYzQ3ZmMxOGI4Yjk5YTkyNDBmMGJmNTg0ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5MzljNTZhNmU3NmVhZmY2Yzc3YjY0Y2IwMDA1NTlmZGVlNzQ2NTRkZDg2NWRlYmVjYjI5MmYyMjA2MjA4NzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlmZTRjMzAxNjcxM2E3MjhjNzZjMGZlNDcyMThiM2U4YjEwZGQ5MDAwYjQzODViOWUyOTMxMTQxNzY4OTFiNjUifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L170-L187",
+          "version": "repo-lines-v1:sha256:f8944d842884f2a92c62ff8c2f98ec72b39490f9b53c2748d0a31b6a098fb26f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyN2FiZjEzYzEyZGEwODgyYTM1ZTVjNWRjNjIzYWNiY2M5MDM4ZjhjNjlhZGY2ZWJmMzViODRkZjQzODYwNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5Y2ZjMTliYjU3ZGM1MmE5NTU1MjhjNzRhM2RiOTUzYTgwYjgzMGExZDY2OTAyNzUwYTM3ZjljZDQ2NDJmM2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwMDRjNDZlMjNiZGVhYTY1YmFjY2QzMDJmM2Y4ODI0NmEwNmNlZjMzMjJlZWQ2MTVkNjc4Njg3M2QyNzQ0YjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFkMDU2NjM2MGE2NGMwNDQzNDMyYzIzZDU3NDY4ZjU1NzcxZmI1ODAxNGY3NWJlZGJhZGQ4ZTE0ODI5NmI3ZjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6a6195adb85e485082c01b0eb5fa5fdb",
+      "statement": "Live execution is refused by the write gate when the kill switch is present, writes are disabled, the reviewed catalog revision is unpinned or stale, or the tool is not released for the canary; fake providers bypass only the live-release checks.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/config.py#L143-L153",
+          "version": "repo-lines-v1:sha256:2bfa62ebac8a6d2ed6557c6f2b138b582b76c8e0ec68b3d81c5e9e3f9f909024:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0MDJiODdjZjk3YTIyYTE2YTZhNmEzYWNiODRmNzgyZWM2NmE0NmEyOTBlNTk5MWM4MmFmZTQwYmM2NTEyNzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlMDhmYTdiNzE1OWFkZDhlZTQxZDEwYzczMjU4NmQzYTYxY2Y2YzE3MDAzZjg3YjBjODgwZmFhNjM0OGIxNDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0YWE0MTUzNjk4OTUyZmUwNzQ3YjJmYjRkOWVhOWI5NDgxNjcyNjY0N2Y3YWI3NDk4NWY4YTA0OTc4NjkzYzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0NWM3OWU2Zjc5ODZlN2Q5OTBmYTkyOGQ2Mzc0ZTdiZWU1ODdjZmM0OWYyZDVlMDY5MWFiZWMyMmY0MzkzOTAifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/profiles.py#L60-L72",
+          "version": "repo-lines-v1:sha256:6363b9313d0ce725d491f09247e0a4b93881078c113d42cf8dd7fc52e6a40527:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiNDg5ZWMzNmFjYzRiYTI0NWQxZmUwMzJiNzliY2ZiMGY1ZmRlYzhlMzYyZGEzNmJkZjMxOWNjN2YxNmUzNmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAwZTk4ZTEyOWFlMDdiMTBhY2QwMDExNjQ3ZDU5Yzk3ZmMzOWIzMDEzOTlhNTBmYTNjNDllZTM4OGU4MWZjM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiMTZlNmE3Nzk3ZjUyZmM4Yzk2MzJkYmUxMDE1ZDc5ZmE1ZTNkYmVlOTEwZjVkM2IzZGE4MTg3NDUzMTk0ZjcifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L169-L226",
+          "version": "repo-lines-v1:sha256:aac558c30d812284ad80e0585d400acbdf5a14fb96f8f12432d55b796c628193:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyZDBlYjViOTdmMGIwMjgxZWM1MjFhMWM0OGE1MmNjOTgzNGM3YmYyYjc2YTY0MjI3ODA4YTM2NDVlMjljMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2MGQzYzg3N2QwYmM2ODJhMmI2OWJjMjhkYmJjMzVlMDA5NmQyNjhlOGIwOTFiYzljMmFlZWQ2YTJhN2IxYTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk5ZTg1NDdmNmMxYTU3ODFiMzkzZTdmMzY5N2ExYWY3ZGY4MTY0YzUxZWE0NjIyMDgwNDZlZDk4NGZiZmMyMWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3MmE5YTQ5OGJhNjE2NjZjODIyMWY0NzYwY2EwZTIyMmQxYzg5ZDYzZjMzZTA3NWE4NWZjZWExNzUzNGIwM2EifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f582e26aa6384d4da1ed64b3b610047e",
+      "statement": "Execution makes one mutation attempt, optionally supports validation and an idempotency argument, does not retry timeouts, and uses bounded readback to produce a persisted verified, failed, or unknown receipt with attempted/acknowledged flags and observed state.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/domain/proposals.py#L184-L210",
+          "version": "repo-lines-v1:sha256:2648ff8842d7add11815f9d2f05a9f64f48ef1bf3dc1862b20d06691b8af4f17:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiMjRkM2ZhYjZiMmRmZDk1YWJiNmM1ZTI4NDhlZmQ5MDNhNDJiNmRiYzczY2QwM2I3Y2NjMDM0ZGQxYTVlY2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3YTYyYTYwOWQ2Y2JhYjM2YmIwNzIxNDgzZDM4YjlhZTM2MTJkMmU3NjM0MDRmM2E2ZDM1MmFiYmJjMmM5ZDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzZGYyYWNmMDZlOGMzZjAzYzcxMzVjNmU4YWM1YTljYTU0MzJhYmUwNmE3NGFjYTBmZGQ5YTUzYTAwOGY5ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L692-L739",
+          "version": "repo-lines-v1:sha256:a8ef7356553c74286425bb8a3f8171082b748c54e84fb20ae99e27cb15a7737c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiMjRmN2NhYTgyYTY4MTY2NzYwYzlkZDNkMDlhOTA5OTkyMGE0NjIzYzFhZGJmNDE3ZmI0ZWMwYmUzNjg1MDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzODYzNTM0NjlmZDRkYTQ5OGRmZjY3NTRhMDUxNzQ1ZjA4YjNjMDM1MjQzMzkwOGRmZjZjZjU4ZjNmMTJkY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUzMGQ1MmUwNTM3NDRhM2IyOTcwOWQ2N2I5ZWMwYjc1NWE3YTJiZWYwOTVkOWU2ZTQwYmU2ZWZkYjI0MGI4ZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlNDViMTcwNzkxMTZlNmE1NWQzMDBlMDBkYmE3YzcxZTFmODNkMmYwYmM4NTdiZTMyNGY0NDQ5YWUzMGFlODUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/writes.py#L789-L892",
+          "version": "repo-lines-v1:sha256:2b8176b4516a5dad6c02e6712c7c90bfcd605cf9f200319d1d28aaa86eddaee9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZjEwOTUwNzJlYTE0NmU2YjA1Yzg4YmMyNjhmOGI1NGM4ZjI4MjE4NzVkZWExYjcxZDNhOGNhYjE0YmJmMmY2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1OTA5YTUzYTYxOGQwMjhlMWQzMDAwYzBhN2FiY2VlY2JlNWZiMzdmNGU1MTFlZmU0NjY0M2ZhZDZlNjY4NzJmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiYzQ4Yzc0NDRmMDc4MjVkYjMzNDJlNzkwOTg4ZjMwMGYwNGQ5NDhlMDdlOGZjYmU0OTVkMDIwODExZWIzZTkzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_6f3e8c00bcdd4f539d7c504bcb19c303",
+      "statement": "Custom Slack presents a receipt only when its revision matches a terminal proposal state; rendering supplies accessible top-level text, escapes and bounds model prose, uses opaque action routing values, and tells users not to retry an unknown result blindly.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/blocks.py#L1-L74",
+          "version": "repo-lines-v1:sha256:05672177e3d39a2c67d177123a160b27cd175f2d7a821feb966a012145bb9f25:eyJzZWxlY3RlZExpbmVDb3VudCI6NzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3ZmJmYTg1Y2Q0ZTI3OWI3MTllOTkzZTIxNzU5ODdjMTdjMDdhODkyYWU2NzA5NjlhNjBmMzZiMTllOGY0ZWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMDllZGQ1ZGZlYzYyZGE3MTExMmI5NDFhMjkzZjJhNTJlYTk1MGI5ZDJhYzgyNjI1YTBmODc0YjA1YzdkM2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyODY2MTMxNGYzZTUwNGRiMTNmNWU5OGIwNjYyMjAzNmJkMmU2OTY1ZGZjODIyODY4NWY4ZTBiMjNhMzRiOWYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/blocks.py#L148-L171",
+          "version": "repo-lines-v1:sha256:680251be59bbd783d384a74afe857fe49dcafede20b09cea5a73fdab43928216:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOTVhOTQ5ZjE0MzBkYTE2MTQ2Mzk3NWJjOGU3NmZhZjc1N2Y5Mzk2YTdiMDRiZGUzYzc5NmY1MGEwMTAzNjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiOWVkODNiOWU1N2Q1NjMzYmYwMTE2YTFkOTRjNDhlY2Q2M2VjNzNjNTgxNzhmODA0ZjM5MGQ4MzA1YjgwYmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZkZThjNzZiMThjZjEzZGE1MGFhZmZjMjQ0MzA0ZDE5MzA1NDUwMTI0ZjUyODVkMjEwYzdmMmY1OGY2YzliNGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1Y2Y1Yjc5MWM3YzYwNTRkZWEzMTgwNTZjMjI5MzQyNTExM2IwNmQzNTkxY2ViMjEwMmQ5MTM3NDM3YmUzZjEifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/surfaces/slack/service.py#L119-L128",
+          "version": "repo-lines-v1:sha256:f5ffcccd4548264dc9f4a30426d90d54c36814e29c9d7621517bd04bb1aa0feb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMWJkMWQ4Nzc3OTYyOTczY2JlNGM0YzkxODcxYjEzYmE4MGJmNzc1OGQ1NTEyODJkZTMxZTczMGI5ODhmNGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzYjM2YmI5MDBiZjIxNjFjMTg1NjA3OTc0MWE3Y2FkZGEzYWNiNDk3NTgwMmJhYzA5ODQ3Y2I3ZDE1YjBlNjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxNTNjMjU1YTg5ZmI4MGY4Y2YwZWQxY2YzNTU5MjliOTA2Nzg4YWMzZDM5MGQ2MGRkM2QyNDFjZGUxMjFkMjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhMGYxZGZiYTRmNDI5OWU2ZGZkNmNlNjVlZjc4NTA3ZGY3YjU5YzhmYzIxOGU1ZjczNjg3ZTE5NzM4MjgxMzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f7c1b5843ba428996afa03d1a01b3d9",
+      "statement": "The persistence boundary requires proposal lookup by ID/routing ID/thread, approval one-time consumption, receipt lookup, and thread ownership; supplied in-memory stores are only for tests/local demo, and the graph workflow can resume after restart when the same checkpoint and repositories are retained.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/persistence/interfaces.py#L11-L48",
+          "version": "repo-lines-v1:sha256:13438fe6c501d39165de509ae0085fd0e08fba1053e16af4af2aef7db5866159:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2YzIwNzljOTkwNDhmOGY4ZGY0NDZkZmE0ZWRhNTM4YTVkNTMxNWNlMmU5NDc2YWM1NDcxMDhmYjk0ZjFlYWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjBkODVkZTRlZDdhYjgwMjFiNGE4ZGQ0ZmExNWVjNTE5MjVjZGZjY2RlMTgwNTg5NWE0YzhhM2MzYmE0OGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmMDQzNzUyNmYwNzUwMjAxYTc1ODA2OWRjMWZkYTIwYTdjNWY3OTIxODg4MGE1NTU5NDNmNThiZThmZDdkMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/persistence/memory.py#L1-L9",
+          "version": "repo-lines-v1:sha256:0f748706cf901d5ed7c5c33f22124395d111744a90ac561085aef2365a28d6a8:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdhYjJhNTlmMmE4NDE4ZTc4NWMxMmU0ZGNmODViYjNiZTQ2MGRiNGM3MDVkZWJjODljZGNkYzgwNmMxMTU4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTQ5ZTVkYWE4MmNlMzRiNmQ1MzE5ZTQ4N2Y4YmY2M2U3ZTVlNDQ4ZmY1MmZjODQ5NDMwZDIzMjUzNTdmNzc1MiJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/mda.py#L1-L6",
+          "version": "repo-lines-v1:sha256:2471caa4a8c65d56826fceb8027e5af78163db7f0883f384f65486c7b8dd0146:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEyOGI2YmFhYzA3ZDY1ZDZkY2IxNDEyM2M3ZTZkMmJjN2MxODQzYzQ3OTQ4ZDJmNDViNmI4NGVkY2RiM2E3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTMwM2VjZGQ0YTRkMTBmMTljNzNmZDQyZmQxMjQzN2ZkMzM1NGE4MjY4MTYwNWRhNTI1NWE5N2EzOTA2OGRiYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTViNmU4NzA2YjQzMDQ3ZjJhNmRiNjdmMTMyNjM4NTk1NjA0ZTY3ZjM2OTY2ODc2Y2UwMTU4ZjAwNTNlNmJkMSJ9"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L310-L358",
+          "version": "repo-lines-v1:sha256:1778644210ad24b18e8315ec0f5330d181f4f187bd9abfed98cfb5d57d5ca433:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNTIyZDI4ZDQwMGYyMjM5MmYwZGYxYmFjYmNkNmJiNTU4ZmNlNzE0MTc3MTNiNGNlMDk5YTlhNmUzOWJlMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ODczZTUxOGQwM2JlYzQ3ZjM0NTAyZGViYzAxZjA5NjliOWViY2Q2MWYyMjc1M2Q5OTUzNjVmYWY0NmZkYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllNDFlYmQ4MzZiN2ZjMThjOTU3NTU3ZDc2YjI2N2UyMWY1MTU4NzI1NDNmZDg4NTQ1ZmM4N2E4ZWRkN2JkN2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlMmZjM2JmNjU2MmYxNzc2OGZmNjBjYmI3MDdiMTQxZDA2NWJmZTcxMDQyYjYyZjU1YzQ3ZWFhNDY5MGU1ZWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f898de715054adc9b6b4ddf7c7ac5d1",
+      "statement": "Contract tests cover graph interruption before mutation, authorization and self-approval refusal, tampered or stale proposals, expired/replayed claims, result reconciliation, and an end-to-end custom Slack reviewer-button resume with requester-owned thread and verified receipt.",
+      "evidence": [
+        {
+          "resource": "repo://tests/contract/test_surfaces_and_runtimes.py#L35-L107",
+          "version": "repo-lines-v1:sha256:e850cbbd5b4c65eabab461d3f41ed4b303fcf74a20d6ce5c4a02082e56edffe0:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwOGNhMTEzZjVlNTkzMzJmYzBmNTMwMzg1NGNjMjcyMzY3YWQ3ZjcwNjFhYzJhMmVhMmVlMWJhNjcxYmQ4MDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjMDZhNDRkNWVlY2VhZWJmMTViMWM4YjY5YWYyNWZiZWRlYWUxMWM2YmU2MGUxODdhNDg4OThhMmM3Y2ZkYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmYmQwMDkzMTRiYzI3MDg0MTY3MzRhMDJhZTVmZjM5YTFlNDhhMDUwYmU5MWY0M2IyZmFhOTIwMDJjNjJiZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI3YmQyNWI0OWRkOTYxMjQ4YWNlMmEyMGU3MWFjMjlmYzRiOGEyOThkOGMyNTc5MmY4OWIzNWU3Yjc3ZjkzMzEifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L235-L307",
+          "version": "repo-lines-v1:sha256:0363c838fa669bb9f6ecf8a100003b0cf5dd6e843c8581b605d1cc32acc405ed:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNzQwNTVhNzAxMWRmMDZjNDMxZTU3ZDlkODhiNGI4NWM2NGY5ZTA1ODRmNzczNzNlNzA4NzdiMjQzZjA5MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ODczZTUxOGQwM2JlYzQ3ZjM0NTAyZGViYzAxZjA5NjliOWViY2Q2MWYyMjc1M2Q5OTUzNjVmYWY0NmZkYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwZjA3NzVhNjBkNmNhY2FiNTM3ZWQ0NWJlNGE0YjQ5Y2U3MmYzNmE4NTRmZTg5OTgyZGVhMDAyNWQxNzI4YWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2YWJiZjQ4MmE3YzgyZGVhYTE0MTRjYzYzZmE1ZDUyYmViYjY5MDNkMzZmMDk1NmY1NmVlMWEzODlmNzJjZDUifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_write_flows_graph.py#L45-L187",
+          "version": "repo-lines-v1:sha256:c7419d22b4079b745f6446af4ec1ea25ee5ee4e570bd5edaf1d05758c7bbd240:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1OGRhZjg5MWU5YWQ4MzAxZGMxYTU0NDIyZDhiMGUyM2Y0MjA3ZjEyYTc1MTVkMzgzNWYwNmY1MzA5OWI3MTY4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2OWNmYzE5YmI1N2RjNTJhOTU1NTI4Yzc0YTNkYjk1M2E4MGI4MzBhMWQ2NjkwMjc1MGEzN2Y5Y2Q0NjQyZjNhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4Y2M0YTdkMWNjNzk2YWJhM2U0NjcyMzMyN2Y1MTdlOWY4MTE5ODJkMjUwZjA3MDI5ODZlNGI1NzY0YWQ5NTg5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhZDA1NjYzNjBhNjRjMDQ0MzQzMmMyM2Q1NzQ2OGY1NTc3MWZiNTgwMTRmNzViZWRiYWRkOGUxNDgyOTZiN2Y2In0"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-09T17:45:08.888Z"
+  }
+}

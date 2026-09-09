@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:f733490c15ba0aec622ad0cb6c361dea6fd8fbb40d9af7b58517489dc83b7884",
+  "claims": [
+    {
+      "id": "claim_c4c521a8969440bdb49d21f97a88e4ee",
+      "statement": "The local `paid-media-agent report` command constructs the configured runtime, runs the deterministic cadence pipeline for weekly or monthly windows, supports end-date, alias, no-render, and JSON options, and exits nonzero when the run cannot proceed or is unreconciled.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/cli.py#L475-L560",
+          "version": "repo-lines-v1:sha256:7f0b06e13b3557de91326212a57bc25342caa5fd5b8069c2c4c0c124fbf4cc1e:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwMDc2ZWFhNjY5YWE3NTkxNzc5MzRiNjc5NjU4MzAxY2M2ZWZhMGM4NTk3NGY4NTAxZGQwMmY0MWQ0ZmVhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmYTIwODU4YWY2NDI0N2FhNDdmMzFkMWUwMDQ0ZjcxMDc1NmJkMjc0Y2Y1MmYwODk3ZjgxNTU3YzU1MjViZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlZTI2OTVlMzI1M2ZiMzQ3ZjdjYmYzYzg3MzJjNDA2ZmJlYmU4NjlmYWE4NzdlMDc5NzM4NWViZjJmMmVjMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkNDEzNDBjYzIzOWExNTljZTliNjAyMmU5ZjYzMjI4MzJlMmVhZDc2Y2FlOWU0NzU0ZDIxMGViOGZiNmQ1ZTgifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/reports/cadence.py#L64-L154",
+          "version": "repo-lines-v1:sha256:3de3fea617659fb5ae3b0b32cf793562c729680c2f63801002f88cdc75f51101:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2NGEwYmNkNjg2NmQyZGUxYjljY2I1NjgwMGZmNTcwNzU0MTVhZDcyZGJlYjAwYTYxNjZmMTcxZjc4Njk3YTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmYjM4N2ZlMDQyZDQwMTg0NjJkYjIxNWE5MzM2YmI2MGUzZGE5MDdhMWFjNGRlNDgxZGQ1MWQ1NjliZWU2YTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyMjdiNzZkZmQ3MWQ5NjY0ODcyMDg0NTI5OWU1NTFkNzA1YzgxZjcyN2MxMDlhMGM2NjljZTc3ZGRhMDcxZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c4cc8e2d84d489d952a6be2a72582e6",
+      "statement": "Managed weekly and monthly schedules start a Managed Deep Agents report prompt at 13:00 UTC, weekly on Monday and monthly on the first day, directing the agent to read all aliases, compare equal periods, render a report, and retain unavailable platforms.",
+      "evidence": [
+        {
+          "resource": "repo://schedules/monthly_report.py#L1-L14",
+          "version": "repo-lines-v1:sha256:748d83679ffd691ff3e18d8850b55b13a0e1c6f7e52363c89c7f79da9781546f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiNTYzNGFiMDEwN2FlYmVhODc2MGRiZjMwZWJiYTYxNzY4MmExYmZhMjUzODIwMzBiYTg4NTE3ZjEyOWJlYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://schedules/weekly_report.py#L1-L15",
+          "version": "repo-lines-v1:sha256:9e0f69b9347dcaa53ecc6a8ecb59337a956e893507aab1371539586a784b280b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiNTYzNGFiMDEwN2FlYmVhODc2MGRiZjMwZWJiYTYxNzY4MmExYmZhMjUzODIwMzBiYTg4NTE3ZjEyOWJlYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2786efab4b4448ab9ae54da886faf2ea",
+      "statement": "Authorized performance reads are scoped through host-owned account aliases: the dispatcher re-resolves the current read catalog entry, rejects stale/non-read/raw-ID input, injects the provider account ID, validates the original provider schema, normalizes row results, and records artifacts with provenance and quality metadata.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/config.py#L52-L97",
+          "version": "repo-lines-v1:sha256:797b09e3113adb92f447019ec423ded32bf71ec5efcb37b539b5109c4bb4ccfa:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkZDAwNmI1MjA4YzhjY2Q4MGYxMGUwOTZkYTRhZjNjZTA2YWI5NzNhZWJkMjJiNmRhZmZmYmFlMTQxMDJmMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2Y2ZlNThkYmZmZjJkNjZkYjllYzNlYTM4NmY0YjA3YzQ5ODFmZDFlNmRmZTM3MGU2YTQ1Y2NiYzczNjMwNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNkNTNlN2VkOTczYmEyNDk2YTUxYmRiZTAxNTBkNGRjMTdiMGNhNGU2N2QxNmEwYWQzMWMzN2M0NzIzZDA3NmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc3MmM3NmQ1MmZlNTk5N2E5YmU2OTQzNjIwODZjNzAxYTFkNTUxMmYwZGJlODgxYjQxYjk1ZWM4NWQ0ZDc4ZmUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/reads.py#L142-L214",
+          "version": "repo-lines-v1:sha256:7572349e69f71dcf221102c9052a2bc3807acf87d8dbb47aed4489d46b9d8506:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI5NzRjZDQ3MGQ4NmIwN2E3NDcwZGNmODZhYzJlNTRhNzA4ZWRjZWYyMTg1YWZjOGY2ZjdhZTM2YjEwOGI3YzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjNmQwYzJkNjcwYzZhNWY1YWRmNjQxMDliYjUyMmE2MjYyMWEyYjk3NzBiZTRlYTdjMzJlZTc1ZTY1MWU4YmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzYzk0NzE2OGUwNjJjOGE4MDM1MTQ3ZjE1MmRkNDE1ZDM4ZGE0NTU2MDBkYTcwZTkzNDg1MDllZWM4NTZiMjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmYjRkODIzMmRmN2ExMmUyMTQ0ODhkMTBkODM5N2NlN2NkOTQyNTRkMTg4NjgzZWNiMzAzM2FiZTc5NGQzZGMifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/reads.py#L234-L324",
+          "version": "repo-lines-v1:sha256:b553350299d792e5f18832bfb92b2ae96803a397da3ce17b6e2e657722686fc5:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkMmQ0MmM5M2ZiNWQ2YTVmMWE5OTlhZjhjNzhiM2NjNzQ2N2RhYzc5OWMwOTFhZGE0ZTc0OGE3MGY5ZmVmMzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5NzkxMDZmNzI4MjFiNDRkZDMyM2NiNDM0NDg3YmVjMjgzYjFkNDU2NjhhMGQzNmQyYzY1YTM5NDg3OTg4ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0YmY2MGM1M2JkZTA4ZDdkZDcyYWNjZmVkZjBlNDZhNDI1MzZhYzQ4NDM5NjQ1YzYzNzllYTk1YmE0NTZlOTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b919f24dbc634bba83e1333afe581ed8",
+      "statement": "ArtifactStore persists JSON artifacts beneath workspace analysis or out directories using opaque IDs and SHA-256 of canonical payload serialization, and rejects invalid IDs, workspace escapes, missing artifacts, and hash mismatches on read.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/artifacts.py#L17-L26",
+          "version": "repo-lines-v1:sha256:d3db6405c406d5c6fad07ff17750fb718cc3d9e5c025e8c8a3e41d14bc4f905f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYjQ4Zjg1MzRiNzhmNjIyYzRkNmIwMDE1MzI0NDQzZGQxMmFlZjY0MjNkNjJmODQzMzIyNDFjYmJlZDY4ZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI4Yzg2MWM1OTE1NDM5YjYxMzllM2E2NjA1OWQ4YjJhYzJiOGFhYmIyZDIyZDlhYWI1OGE2MWNmYjk5M2IwNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4NjdhYzhmM2MwMDNlMDZmNjFlNzBhNmEzMDM5ZGIzNDg4M2RmNzQ5MzMzNTNiNWVhNDViZjg4N2ExZTc4NGQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/artifacts.py#L61-L150",
+          "version": "repo-lines-v1:sha256:b18f844e61f77137073913c769f747a3dbfeee6e4f982e3caa8cecc6c878849a:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmMDY0MzU2MTk3NTA1NDMzMzQ0MzM5NjJkNWRjZmU1MDdhYzU3Yzg5MWU3ZGQ4MTliODNlNzg5MGY0MDlmMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwNDdlMWJlOWQwOTdlY2U2Y2VkMWI4Zjc3MWExNjY2OTgyZjMzOGM4NjkyZDdiMDM4MjgxMmJkZDMwMTVhMzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1NDEyNzMwOWZkZTJiZWUxOWQzODY1MWRkOWU5ZmJiZmQzM2E5MGM2Yjc1ODk4NjY4MzM3N2U1YmNjNzUyOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkZjgxNzUxMmRiYTZlOTQwOGFmOWU4NWZmZWJmYjA4ZGNjOGI4Y2EzNmM3MmE5OTc5NWI5NDVmYTEyOGE1NjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_79858141235b449896996bc3ba8dc39d",
+      "statement": "`compare_periods` accepts only nonempty performance-row artifact inputs and equal-length ordered windows; it rejects reads that do not cover either comparison window or contain no rows in one, then writes a versioned analysis artifact and returns a compact deterministic summary.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/compare_periods.py#L43-L124",
+          "version": "repo-lines-v1:sha256:132695864c6678c06f4ed05cb75d44b42b688a41b7d97b567d89669d370ff0a1:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwZjkwMjhhNGZmNWVjOGU1ODkxZjYyYWE0MzA5ODk4ZGQwZjg0NDYwNjg5NmY0MTc1NTJiYmIxNWEzOTJhOTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MjQ5MzcwZTE5MmRlZmI3ZTQxYjE3NTZjYTQ2YTM1NGVjNmIzMDQxYzdjZjFmMDhhMjBmNTkwMmYwYTI0YjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkM2Y2YmIwYzZhYzc3Nzg1MmYyOGRlNzhjOWI4MTExZDdjOGNiNGI4OTNlZTQwYzFjZDQ3YTQwNGIwNGU2OTcifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/compute.py#L375-L423",
+          "version": "repo-lines-v1:sha256:c75a627311bab7130df59551bfe374b4523b0f750cbbdf18c3fac0d129a8d963:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NDVmMmVkNTg0MjgyNjg3ZDI2YWMzOTgxMGU4YzA0ODFlNDA0ZDcyNjgwZDM4MTMyM2E3NmIwZDVkNWI4YTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlZWEzNzhhZGQ1NTE4Yjk0N2FmMjZjMzc0OWQ3ZWFmNzFmYTQxYjk3YTYwY2UzYzVjNTc1MmVhZDYwODFmNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_867d2ede12cf45439e3d72ed5f2e16a6",
+      "statement": "Deterministic platform comparison aggregates raw values before deriving quantized ratios and deltas, preserves missing metrics and zero-denominator ratios as unavailable, validates currency, timezone, and grain, and flags duplicate, incomplete, missing-metric, and partial-source conditions.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/compute.py#L135-L214",
+          "version": "repo-lines-v1:sha256:f9b8f337821a62c014d4db07796d930561010148ecf122c96b03bf22fcfc5c18:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3MjI5ZTA0ZTRlN2ExYjJkMWJjNGEyMGM2MWNjOWJiMGI4ZWIxYTE2N2U0YjRkMmU4YWMyMmM2MzcyZDY2YWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1Nzc0NDMzY2JjZTU1NjFiYTY4YmYxMDRlMjUzMTA4NTU3MmI2YjgyNDNkOWViYzBiYWRkMThkMGY2Nzc3YTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVmNTZiZDNjYmJjYTY0Zjc5Y2E5Y2Y1YWI4NmZhNTA0MTM0YTBlYTBiMDZmYThkYWNkOGE3YmJkMTRhZTYzNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIyN2M1Nzc0YjdjYjNhN2Y0YWU3NDQwMzkzZWI2OTg1YWRlOTAyYjU3NTI5ZDBlMzAzYjc5Y2Q4NmViNDM5NjkifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/compute.py#L33-L114",
+          "version": "repo-lines-v1:sha256:cc4bce68caaa23cf291b6113ee4f376856fc513b193806e6e339cabd38f82d7c:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4OGRlNzM4M2RkYjA4NzFkYWFjZTE1M2RjZjBjZTRiYTJiMjQ3YTg4MDRhMjMwYWZjYjZmZjIyYTFhM2M4YTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2YTk5ODc2MjBmMjcyMDQyOTZjN2Q1ZDk4ODY4MmI4M2M2ZTM3M2M0MDQ4MTQyZDg0ZmE0NzcyMGE3YTBkNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1NDEyNzMwOWZkZTJiZWUxOWQzODY1MWRkOWU5ZmJiZmQzM2E5MGM2Yjc1ODk4NjY4MzM3N2U1YmNjNzUyOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2ZDk0NGM2ZmYxNWZlYzc0ZDk1Y2I2MTg3MWFhYTM3YTQ4M2Q0MzY4OTg1YjM1OWVkMjVhZjYzZTFlNDljNzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_46e88caf939f4010ace6623414ac3801",
+      "statement": "Platform reconciliation checks entity current spend against platform spend and, where supplied, rows against provider spend and row count; a PeriodComparison is reconciled only when every recorded platform check passes.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/domain/analysis.py#L107-L125",
+          "version": "repo-lines-v1:sha256:8a526c88021ba206275d186c60d436d7e850f58855db1033b49901afffe58f2f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1YWNlMzk5M2UyYTAzZmExODg5ODM5NmNkNjIyMmU1ZWNkZjViNjg5ZTBkMTIzOTdkNmY5N2MyOWQxYzc1ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzN2Q2NjAyOTMxYWM3YzEyNjY5NDU2OGQ4YjUxMjg2YTQ1ZDFiNmUyOWY4YTRkMWY1MzlkZjVmZWFiNDAzMjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmNjk3NGJhODA5NmMwYjAzNTg0YmU4NWNlOTRmYjBmZTRiM2FlNTY5ZGEzNDNlOGQxM2RiYzc0YzQzOTExMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYwZGExODg1ZGE1MjE0MjI5MDIyYTAyYjllMDAzNTgyOWZmNDljYWI3ZDk2ZGY5YzMzMzg5YjhmM2VlZDAxZWUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/compute.py#L216-L275",
+          "version": "repo-lines-v1:sha256:a190afad64bda0023762699a4f153d392143dd046db2c1385ea0e6b56a6f1a33:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ZjNmNDIwMmVhMTYwN2I1YzYzYThjMDk0YTViNDhiMDA5MjA3MmRmMmEzOTk3YjZmYTJhNDA0NGNiZDY0YWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmOGNkNmE2NDE1OTFiYjFmYWVlN2QxMTMwYzNmZTZjMGZmYzgyY2MyNDZkMzBlMjI5NzQ2ZmQ0ZTU1YzlmMDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5NDY2YTA2MjdmMWY5ZWYxN2YyZTFhMWJkNzg2MzAzMjA4NTA1MzczOTQwMjlhZjVkM2Y0YTE4NWRlMzM3ODYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8b44f0acf2b149708c0434d95905e8ac",
+      "statement": "A cross-platform total is suppressed if requested sources are unavailable, currencies differ, a platform window is incomplete, metrics are missing, or platform window bounds differ; per-platform comparison results and the suppression reason remain available.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/tools/compute.py#L301-L341",
+          "version": "repo-lines-v1:sha256:645a16eac3ce44a455a27873e8af5b66bf2e599f032083a4cbe2995e97a73284:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxYWY0MDI4YzViZmE3ZTVjZTY5NmNiMmRlMWFkNjBlYzQ0ZGQzMTA3MGY3OGU1MjFjYjk4YTA2MDI3OTA2YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzMGRhNTdmNjgyZTRlODIyOWZkNGMzMzJlOGI4Njk4MDY0Njc4MjEzMGUzOWJkNzZkMDVkMGFiMGZkNzEwNDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2847e5a2ccae425bbf1b7c96d4395938",
+      "statement": "The deterministic cadence runner derives complete 7-day weekly or 28-day monthly trailing windows with preceding equal-length windows, continues past individual unavailable aliases or reads while recording them, and fails only when no source produces performance rows.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/reports/cadence.py#L29-L49",
+          "version": "repo-lines-v1:sha256:af397ddcf9e4383e7d91a927557465f42059ba21bb24a341ddd03b8f611e39fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwZmVhYTQzZTMyYjUxMTM2YmFhZGRmM2I1MzAzMTlmNzQwYmM5ZWE2ODNiZjMxMjA5NGFjOGVhM2ZiZWY4NjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5MTE5YmY4NzE1ZDA2NDU5MTUwOTZkMjFjZmZlYjg5YjY1NDhlMGMzNDRiYTllNmU1ZDlkYTZjNzM3N2I2NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxMTIzYWE0NGY3NDYwNTJjNmI4MDRiMDAyM2UyOGU3MWQwNzY3MjUyZDYxMDI4NTkxYWYxNjBhNWE4Yzc1NmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/reports/cadence.py#L64-L128",
+          "version": "repo-lines-v1:sha256:969fbf7402822d3fea454e315e481b804dd81e215416d37cbae8d685d00a8f68:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2NGEwYmNkNjg2NmQyZGUxYjljY2I1NjgwMGZmNTcwNzU0MTVhZDcyZGJlYjAwYTYxNjZmMTcxZjc4Njk3YTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmYjM4N2ZlMDQyZDQwMTg0NjJkYjIxNWE5MzM2YmI2MGUzZGE5MDdhMWFjNGRlNDgxZGQ1MWQ1NjliZWU2YTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1MDhhMDhlNzQ0NmIxMzU1M2EwMDM5NmFiOWU5NGVmNjg4N2M3MzdlYWI4ZTI4Mzg1MmJkNDcwN2Q1ZDg5OTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_be4db56f22bd47cb87e6aa4f4e96fdad",
+      "statement": "`render_report` validates an analysis artifact, builds a code-owned report payload, reconciles it against the analysis before rendering, and aborts with an artifact error on reconciliation mismatches such as altered values, omitted sections, inconsistent total scorecard state, or missing unavailable-source reproduction.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/reports/render.py#L204-L235",
+          "version": "repo-lines-v1:sha256:32d2e494cd4d1c2d5ff40db95f655aa3eb234afdd22536a9d1b5e1436ef03e70:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwMTE3YzA0ZDY1N2NlM2JiYzRiZmY0NjVlOGUwNzIwNThjYTliYTI5NzYzNDUyOWVkZjlmZDlmYmI0YjU0NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5NjZjMzYzOTk4N2ZkYjRhZGVhODkzOGZmMmM4M2ZjZWZkMGYzZGI3MzZhZjk1Y2FiZDM1MDgxNGIwOGY5OGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2ODRkNTA0ZTdhZDA3YjMyYWQwZWFkNjAzZGY0NTRjYThiOGFkYzcxOWMxMTZjNTRhZjMzMDZiMDJmNGQ5MTYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/tools/reports.py#L36-L76",
+          "version": "repo-lines-v1:sha256:b90c7d81921cc893ba39331226dbee433103567c216e55548b889e468ef1e0ed:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1YTRhODY4NDVkNTgxNmYxZWE2NTZiNGE5MmQ4MzVmMDg0OWM2NjIwOWMwZGZmMjJmYzYwOTM1YjBiNmIzOTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQzZDMyNGI1YTRmZTIzZmQ5NmU5MjAxOWE2MWQyOTEwOWEzZTcxZGQ2ZTc4MTEzNDc5YzljYTcwNmZhM2RhMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFjZDNiZDNhMDk5MjkzNjA4MjgyYWE0NjIwNDUyYmM3YmVmMTNiZDQ2YjIzNDhkOGJkZDZiMzE2ZjUxYmM4ZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3d1fa73565ba459286ad6c55c4e1d827",
+      "statement": "The report renderer owns payload layout and writes HTML first; it produces PDF only when its PDF engine is available, so unavailable native libraries leave an HTML report with a PDF-unavailable detail.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/reports/render.py#L108-L201",
+          "version": "repo-lines-v1:sha256:407868ba06bfe869c0cf0b1d1212173aea36171fdfe30427aaff2473b9a77e27:eyJzZWxlY3RlZExpbmVDb3VudCI6OTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwZTA5MDA5Yzg5YWY5MjhhNWQ0N2U2NmQ1Y2YxZjU5NzE5N2Q5YmZkZTNhZWRkMGJhYTM4NGUyODJiYjgxYjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlZWEzNzhhZGQ1NTE4Yjk0N2FmMjZjMzc0OWQ3ZWFmNzFmYTQxYjk3YTYwY2UzYzVjNTc1MmVhZDYwODFmNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyZmE3YWRiZmY0MTAxMGMxZjcxZjJjOWVjNzdhMTBmZGU5YWM4NDA3MjA2MjBmYzVhZTNkMTZhNWUyMjVhYjQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/reports/render.py#L245-L320",
+          "version": "repo-lines-v1:sha256:53a7b0ed06679f5fad2ae520415c7c32f2f0401ab26b8cb8f9c85e02cbbce90f:eyJzZWxlY3RlZExpbmVDb3VudCI6NzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzNGIyYTYzMzdhZjVkN2IyYTg5NDNlOTQwODFkZWVlMzE1ZjQ1NzFiOGMwMjViNWE4OGFiY2U4M2MzYTdjNTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3MzM5MWUyZDM5NWU0MjRlMTFiYzMwZjE3MTUwN2Y3YjhiMzEzOWYzODAzMDU2MzZjMGQzMDhhMzhlM2IyYzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhkZWE5Y2ZhMTA1NDY1NzgyYWQ5MmQ4YmI5NjZiZDNmZDdiYzZlYmU1OTJhODkyYjgxOWE0Zjc4MmZhYWE1YmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxYTgzN2YxZDU3N2M2ZjhmZTc1ODhhYzY3OGE2ZDQ1NGQ0YWEzZTExYzVmZmM5YjBmN2I2MWFhYWFiMWFkZDIifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/reports/templates/report.html.j2#L21-L90",
+          "version": "repo-lines-v1:sha256:0da7e9496384ec514dd4274ae4f77c7f5771c115a8a4e6fa8e947f827a1cd502:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ZTMxYmFhNTNiNDFhNGE2NTA0Zjk0Mzk1MTZjZGRkMjMxYTA3M2VjYjA2MmI4YTRmODZkYTk4Y2FiOGU3ODIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhZTQ3ZWRhNjQxM2MzNmYzNmE3ZjczYzU3NGRlMzc0MjNkMmY2NTc0NTAxZTkyZGJmYmE2NzcwNWFkZGVhOGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlMzBjOGVhYjU2ZTkwZmEwNjllNTk0YjA0ZDEwYWVlOTBjNjg2NGMwNDM0MGNiZWE3NDZkZTEzOTJiNDQ0MjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyZWQ1NGVkYzQyZmJiYmMzNjk4OGIyYTE4NGI2N2U0OTU2OGJlNDgwNzgzMjUzOGJhOWI3ZWRkYTUzNzQ0ZDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a30618f506442c5b6a383d2540e9be9",
+      "statement": "ArtifactBridge is the report-delivery boundary: it permits only in-root, non-symlink regular HTML, PDF, or JSON files with nonzero size no greater than 15 MiB and returns a relative-path receipt with media type, byte size, and validation time.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/reports/bridge.py#L10-L60",
+          "version": "repo-lines-v1:sha256:8bbc844b66e8701752314c6eb8aef56cf60f439f42506b7ba70d5ed161c699ca:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4NGZlNmNmMzBjMmU2NThjMDdiMzQzZTRmNGMzZjAzOThjM2QxYjIwYjljMGZjNDQwOTBjY2M1ZDQ1OTBiN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNDY2MTc4N2VhNzQ3OGZmODYyY2FjOTQyMDAzZjNhOTc2NDFmNGU5NzFkOGUxMTFkOGU5ODgwMDBmMTEyNTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MDA1Yzc5NGY5NmUxYmExZDAwNGFmYjBlNmM3MTQxNGNmZmFkOGI2Nzc2ZmEwNmE4ZDhjODc4NWFiZDllMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_828352c9cca04e998e0ff68c6d01c539",
+      "statement": "Offline tests cover cadence window construction and unavailable aliases, compute missing/zero and total-suppression semantics, and report reconciliation, escaping, and artifact-bridge denial behavior.",
+      "evidence": [
+        {
+          "resource": "repo://tests/unit/test_compute.py#L53-L173",
+          "version": "repo-lines-v1:sha256:65be6378e1467ea93061d3f00ddf29fc3b86a3f25de3f68a3bc7068f0b3f984c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5YzNiNjJlMDIwNTNlNmJlNjkzNjgyY2UzNDE1NjdhZmU0MzIxZWUzNzFmY2Q3OGYwMjljZTk0ZDQxMGJkNTA3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhMTMxYTZiNWY5YWE1NmVmODM2YzY2NzE5ZjcxZjg5YjFhMTYxM2IwNTJmMDk1Mjc4ODllOWFjZjYyYmJjNDc5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4Y2M0YTdkMWNjNzk2YWJhM2U0NjcyMzMyN2Y1MTdlOWY4MTE5ODJkMjUwZjA3MDI5ODZlNGI1NzY0YWQ5NTg5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        },
+        {
+          "resource": "repo://tests/unit/test_reads_and_surfaces.py#L89-L202",
+          "version": "repo-lines-v1:sha256:6cf854bf65f7b544da012abab7ad599e13cb0f7ea06a7542410088cbeff3f9ad:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZjYxMThiZmIwMzcxNmE5N2E0NzFjYzkwN2NmMDllZGRiY2NlNGYzYWEwNGRiMGE1MGU0NDA2ODhhNzNjMWZjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2NDY3YmJlZWNlYzdjNDUxNGYwYzU0ZTFmY2I4Mzg0ZjVkY2ZmMTdjNWQ3ZmQzNDE1ZWRiMmI4NzJhNjgxODU3IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2ZmIwYmFmMGJiN2YyZjIwY2EyOGM2MGVhNGI5YzU1MDcwZDc5ZjQzZDg1MGY3MjhiMWY1ZTkwYjNhMDY3MGMwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0ZDBhODE1OTRiZmRlODc5MWFjMmViNDM2ZDM2ZTU3NGQ2NjU0ZWVkNGJkNDU1NzA2YzBlYmFkZGM0ZGMzMjE2In0"
+        },
+        {
+          "resource": "repo://tests/unit/test_report_cadence.py#L12-L60",
+          "version": "repo-lines-v1:sha256:fc771b3992063fc709cd889733a3386d3d1fb751b4a8129c238070a4d7714e12:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhOTAyN2RlNmUxNzBmOGRmNzUwYjE4MmExMzJmYzE3MDBkNmYyNmQxMDdmNTk5OWVjZjY2ZWJmODA5YjA4YjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxN2QyMTIyZDQ4MWI4Y2YzMzI1ZmY2YWVlYzZhYzIyYmFiYTBjOGYxMjViMTkwMDQwZTI1NWRmMDQ0MmM3MzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjNDNiODg5YzI0MjJlOTI4ZTcyZDA3OTNjNGZiNzM3NDEzMDMzMWIzNDFjZDcwYmFlNWQ3ODY0N2NlNjZmNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-09T17:45:08.888Z"
+  }
+}

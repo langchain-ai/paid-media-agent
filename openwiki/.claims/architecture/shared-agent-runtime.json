@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:f088c642d9f78058d3c2e26b5d8e39982845f95134082e27e4761fda65e655c1",
+  "claims": [
+    {
+      "id": "claim_2787ec241739425a89d2d56e617139f5",
+      "statement": "`build_agent_components` is the shared policy-controlled assembly: it combines typed settings, a runtime profile, and an authorized catalog into model, tools, middleware, interrupt policy, prompt, metadata, and shared host services without network calls or process-global mutable state.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L181-L198",
+          "version": "repo-lines-v1:sha256:65c193a04df264a18b8845749ab72920893ad32e67ed73ad3105847ba75aa384:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlOWRkZjY2NTczMzRiNWIyMGYwNmZmN2I0MjllYzg1NTYyMDcxZGMxYzJlYjljY2Q4OTU5MjljN2FmMzRiMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxOGM3Y2JjNjcwY2FlOWNkM2EzNzIyYTYwZTgwMjYwOGExOGJlNzdkZjg1MzA2NzhjNGE0Mzc4NDQyYTM0ZjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjZTYzZDQ3MzkxOThlNTFlMTY5YjVlODRiMzkxY2RiMTUwZWVhYWQ2ZWVmZDA0NTc3ZWNkYTRkZjkwMzEwM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmYmQ5MTA2MDk4MTMwMTU1MDBiNzcwYTA5MGVkNTg2ZjZlZDFjZWM0OGM0OTlhMDkyNjczZTU4OTE4ODg2MGUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L260-L285",
+          "version": "repo-lines-v1:sha256:2888eb0f6ddf41809574f18c75bb5b5fd8a166a2d47876cfa69b5243670259b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0ZjFlODVkYmE0NWZiMGZkZGNkNTM0ZTcyM2NhOGVlNzFhNTBiZjY0MzIwZDMxZDcyOWI0N2MzNGZlOTJmNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNjZlMTJkMmRlZTYyY2IwZDBmMTRlYzQwZmM1ODFjMjExYmRmNzQxNGE2NjI2ZDI1Nzk1Y2I5NjNmNGY3YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFiNjc2Y2MwYjZiY2Q2M2Y4ODNkMDMxYmUxZjg4NGJlYjQyODllNmMyNjIxNWRiODQzYTRmY2NhZWNkZDQ5MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_445d1205a0b94e48942115ea4925f793",
+      "statement": "On `main`, `agent.py` deploys the shared MDA-profile components through `define_deep_agent`; self-hosted server, persistence, transport, and local LangGraph Server infrastructure is maintained on the `self-hosted` branch rather than as a `main` deployment path.",
+      "evidence": [
+        {
+          "resource": "repo://agent.py#L1-L20",
+          "version": "repo-lines-v1:sha256:a65b9e5d031448ace3b58b8ce420d64b4dbcba86d6c4bcbda176ec337649a3f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzYTRjOTk5OWNmNzkzMjA5MjczMDI1Yjg5ZjAxMjExYmFiYjY2OGNiZTY2YTcyM2NjMGVjNjNlNTBkNWVhNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0MzZjNWI2MGI1ZDcwN2FjMTlkMjhiNGFlYTk1OTJjNGZkNmU1MjVhNzIxODQ5Mzc3MjY5NmRkMDk1NTI0ZWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgifQ"
+        },
+        {
+          "resource": "repo://docs/self-hosting.md#L1-L21",
+          "version": "repo-lines-v1:sha256:e4cc3f5173b6f563ed55498e00c7f41f063576b27d958cd0cbaebbc76c02662d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2MDNjYjRiZDNjNDk2NzAzNjU5ZWY2NzYzYjdkOTBhY2Y5MDc4OGU2ZjJmM2ZiMjgzZTg5M2MwN2U3MTY2ZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MWUzNmEyNjBjMmQ3M2RkZTFkMmRjNmM0NzI4ZDM1YTIxY2VhYzY0MTUxMGZlMTE4ZGViZTMxM2MxMGNkNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2YjA2YmI1ZDkwNTY5YTk2YTkxYjQxY2JhYmZhMTM1MGE2N2JkMDdhZGJjYjQyNWRhYTdmYjg0YjUwMDQ0OTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ec840dfab818477ba762c43821e07295",
+      "statement": "A `RuntimeProfile` owns environment-specific artifacts, account aliases, catalog and provider adapters, write and approval policy, signer, repositories, run mode, skills path, and extra secrets; assembly constructs the read, proposal, and execution services from those dependencies once per build.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L115-L146",
+          "version": "repo-lines-v1:sha256:6428f4b2ca8074da0391ce7018a6c6e5695243188ef0b1fa6b1bcd1d469c38d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkYWJmNjQxYTBlMWFlNTk1YTYyYTM0NjIwMjU5Zjg5OTI1ZGZhYmY5MGU1MGNkOTNkZTQ0ZTBlNzE0Yjk3YmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5N2Q1NGU0ZWU0MWU1YzEzN2NjZmY5NjNlMWEyMmRjNGNlMWYyZDlhZjliOWFlZDE0NjFkYmM1Y2E2MTg4ODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkNjgyMjY4Y2QzNGI1Y2NkZGM0ZDdhN2RjYTVlYTQ3ZDRiZGUyNzkxOWFjNzY2YTcxM2EzOWZmN2U5YWViNDUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/profiles.py#L37-L72",
+          "version": "repo-lines-v1:sha256:5edae42ea248bc80a6e4d95bbc6a41d75fd4d29b1f092e1627676e0171d2ad57:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2OWExMzk3NWMyNTZlYzgzMjBlMjAxNjA4M2M5NmRmNjM3Y2EzZDM1YmViZGUyMzE0YmVlM2E0NzExYjU2Y2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmNzI2MGE0YjllZDRjNThiMzU4ZjlmMmVhYmMyNmI5ZGIwMzRmYjZlYjRiZDViMTQyZTQ3OTI2ZDhjZTZkYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiMTZlNmE3Nzk3ZjUyZmM4Yzk2MzJkYmUxMDE1ZDc5ZmE1ZTNkYmVlOTEwZjVkM2IzZGE4MTg3NDUzMTk0ZjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7f3aebfcac174434acfd0bd2c5d6caaa",
+      "statement": "The configured profile loads and validates a catalog and write policy, uses live read and gated live write providers only when a fully live catalog is available, and otherwise retains the fixture-backed fake provider.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/runtime/catalog.py#L39-L95",
+          "version": "repo-lines-v1:sha256:bde9f0389b8ddc815d0ce39064d76ffcbdc6e3a5c25c2423cd1ddef2aa54e6ce:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjZTViYzIyYzM2ZmMyYjQ3ODJjODgzYTExMDkyNzRhODkzOTM4OWJiY2U0NzY2YWFkNDlmMTY3MTJlYjA4ODQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlhZDM2ZWY5YTg4ODU0NDc1ZTdmZDQ5N2YxMWMxMDFhYTJmMmU5ZWMxN2U0NDJkZDliMzI2ZDg0M2I4ZGUzMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/mda.py#L45-L66",
+          "version": "repo-lines-v1:sha256:7b5b71084e7423e5452ae02545258331e5d722b0a6101b9893b500c909d279c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViYzUyZWEyZjU1ZjA0ZjAzMTM5YzliZWZkYTMwMDY1Nzg3N2Y4Mjk2ZjlmNzBmNGNlN2Q1MDk2Y2VhOWE3MDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlYWUxODYxM2QyZTk3YzRmZjg3Yjc3ZDM0NDdiMDcxYjRmZDM4ZTE5MWI0YzgzZjMyZGJlMzUyZTczOWMxMjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NzRkMmU5YzQwYzliMmIyYjdmYzQzMGM1NzY1MjlmNDAzZDk4MTNlMzg4MmNiMDViNWZkMjdkNGE0ZmExYzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyMTlmMTAzYzMyYjE0YjM5OWRkMTViOTY3NTQyYzdkMTZiNjYxYzVjZTE4ZGQ4ODE4N2E0YjdlNTJjMWJhOTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ea573358ac25492fae34aebc4e6b24b5",
+      "statement": "The model-facing tool surface consists of product tools plus filesystem tools while Deep Agents built-ins `task`, `execute`, and `delete` are hidden; the invocation guard filters unavailable tools and denies direct calls to catalog entries that are not reads, requiring mutations to use the governed proposal and execution tools.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L202-L227",
+          "version": "repo-lines-v1:sha256:4a4f8647e8d82605aaebc707712da313248ad5265bc42fc115c6703502d08c0a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwYjZlZjQxNjNjMWExYWM1ZjZiMDExOTQ3MzJiZjg0OTM5NWUzZTA5MGEyZjBiNDk3YjdmM2U5YzZkNTU4NjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzZmYxYWRlNWI3ZDAyMzk1ZjU1MTQxOTU1NzEzNTA5ZTE3NjBiYTdjMTIyMjFlNGY1ZTY1MmJlOWM4OTI5MGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmYmQ5MTA2MDk4MTMwMTU1MDBiNzcwYTA5MGVkNTg2ZjZlZDFjZWM0OGM0OTlhMDkyNjczZTU4OTE4ODg2MGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4MDk4ODMxZjRjN2U3ZTI5YjkxYzlkYzQ5NzM4ZDY4ZmZmMDE5NWE1MDRkZGI5MGQyOWY5M2VmOWMyZTFjMmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L58-L74",
+          "version": "repo-lines-v1:sha256:ef4a41136e716da245c8d24c5f614a3e92e5f42503106db73d4a61164b3ffe9d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxN2MzYTQwMTQyYTk0ZmIyMmVhM2UwNDBlYzI1ZTYwOWYwNjZlZWFmM2VjMjMzOGRhYmFjN2YyMmY0MjhkYzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5YTU2YzA4ZWNkNjYzMGZjYmQ0ODA3MWFlMjZjZDg5NWYxZTg4N2UxZmE1MjMzZjc0YWJiM2UwZDJkZWM2OGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMyZWNhYTU5ODMzZjI1NzFiZTRiYzliNzVhMDQ0YjJjMWI1NDU3NmFlYWMzM2ZiMzFkZTQ3YmUyNjU5ZDM2MDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/middleware/authorization.py#L21-L34",
+          "version": "repo-lines-v1:sha256:7533475ae9e7379eb6f0d132cc9aa57d745a8543c3b0ca91943f63d340986f11:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0OWM3ODJhODQ2Yzg5YTQ4N2RlZjIxNGY0MmI3OGIwODMwNWNkYWUyZjMxYzU3NGE4NzJiYjk4YjdlNWIxZmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE1MWZiMzc2MjZiNTdkYWY4YTg3OTYzMDA2YWM4NWFmYzg0MTk4NGI4ZjU0NjZiYjhhYzUyNGE5MjE2ZThjYmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1YzFjNDYyZTJhMzlkNzQ3NTlmNWUxYjEyNmY3NjgzYTJiNzMwMTE4ZTE4ZjUxMjJiMDhjZWRlZWI2NTBlMjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkZTI1YzI5MzE5MzkyNTA3OTM1MTlkZDU1OWYyZjBiNjRkYWQzM2M2MjM2MzkyYTMyMjk2ZWZkMzliMzgyOWYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/middleware/authorization.py#L58-L103",
+          "version": "repo-lines-v1:sha256:bd235fce2c0e58a68c45d0bd2b0f3bf049edcccec27765c38dffd6b136a0a090:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmZGM0NmY1OThlODkyYmI0Zjc5YTY0YzVjM2FmODZlOTlhNWVlNjBlNTQ3ZGIwMGJjOGE4OTM5NjdjZjUyZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNzVmZGFlNjE1NjAxYzViYzllMTUyM2I5Yjc4ZDhlNzE2NDY0MmQ0NzI3YTM1N2QxZDZiNjk5MWJhNDIxNmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1NjMxZjY0ZGNiOGFmMjRmYjcyMWJjNGU3MzcxMzI2YWIwZWFiNmI5MWU0NjkzNWI0MDcyNDFmZTZhZjU1MzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_211f55d52e824cf09a9fefcd433400ce",
+      "statement": "When governed write tools are present, `execute_change` is the sole tool configured with an approval interrupt derived from the proposal service.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L251-L253",
+          "version": "repo-lines-v1:sha256:23f613a6951975e01877069e48ed61e6c25b9dbdbce50cead61484622e5208fb:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQyYTllM2MxNzY2MDJmMjJmMjFjNzQzMWYyNDI1NzdkNWM0ZDJiZjlkNzk1MjlmNTU3OTg2NDk2NGE2MDczMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzc3NmNjN2IwZTQxM2IyOWQ1OWE0MTlkYzI2OThkYmQwMGU4OTM1MWViMzYzOTJjOWQ5N2RlOTgzNTQ1M2Q5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTZmYjg1ZmM5ZTVkOGY1NjMwNTE3MzgxNjgzZGZlMGYyYTM3ZTRjMTQ3NmE1ZWQxZWU0Njg1MTczNjI2ZTg2NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODJjYTY5NWRiMTE3NDNmYzA1NDRlYWJhM2FmODIyNDVmYzE2MzI5YWRiYTFkY2RhYWJkZWZkY2ExYjZhMTFlOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d43d5645b59947869af08c1cdbf543a3",
+      "statement": "Assembly registers bounded retries, timeout, and model-call limit for non-scripted models before date stamping, model-aware selection, invocation guarding, result offload, and redaction; the configured order is part of the shared runtime behavior.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/assembly.py#L229-L250",
+          "version": "repo-lines-v1:sha256:6dc01c6151069c92628534f20af8f68ebcf6abbb5c9da40c8d284d95c133b15d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiOGFmY2UzYjljNWZjNmYzZjZkZjAyN2MxZTA0NWE2NzZjZjE5MDVhMTYzMjlhMDBiNTQxN2Y0ZTM2MmUyMGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MDllYzUxMjhkZWRjNWE3ZjdiN2ZmOTAyMjM4ZGE5ZDQ0MWIzNTNhODg1OGQ0MTAwZGIyMTJkNmQxNjMyMDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzZjYxM2E2OTUxOTc1ZTAxODc3MDY5ZTQ4ZWQ2MWU2YzI1YjlkYmRiY2U1MGNlYWQ2MTQ4NDYyMmU1MjA4ZmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_95097474f6c245aea36f1fec166435e2",
+      "statement": "Tool selection chooses provider-native search only for capable registered models without a custom base URL, otherwise uses a bounded portable selector; an invalid selector result falls back to always-included core tools rather than widening the tool surface.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/middleware/tool_selection.py#L149-L177",
+          "version": "repo-lines-v1:sha256:7f74f8c198fb93ad8f05cf520df95210635cfef416de1bf6d51dc9746d6e683e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2N2RjYTc2YjIwMGFmODVjZDI2ZTFhM2JkNzYzYTdiNzg1NWE4YzQ1OTVjNDI2Njc5MTUxZGRjMGJhMjliOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkZTIzMDNmNjdjZjA5ZmVhYTcwMGI1OTg4ZThjMzFkZjdjYjUxNmQxZmI1MzAwZTRlOGNlZWNlMTE5MDE2OGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MDM1MDg4YjE2MGFiZmZmNGMyZTMyOWE0ZDRiYTBlMjhiYWRhZTgwNmUzZWM1MDE1NjdhNmVlZGMzMDZlNDQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/middleware/tool_selection.py#L180-L218",
+          "version": "repo-lines-v1:sha256:cfb7e5523b298774065ce30ac4e1a480525d5966b8c431b6081b1e84162f42d4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkMzQ3YmM5OTVkMDRiOTdlNjBjMDE3N2MwY2ZlNjAyZWY2OWY0ZTdkN2M3NzQ1MDM0YzE1ZWJhMjBmNjgwNmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMGVhZjA0N2VjYTM2NDZiZWExZmFkZjAzOTE2MDRkODM3NzAyZWI3N2UyMDYzYmQwN2U3ODk5MTU5Y2QyODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI4MjU3YzllNDk5MDYxOTM4MGQxZWZlNzY5YTdlOTUxNTE5MGRhMGIwODE4ZWY4MDA2MTAxNjQxOTk0ODEzNjcifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/middleware/tool_selection.py#L272-L290",
+          "version": "repo-lines-v1:sha256:0343a65fd924fd906d5e22c58a5a8d98e67d36c9b84f53f66654311d4654e43a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyZGJhMWYzNjc1NzI0ZWI0ZDU5YTdmNGFmYmJhN2ViOGRmYmVkMWQ3ZjA2ZWZiMDVhNzAyODA2NDdhNDk2ZTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ3MDE0OWUwNjlhZDY3ZWNjZjQ3MzY0NmZmMWM3NTAwNTBkMzI5ZDExMDAxOGRjNTc2Njg3OGVhZmExZDYwN2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9fc7b90b442047019f6373503f7a0e74",
+      "statement": "Oversized non-filesystem tool results are stored as artifacts and replaced in context by a compact reference, while paged filesystem tools are excluded from offloading; redaction removes known/configured secrets and sanitizes handler exceptions before their message is returned.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/middleware/offload.py#L16-L60",
+          "version": "repo-lines-v1:sha256:f05ccffaca5f818c1f635efda415a08e74d0b728b32cb4ff38e3028cc15c860f:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmYTM3Y2QzYTM0YWZmYmIyMWUyNWJiMmJmZTAzYWJkNTdmNjRiNjRlZjQ1MDY5NDRmNzhjMjBjZjI1OTYxMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyZmZkMWNlNzI4MDVjMzIxMjhhZTRkOWI0YWI2ZmE0ODI3N2VhNjg5OTNkY2ExODY3MjExMGZjMTEzYWJjMTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1NmJjNDJmMGMyNmVhYjlkMmZjNDY4NmZiZmY0YTRhNTU0MjI4ZGFiOWY3ZDgyMjljZjk1MjFjNGZmNjU1ZGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmZTkxN2YyMGNlNWNlYmFhYTVjZGU2NmU5NWI3NTE0MTUxM2NkNDY0MjdiMGFhYmU0YTQ4YjQ1MDUxNGViYzYifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/middleware/redaction.py#L31-L87",
+          "version": "repo-lines-v1:sha256:a4b773ddea7a9f665c924fda1582cf2012b613b69e8910ee653c0f91be8ec576:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmYmQ3ZjI2NjQwMTkyYzQ1M2QyMjBlZDFiYzg3YWRjNDI2MjEwNThlM2FiZTFjNTY5NzJkOTFiOTQ1YjFhYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MDMyZTk2NGQwOTMyMzUxZTVkMTg1MjY5MjgxYjE3MWEzYTA5YjA4YjI4NmU2NjFlYTQ3MDMyM2M4MmViNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5OGIwNjNkOWI0N2U2NTM3OTYyNTU3MmNjZTE5NzY2OWQ1NzY3ZTEyYzE4YmUwNzU2NTJiOGNkOTgxY2U4ZDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9fadf8cab4e04e67a1742c29d12d6ec2",
+      "statement": "Local compilation uses `create_deep_agent` with the same shared components but a checkout-rooted virtual filesystem and caller-provided checkpointer; fixture local runtime defaults to in-memory state, whereas configured local runtime resolves the MDA profile and still uses an in-memory checkpointer.",
+      "evidence": [
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L51-L70",
+          "version": "repo-lines-v1:sha256:a89b43dd33ede9ba8f3a16910213f13c1f70abc85edbacad15e0b1ae55b4dfea:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3Y2M4MzI5ODNmYjM1YjExZDU5NTE2YmFkOTQxNjBlYTlkZDI1MDFiMWYxNzQ5MmY3MmE5ZDY1ZThmMTg3M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3YjFhMWMyYjljNzU0NzE0ZTFhZmNiNmY4NmVhOGJmYWQzODliNzE2YTc0YzE0YmZmZDhjMTAwMzA4NWRhNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzMmQ5ZjIyZmZiNmY0N2FjNTA2YzA2ZTdjZDZhZTk3N2FkYzM1OTE2ZDkwYzU5M2RhYmM2YjA2MDQwYTU2ZTQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L73-L132",
+          "version": "repo-lines-v1:sha256:a251870236bad0ea4829cb389ec4fc789506653f8fc4c2cdd24b253697a631cd:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxYmRiZmIxOTQwYmViYTI1MDBhMDM0NWI3ZDA4YTA5NzcxZGVhNjc0MDgxZmIxNzViNWM2ZjA3MGZhZWExYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f893477497d4a0ca44f08812ab2e4b0",
+      "statement": "MDA provides the infrastructure surrounding the shared bundle—durable threads/checkpoints, per-thread sandbox, schedules, caller identity, and Slack—rather than those facilities being supplied by the local compiler.",
+      "evidence": [
+        {
+          "resource": "repo://docs/architecture/runtime-profiles.md#L11-L20",
+          "version": "repo-lines-v1:sha256:e59e774746edf3073ba9ea28686be623eab6415fdb78fa74fdc2d43808c9cfbe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5MGVlMWYwYzUwZjZjZDI0ZDExN2NjMzk4ODk3ZTEzNjViNjllMzhlOGU2YmU3N2ZkZGM0MmI1NmE2ZTAzMmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjYWNmZWZhMzljOTU4MTJlZWQzNjZkNGY4MDUzOTYyOGU0MTFhM2MwMmIyMTFmNzU3MTcxMDcyM2E2ODRjOTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0OTNlODVmZGM1YWNmM2MyMWFhN2NkODE1Y2JjNGYxMTk3NmI4YWU5MjMwNDczY2FkZjI4ZWYyZTYzNDU3YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlNGNkYTk4NGM1OWY0ODBkZDNjMDNhYzUzM2UzOTc3MmIyYzQwZWNmZTZlOTM4ODBiNjM4NGNmMTg5MDFlNDgifQ"
+        },
+        {
+          "resource": "repo://docs/self-hosting.md#L3-L6",
+          "version": "repo-lines-v1:sha256:66a63646e9ad4c701091f17efc056e3da1e72055066f725ba22c0b7a17cf63d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTY0ZTk1M2E3NGQ5NjA3MmE4ZDU5ZTdjNTMzMDZiOGY2NTlhNTQ3YWYwZTk2Njg2YTEyMTQyMTE4ZWY3MjQ2YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGMyNThjN2E3ZmVlNDAyNWY2NjQxOWFiOGQ1ODViNGE1N2Y4ZjM2ZDVkMThhMzc0OWNlYjJkNDFhOGI4ZmE5NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzZlZjY3YmNlM2YxNTdiODRhNWI1ZGI0YjlhNDk0ZGMyN2QwMjBmNDAzMDExZmI4MjE5MmJmOWE4MDIyOTFmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjFmZDQzYzc3ZWU5MmFhMzk0MDQ3NzQ0YTg1ODUyYzMyZjRiMTAwMDNhZWZiMzIwZmNhMTkxODdlODYwNjhkMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_33a015b42b3e411aa5e386976cd4639c",
+      "statement": "The hosted model sees an MDA sandbox containing synced `/skills` and thread scratch `/workspace`, not the repository; organization context, artifacts, reports, and provider access cross that boundary through host tools, while the local virtual filesystem denies sensitive paths and permits writes only under `/workspace`.",
+      "evidence": [
+        {
+          "resource": "repo://docs/architecture/runtime-profiles.md#L25-L33",
+          "version": "repo-lines-v1:sha256:408d18c6aa315316170431ee151fe6af3487539eeb1a0b50654d6d43063eb7bb:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDZmYjNjNDg1MmM0NzJkZDMxN2RlYWRlOWRlM2FjM2Q2MTZkZDVhMTk2Mzg5OTAxN2M0MTA5ZmE2N2M4OWVkNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzI2MzVmZDlmMDFlNjQ5YzI3N2M4OGM1MDU3YTdiNDJjNWQxN2VhMWMyYzNkNDAwYzE5MjdmMzMyMmRjNDFhMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2RkMGZjOWRhYjYzZTUwMDM0Y2RiNTQ0ZDRlNzhiYmQwMTBkY2JkYzYzZDU3ZDNhZGJkOGRlYzQ3MzI3ZDdjMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjQyNzA1OWUwYjgxOGIyM2E5NmM5YzExOTlmOWUzNGJiYTc0NDU4MzE2ODcxOTIwYzVjZTdjMzkwZDllZTNhYSJ9"
+        },
+        {
+          "resource": "repo://docs/architecture/sandbox-and-snapshots.md#L27-L31",
+          "version": "repo-lines-v1:sha256:9ad37dc0eef690d6ccc174a874df8a11c729548bcfe8b9ad33e6e0bfa0343e3e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTlhYWNlMGVhMmU4MzhhYWNjYTA3NTdjNThhNTFlNTJmNjg1YWE1NTg3YWQ3OGZmNTJkMTg3Y2VhZDdiOGY2OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzFkYmVjYmFjODU3MGUwZjc2N2QwYjIwMjBlZGRkZDk4YTU2MThjOGRlMWM2NDI0YzM1NTE1NTNhNGJkMjYwNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzQxZmU2OTZiM2JmMWRjN2I4MmIxMGE4NGUyYjU1NDc3MzUwMDNlMzI3MTBmYmU5M2NhZTcwNDM0YWY5MmY0YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjdlNTdiYTQwOTAwYmM5ZTVmNmJlMmYwMTQ2ZGJjOWIzOTQ1OGZiYzUxYjE1NDhhOTA0YjZlZmVkNjZmMjk3MyJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/local.py#L28-L38",
+          "version": "repo-lines-v1:sha256:c986b16a21d96c0c171d10197b03db0eb9a6ae91f9763340b59c4ae9a5bbd781:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNTU5YWYzZmRjN2U2YzVkYTg4NzNhZWIxMWU2NWVkNjFiZmQ1MzY1MTcwZDEzNmY1ZDZlNjZiNTVjNjIzODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZDI0NDU4MmI2ZmIwM2QyM2I4NDE1YWJlY2QzNDZiMGM5ZjQ2NmI2Zjc1MmIwNjgxODljZTdlOWEyZGMzNTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUwOTVmNDJhMGZhZDJhYWJlMThjMWVjZWY0ZmY1MzNhODZlZTJiOThhNjViYWE4NTlkYTEyMzIwOTQ3ZWE5ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwY2UzZjI0YWI0N2MyZjVhOWQzMzdmMzc3ZWQ4NTczZmE1NjU4NDA3NjQwMmYxYWYwNTRhM2RlZDYxOTQ2MmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4aa5c8c2e9fd47fdaa7d4fbdbe7819e8",
+      "statement": "The sandbox snapshot bakes runtime dependencies but not skills, workspace content, or secrets; sandbox probing uploads skills, creates the workspace layout, checks for key-like environment values, and the model has no shell tool.",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/Dockerfile#L1-L14",
+          "version": "repo-lines-v1:sha256:9a55cb3a13592a78c449c6eeaf019438f321deab9ebff7358ef289b21c4afe82:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlOWEwZDM2M2EyM2NiYjE1ZjgyODU1MTEyZWIzNzliODZiMTEyZGJjZDk0ZmI5MGJiMmEyZjMwNzc4YmM1ZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiNDUyNzQ1NzgwODhjMTY2YjEzNGIxOWMwNGRlMzYyNzEwY2QzNDgzNmUzOTg4OWM2NjU2NmExNDJkMDA2MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L1-L7",
+          "version": "repo-lines-v1:sha256:ce62a45e5adbf47dfd53a48d2206ceb494b145ab21bc145c822681213a53b99e:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDVlMTY1MjEzMzZmZGQwMGY2MzFlYjA2YzczYzFjZmE4ZDdjYjMxMjZkZmMwOGY0ZGE4ZmVlMDc3MWEwNjczNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTMwM2VjZGQ0YTRkMTBmMTljNzNmZDQyZmQxMjQzN2ZkMzM1NGE4MjY4MTYwNWRhNTI1NWE5N2EzOTA2OGRiYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTViNmU4NzA2YjQzMDQ3ZjJhNmRiNjdmMTMyNjM4NTk1NjA0ZTY3ZjM2OTY2ODc2Y2UwMTU4ZjAwNTNlNmJkMSJ9"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L178-L190",
+          "version": "repo-lines-v1:sha256:9000e4769fc2b141da825b4bbe173eb3ba742dc2952c316ac86c58fa9ccc50c9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmOTZhNDdlNDFhOGMzMjhmNjQzMjk1M2YyMTBmZmY5ZDg1ODA3MmEzNDZhZGRkM2YzMzAxY2JlM2I2ZTRkZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNGJhMWU0NzVmODdkYzQwNWZmNmRiMzNmMzIyNDA2YmNkNzZhZTNlMmIxZDkyYzIxYTUzNjkxZTg5MmZjMzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjODM2ZjRhOTMyMzBjNTk2Mzk5MzExNjhlZWVjOGUwMDMwN2EzNTRjNzQ2N2JlYjYxMDQwYzg5ZThlMzNiOWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0MTg0ZjFlYjVlNjlhMWU1MmIyMmY0ODQ1ZjkxYmU3M2RhNmFkZGFkNDZmNzViOTZmNzc4ZmU0NjI1ZjdiYjQifQ"
+        },
+        {
+          "resource": "repo://src/paid_media_agent/runtime/sandbox.py#L79-L92",
+          "version": "repo-lines-v1:sha256:ec2307d47253437fe6ab736997189be15e410bef09b40179815b7d48ae01deb9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzNGZhMTBjYmVmYTdjM2EwZjIxNDViYmY3NWE4MGRhN2RiMzJiZmY1ZTIxOGNiNWJjMzIzMDg1ZWYzZDc4NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1MmM1YjA4MWFjNjZkNjYxNGFkNDY2MWZhMjdlNDliZjUyNDc3OGU0MGI4NzZlZjg2MzM2MDQ0OTQ2YTIzMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4YzEwMGFiZTE2ZmY3NTUxYTA3MDE2OWM3NDdjNGRjYWZjZTNkYzlmYjc1NTBjZGE4MzliNDdkOWNhNjcyZDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxNTQzMDJiNDdkYzVlMTQxNjU2NTlkNzk4MDBiZDc0MTM5NjFiNzhiZmQ2OWI0YTAyZWFhOGQxZDQzOTFiM2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_331de02f88ce4260b7761337caf60a75",
+      "statement": "Contracts verify MDA/local shared-surface parity, selection behavior that prevents mutation exposure, and write-gate failure conditions that prevent provider calls.",
+      "evidence": [
+        {
+          "resource": "repo://tests/contract/test_live_write_gates.py#L75-L167",
+          "version": "repo-lines-v1:sha256:8ed9d44298a2f4c1f30dcb574b24ca9d9084f5585410c45d81f2c95af739f7d8:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMTFjZGE0MGEwMTk2ZGM3Yjg0YWVhOTQ4YmNjOTYwY2UwMDc1ZTMxOWNlMDM2NTdjODU1YThkMzczNTk4MzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiNDk2YjllY2JjNGI4MGU5Yzc5MTAzOWNiNDJjN2U4ZWIwZGJjYmZkZGYwZDViMTQyMGY3NDIzNzgwZWExNDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNiNzczOGI0NDI3ZGEyM2E5NzQ2MDIxOWFjOTE0ZTNmMTM5NWUzMjRlMDQ1NTAxMDUwYzI4MGJhMGI3MWE0ZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxZjg4NGM1OWUyMmM1YWIwYWIyYmE5NGRhNjUwNDZhNjIwMzFlNzM3ODgyNDkxNWU4MDg5MjY0ZGFmMThjOTcifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_selection_matrix.py#L143-L169",
+          "version": "repo-lines-v1:sha256:c1dbe61a659e03e72113baa32422f6c7b25f5579710123d684ab7aaa1c5c581c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0YWM3ZTNjNjUwYzlkMmZkMzc4MDZjYWFkNTk0YmQyYmQ0MjhjMjAxNWMwNDM2N2JjMzA2OWEzODYwMzY3OTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlODA5NmUwMWVlNGQ2NDQyNGNiYzQxYWQ3MWM2OTBhZmEwYjg5NDZhZDI4ZGFjN2Q2ZDE0YWZlZmFhMjQwNTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJkZWEwN2FkY2VmZmM4YjhkYTllYjIyMWMzOTBlODhiODUzZDFkZjdkM2Y2ZGU4NjE1NTE5NjA5MTQ5MzQ0NzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2NWViN2MwZTdhM2YzM2YxYWZlNmZhNWY1MjAwNTFjNDI1MDc0NzRiOTYwMjBiNWE0N2M5ZGNkNDcxYWUwYmMifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_selection_matrix.py#L71-L99",
+          "version": "repo-lines-v1:sha256:03c01fd58b8b9aa6c64e5cd89b5a3a63106a66020883536ca8103ca2f112b06a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4NGQ1OTBmYWVlYjU5NzZkMTEyZDgyYzJmNzZmZjBjMDU5NDIyNDc2MmIxMzBmYmI2MGQzMzhmNmYyMDVkMDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwMTY1NjhhYzJjYjZkN2Y0ZTNlM2QzMGZjZGRkYmQ4YTQxNGNiYzNlNThjMTIxOGQ3YzgwZDY5NTAwNGQwOGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlZGM4OTFmNTJjYWNjNjQ2MjkxYjMxNGM2NDkzZmZhMmYzZThhNmJiYjY3N2UyY2YyN2YwN2NmZDJmZWM5ZmQifQ"
+        },
+        {
+          "resource": "repo://tests/contract/test_surfaces_and_runtimes.py#L110-L151",
+          "version": "repo-lines-v1:sha256:5053f58ef094e12f0dd047f2974b080dc2e5c176b319c9b44e1a8013d913a9fd:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1NDc1MWY0ZTFmZmQxMDMwZGRjNWE4Yzg4NTA3M2M2ZTc4NzU1ZTUyZDQ2ZDU2ZDMzOGRkMDY4ODY4MjFmYWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2MzVlNjg4YjIzYjMxZGE2NDI5NDc5ZGE5MmY0ZDllOTBiY2NjMTY3MzE2YTM2NTllYmEzMTg4ODZlZjVlYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxZDdkMDE2YjhiZTI5ZTc5ZjdlNTkzMTY4OTc3NzM2NWJhZTE3MzhiYmFjMGU5YjM3NTQzMTUzMWUzYjg0MzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzN2JhYzNhZWRjMmI1M2NiNjJlZWNjNTMyZWM2ZDQ4NmJjNDk3MjdhN2RiODJjNDgxYWVlOGU1ZTQ4MjdkMjQifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-09T17:45:08.888Z"
+  }
+}
