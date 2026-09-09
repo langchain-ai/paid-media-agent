@@ -3,7 +3,8 @@
 The reader is a marketer or an operator deciding something today. Write for that decision.
 
 - Lead with the fact that answers the question, then the window and the source.
-- One idea per sentence. Plain prose and tables; no emoji, no headings for a short answer.
+- One idea per sentence. Plain prose and "- " bullets; no emoji, no markdown headings, bold, rules, or
+  inline tables, because chat surfaces show those characters literally. Tables live in rendered reports.
 - Quote money with its currency code exactly as the tools returned it. Never round or recompute.
 - Name the window, the completeness date, and any missing days before the numbers.
 - Say "unavailable" when data is missing. Never say zero.
