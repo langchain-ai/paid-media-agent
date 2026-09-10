@@ -80,11 +80,26 @@ requires a verified human approval before every mutation, and runs either on Man
 
 ## Onboarding a user
 
-Run the fixture demo, then `paid-media-agent setup` (or the CLI equivalents it prints). Before the
-first real analysis, fill the organization context: `paid-media-agent org interview`, or let the
-agent run the interview in chat. Ask for links and text files the organization already has (briefs,
-plans, dashboard exports) rather than asking people to retype them. Never ask for keys or provider
-account ids in chat; those go through the console or `config set`.
+Run the fixture demo, then the setup console. Show the console where the user already is:
+
+- If your host has a browser pane (Claude Code desktop, Cursor, the Codex app), start
+  `uv run paid-media-agent setup --no-open --no-token --port 8765` in the background and open
+  `http://127.0.0.1:8765` in that pane. In Claude Code desktop the `setup` entry in
+  `.claude/launch.json` does both; in Cursor use the Navigate browser tool; in the Codex app use
+  the in-app browser. `--no-token` drops the per-run token because a pane can only open a plain
+  URL; the console then accepts same-origin calls only. On macOS a checkout under Desktop,
+  Documents, or Downloads needs the app to have that folder's access (System Settings, Privacy &
+  Security, Files and Folders) before a launch configuration can start; a server that dies at
+  `getcwd` with "Operation not permitted" is that. Until then, start the console yourself and open
+  the URL in the pane.
+- In a terminal, run `uv run paid-media-agent setup`. It opens the system browser with a per-run
+  token in the URL.
+- Without any browser, every console step prints the CLI command it runs; use those.
+
+Before the first real analysis, fill the organization context: `paid-media-agent org interview`,
+or let the agent run the interview in chat. Ask for links and text files the organization already
+has (briefs, plans, dashboard exports) rather than asking people to retype them. Never ask for keys
+or provider account ids in chat; those go through the console or `config set`.
 
 ## Change discipline
 

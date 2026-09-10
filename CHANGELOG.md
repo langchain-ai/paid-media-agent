@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (onboarding inside coding agents)
+
+- `paid-media-agent setup --no-token` serves the console at a plain URL for hosts whose browser
+  pane cannot carry the per-run token; it accepts same-origin calls only. `.claude/launch.json`
+  (`setup`) opens it in Claude Code desktop's Browser pane, `.cursor/rules/onboarding.mdc` steers
+  Cursor's built-in browser, and `AGENTS.md` carries the host-neutral instruction (Codex app
+  included).
+
 ### Changed (two deployment paths, MDA recommended)
 
 - Self-hosting is back on `main` next to Managed Deep Agents: `paid-media-agent serve` (FastAPI

@@ -30,7 +30,7 @@ machine reads it, and the setup console runs the same actions.
 
 | Command | What it does |
 |---|---|
-| `uv run paid-media-agent setup [--port] [--no-open]` | Local onboarding console over the actions below |
+| `uv run paid-media-agent setup [--port] [--no-open] [--no-token]` | Local onboarding console over the actions below; `--no-token` for a coding agent's browser pane; the port defaults to `$PORT`, then 8765 |
 | `uv run paid-media-agent demo [--with-proposal]` | Fixture run through the real graph, optionally with a governed write |
 | `uv run paid-media-agent doctor [--snapshot]` | Configuration, packages, catalog, approvals, PDF, and sandbox checks; `--snapshot` runs the sandbox contract |
 | `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate the approval signing key and API tokens |
@@ -178,8 +178,17 @@ canary steps: [docs/operations/live-write-runbook.md](docs/operations/live-write
 
 ## Setup console
 
-`uv run paid-media-agent setup [--port 8765] [--no-open]` serves `src/paid_media_agent/admin/` on
-127.0.0.1 with a per-run admin token in the URL fragment. Every page action calls the same
+`uv run paid-media-agent setup [--port 8765] [--no-open] [--no-token]` serves
+`src/paid_media_agent/admin/` on 127.0.0.1 with a per-run admin token in the URL fragment.
+Coding agents with a browser pane cannot pass a fragment, so `--no-token` serves the console at
+the plain URL and accepts same-origin calls only (the `Origin` and `Sec-Fetch-Site` headers a
+browser always sends); a page on another site still cannot drive it. `.claude/launch.json` holds
+a `setup` entry that Claude Code desktop starts and shows in its Browser pane, and
+`.cursor/rules/onboarding.mdc` tells Cursor to open it in its built-in browser; the Codex app's
+in-app browser opens the same URL. `AGENTS.md` carries the host-neutral instruction. On macOS
+the launch configuration can only start when the app has access to the folder holding the
+checkout (Desktop, Documents, and Downloads are protected); a launched server that exits at
+`getcwd` with "Operation not permitted" needs that permission granted, or the checkout moved. Every page action calls the same
 functions as the CLI subcommands (`admin/actions.py`), so agents can script the same steps with
 `--json`. The console writes `.env` and `config/accounts.toml` locally, starts fixed-template processes
 (`mda dev`, `mda deploy` with confirmation, `serve`, `slack`) with logs under `workspace/logs/`,

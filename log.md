@@ -4,6 +4,13 @@ Append-only record of material changes to this repository's behavior. Newest fir
 journal (2026-08-31 to 2026-09-03) is preserved in
 [docs/history/build-log-2026-09.md](docs/history/build-log-2026-09.md).
 
+## 2026-09-10 (onboarding inside coding agents)
+
+- Investigated how Claude Code desktop (Browser pane, `.claude/launch.json`), Cursor (Navigate
+  browser tool, inline pane), and the Codex app (in-app browser) open local pages. Added a
+  token-less same-origin mode to the console so those panes can open it at a plain URL, a `setup`
+  launch configuration, a Cursor rule, and the host-adaptive instruction in `AGENTS.md`.
+
 ## 2026-09-09 (both paths back, MDA first)
 
 - Restored self-hosting on `main` from the `self-hosted` branch on top of the MDA-only tree: API,

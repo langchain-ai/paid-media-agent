@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "setup",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "paid-media-agent",
+        "setup",
+        "--no-open",
+        "--no-token"
+      ],
+      "port": 8765,
+      "autoPort": true,
+      "autoVerify": false
+    }
+  ]
+}

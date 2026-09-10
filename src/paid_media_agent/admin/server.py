@@ -86,9 +86,32 @@ class ConsoleState:
         self.shutdown: Callable[[], None] | None = None
 
 
+def _same_origin(request: Request) -> bool:
+    """True when the browser says the call came from this console's own page.
+
+    Token-less mode relies on this instead of the per-run token. Browsers send `Origin` on every
+    cross-origin request and `Sec-Fetch-Site` on every request, so a page on another site cannot
+    drive the console even though it runs on localhost.
+    """
+    site = request.headers.get("sec-fetch-site")
+    if site and site not in ("same-origin", "none"):
+        return False
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host") or ""
+    return origin.rstrip("/") in (f"http://{host}", f"https://{host}")
+
+
 def create_console_app(
-    root: Path, *, token: str | None = None, processes: ProcessManager | None = None
+    root: Path,
+    *,
+    token: str | None = None,
+    processes: ProcessManager | None = None,
+    require_token: bool = True,
 ) -> FastAPI:
+    """The console app. `require_token=False` is for a coding agent's browser pane, which can only
+    open a plain URL: same-origin requests are accepted without the token."""
     state = ConsoleState(
         root, token or secrets.token_urlsafe(32), processes or ProcessManager(root)
     )
@@ -101,6 +124,12 @@ def create_console_app(
         host = (request.headers.get("host") or "").split(":")[0]
         if host not in ALLOWED_HOSTS:
             raise HTTPException(status_code=403, detail="console is local only")
+        if not require_token:
+            if not _same_origin(request):
+                raise HTTPException(
+                    status_code=403, detail="console accepts same-origin calls only"
+                )
+            return state
         provided = request.headers.get("x-admin-token", "")
         if not hmac.compare_digest(provided, state.token):
             raise HTTPException(status_code=401, detail="missing or invalid admin token")
@@ -293,13 +322,19 @@ def create_console_app(
     return app
 
 
-def run_console(root: Path, *, port: int = 8765, open_browser: bool = True) -> None:
-    """Serve the console on 127.0.0.1 and open the browser with the per-run token."""
+def run_console(
+    root: Path, *, port: int = 8765, open_browser: bool = True, require_token: bool = True
+) -> None:
+    """Serve the console on 127.0.0.1 and open the browser with the per-run token.
+
+    With `require_token=False` the URL carries no token, so an IDE's browser pane can open it as
+    is; the console then accepts same-origin calls only.
+    """
     import uvicorn
 
     token = secrets.token_urlsafe(32)
-    app = create_console_app(root, token=token)
-    url = f"http://127.0.0.1:{port}/#token={token}"
+    app = create_console_app(root, token=token, require_token=require_token)
+    url = f"http://127.0.0.1:{port}/" + (f"#token={token}" if require_token else "")
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
     server = uvicorn.Server(config)
     app.state.console.shutdown = lambda: os.kill(os.getpid(), signal.SIGINT)
@@ -308,7 +343,16 @@ def run_console(root: Path, *, port: int = 8765, open_browser: bool = True) -> N
 
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     print(f"Paid Media Agent setup console: {url}", flush=True)
-    print("Press Ctrl+C to stop. The token is per run and only valid on this machine.", flush=True)
+    if require_token:
+        print(
+            "Press Ctrl+C to stop. The token is per run and only valid on this machine.", flush=True
+        )
+    else:
+        print(
+            "Press Ctrl+C to stop. No token: any local browser page can open this console while it "
+            "runs; calls from other sites are refused.",
+            flush=True,
+        )
     try:
         server.run()
     finally:

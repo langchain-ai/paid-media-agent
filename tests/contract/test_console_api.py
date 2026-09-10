@@ -147,3 +147,17 @@ def test_process_endpoints_guard_deploy(client: TestClient) -> None:
     assert client.post("/api/processes/unknown/start", headers=headers, json={}).status_code == 409
     log = client.get("/api/processes/mda-dev/log", headers=headers).json()
     assert log["name"] == "mda-dev" and log["running"] is False
+
+
+def test_token_less_mode_accepts_same_origin_only(workspace: Path) -> None:
+    """A coding agent's browser pane can only open a plain URL, so the token is replaced by a
+    same-origin rule: other sites cannot drive the console even though it runs on localhost."""
+    app = create_console_app(workspace, token=TOKEN, require_token=False)
+    client = TestClient(app, base_url="http://127.0.0.1:8765")
+    assert client.get("/api/status").status_code == 200, "no token needed from the page itself"
+    same = {"Origin": "http://127.0.0.1:8765", "Sec-Fetch-Site": "same-origin"}
+    assert client.get("/api/config", headers=same).status_code == 200
+    cross = {"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"}
+    assert client.get("/api/config", headers=cross).status_code == 403
+    assert client.get("/api/config", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
+    assert client.get("/api/status", headers={"Host": "evil.example"}).status_code == 403

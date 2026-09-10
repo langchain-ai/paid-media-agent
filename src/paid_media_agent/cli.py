@@ -55,13 +55,32 @@ def main() -> None:
 
 
 @main.command()
-@click.option("--port", default=8765, show_default=True, help="Local port for the console.")
+@click.option(
+    "--port",
+    type=int,
+    default=None,
+    help="Local port for the console. Defaults to $PORT when a host assigns one, else 8765.",
+)
 @click.option("--no-open", is_flag=True, help="Do not open the browser automatically.")
-def setup(port: int, no_open: bool) -> None:
-    """Start the local setup console and open it in the browser."""
+@click.option(
+    "--no-token",
+    is_flag=True,
+    help="Serve without the per-run token so a coding agent's browser pane can open the plain URL. "
+    "Same-origin calls only; for your own machine.",
+)
+def setup(port: int | None, no_open: bool, no_token: bool) -> None:
+    """Start the local setup console and open it in the browser.
+
+    Coding agents with a browser pane (Claude Code desktop, Cursor, the Codex app) run it with
+    `--no-open --no-token` and open http://127.0.0.1:PORT in that pane. Hosts that assign a port
+    pass it as $PORT.
+    """
+    import os
+
     from paid_media_agent.admin.server import run_console
 
-    run_console(project_root(), port=port, open_browser=not no_open)
+    resolved = port if port is not None else int(os.environ.get("PORT", "8765"))
+    run_console(project_root(), port=resolved, open_browser=not no_open, require_token=not no_token)
 
 
 # ---------------------------------------------------------------- demo and doctor

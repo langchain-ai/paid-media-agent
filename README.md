@@ -79,7 +79,10 @@ locally), Where it lives (Managed Deep Agents, recommended, or self-host), then 
 Slack app, Postgres, API tokens, `docker compose up`), and Done. The
 agent can run the business interview in chat as well: ask it to learn about your business and it
 saves the answers under `docs/org/`, which stays out of git. Every step shows the CLI command it
-runs, so a coding agent can do the same without a browser. The full command reference is in
+runs, so a coding agent can do the same without a browser. Coding agents with a browser pane open
+the console right inside the editor: Claude Code desktop through the `setup` entry in
+`.claude/launch.json`, Cursor and the Codex app through their built-in browser
+(`uv run paid-media-agent setup --no-open --no-token`). The full command reference is in
 [OPERATIONS.md](OPERATIONS.md#command-reference).
 
 ```bash
