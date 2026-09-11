@@ -1,29 +1,41 @@
 <div align="center">
-
-# Paid Media Agent
-
-**Ask questions across your ad accounts. Approve every change before it happens.**<br>
-One agent for Google, Meta, Reddit, LinkedIn, X, and OpenAI Ads, deployed to Slack in one command.
-
-[![CI](https://github.com/amal-irgashev/paid-media-agent-open-source/actions/workflows/ci.yml/badge.svg)](https://github.com/amal-irgashev/paid-media-agent-open-source/actions/workflows/ci.yml)
-[![License Apache 2.0](https://shieldcn.dev/badge/license-Apache%202.0-1c3c3c.svg?logo=false)](LICENSE)
-[![Python 3.11+](https://shieldcn.dev/badge/python-3.11%2B-3776AB.svg?logo=python)](pyproject.toml)
-[![Built with Deep Agents](https://shieldcn.dev/badge/built%20with-Deep%20Agents-1c3c3c.svg?logo=langchain)](https://docs.langchain.com/oss/python/deepagents/overview)
-[![Deploy with Managed Deep Agents](https://shieldcn.dev/badge/deploy-one%20command-1c3c3c.svg?logo=langchain)](#where-it-runs)
-
-[Quick start](#quick-start) · [What it does](#what-it-does) · [Where it runs](#where-it-runs) · [Onboarding](#onboarding) · [Architecture](docs/architecture/README.md) · [Operations](OPERATIONS.md)
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/setup-welcome-dark.png">
-  <img src="docs/screenshots/setup-welcome.png" alt="The setup console: Welcome step with Analyze, Change, and Report tiles" width="860">
-</picture>
-
+  <a href="https://github.com/amal-irgashev/paid-media-agent-open-source">
+    <h1>Paid Media Agent</h1>
+  </a>
 </div>
 
-Paid Media Agent is an open-source [Deep Agents](https://docs.langchain.com/oss/python/deepagents/overview)
-application for analyzing and safely managing paid media. The model investigates, chooses evidence,
-and explains. Trusted code owns everything that must be exact: which tools exist, which accounts
-they may touch, the arithmetic, the approval, the single mutation attempt, and the receipt.
+<div align="center">
+  <h3>Ask questions across your ad accounts. Approve every change before it happens.</h3>
+</div>
+
+<div align="center">
+  <a href="LICENSE" target="_blank"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
+  <a href="https://github.com/langchain-ai/deepagents" target="_blank"><img src="https://img.shields.io/badge/Built%20on-Deep%20Agents-blue" alt="Built on Deep Agents"></a>
+  <a href="https://github.com/langchain-ai/langgraph" target="_blank"><img src="https://img.shields.io/badge/Powered%20by-LangGraph-blue" alt="Powered by LangGraph"></a>
+  <a href="https://docs.langchain.com/langsmith/python/managed-deep-agents" target="_blank"><img src="https://img.shields.io/badge/Deploys%20with-Managed%20Deep%20Agents-blue" alt="Deploys with Managed Deep Agents"></a>
+</div>
+
+<br>
+
+Paid Media Agent is an open-source agent for analyzing and safely managing paid media across
+Google, Meta, Reddit, LinkedIn, X, and OpenAI Ads, built on Deep Agents by LangChain. The model
+investigates, chooses evidence, and explains. Trusted code owns everything that must be exact:
+which tools exist, which accounts they may touch, the arithmetic, the approval, the single
+mutation attempt, and the receipt. Deploy it to Slack in one command with Managed Deep Agents, or
+self-host it behind your own API, Postgres, and Slack app.
+
+> [!NOTE]
+> Paid Media Agent is under active development. Live provider writes stay behind release gates
+> until a separately authorized canary; everything else runs today.
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/setup-welcome-dark.png">
+    <img src="docs/screenshots/setup-welcome.png" alt="The setup console: Welcome step with Analyze, Change, and Report tiles" width="860">
+  </picture>
+</div>
+
+[Quick start](#quick-start) · [What it does](#what-it-does) · [Where it runs](#where-it-runs) · [Onboarding](#onboarding) · [Architecture](docs/architecture/README.md) · [Operations](OPERATIONS.md)
 
 ## Quick start
 

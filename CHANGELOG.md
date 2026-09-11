@@ -7,7 +7,9 @@
 - The README is a short landing page: tagline, badges, the console as the hero image (light and
   dark), a three-command quick start, what the model does versus what code does, the two
   deployment paths side by side, the trust properties, platforms, onboarding, and a diagram.
-  Details moved to OPERATIONS.md and the docs it links.
+  Details moved to OPERATIONS.md and the docs it links. The header follows the LangChain
+  open-source pattern (centered title and tagline, flat shields.io badges: license, Built on
+  Deep Agents, Powered by LangGraph, Deploys with Managed Deep Agents).
 
 ### Added (onboarding inside coding agents)
 
