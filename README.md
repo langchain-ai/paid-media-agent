@@ -17,140 +17,90 @@
 
 <br>
 
-A team that runs paid media on more than one platform inherits the same set of problems. Each
-platform reports in its own schema, so spend, conversions, and conversion value do not line up
-across channels without arithmetic. Campaign parameters are hard to connect to the outcomes the
-business cares about, such as sales inquiries, signups, or content downloads. And every change,
-from a budget cut to a paused campaign, happens in a vendor console that keeps no record of who
-decided it or why.
+Paid media is hard to run across platforms. Each one reports in its own schema, so spend and
+conversions do not add up across channels. Every change happens in a vendor console with no
+record of who decided it or why.
 
-Paid Media Agent is the open-source agent we built for that operating problem. It reads Google,
-Meta, Reddit, LinkedIn, X, and OpenAI Ads through one authorized tool catalog, computes every
-comparison in code, and turns each requested change into a typed proposal that a named person
-approves before a single mutation runs. The model investigates, chooses evidence, and explains.
-Code owns the tool list, the account identity, the arithmetic, the approval, the mutation, and
-the receipt.
-
-It deploys to Slack in one command with Managed Deep Agents, or self-hosts behind your own API,
-Postgres, and Slack app. Both paths compile the same components, so a surface can change how a
-result looks but not what the agent is allowed to do.
+Paid Media Agent is a [Deep Agent](https://docs.langchain.com/oss/python/deepagents/overview) for
+that job. It reads Google, Meta, Reddit, LinkedIn, X, and OpenAI Ads, computes the numbers in
+code, and turns every change into a proposal a person approves. Deploy it to Slack in one
+command, or self-host it.
 
 > [!NOTE]
-> Paid Media Agent is under active development. Live provider writes stay behind release gates
-> until a separately authorized canary; everything else runs today.
+> Under active development. Live provider writes stay behind release gates until a separately
+> authorized canary; everything else runs today.
 
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/setup-welcome-dark.png">
-    <img src="docs/screenshots/setup-welcome.png" alt="The setup console: Welcome step with Analyze, Change, and Report tiles" width="860">
+    <img src="docs/screenshots/setup-welcome.png" alt="The setup console" width="860">
   </picture>
 </div>
 
-[Quick start](#quick-start) · [What it does](#what-it-does) · [Where it runs](#where-it-runs) · [Onboarding](#onboarding) · [Architecture](docs/architecture/README.md) · [Operations](OPERATIONS.md)
-
 ## Quick start
 
-The first two commands need no ad account and no model key. The demo drives the real agent with
-a scripted model against three synthetic accounts, so the install is proven before any credential
-exists. Python 3.11 or newer and [uv](https://docs.astral.sh/uv/) are the only prerequisites.
+No ad account or model key needed for the first two commands. Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --all-extras --dev
-uv run paid-media-agent demo --with-proposal   # synthetic accounts through the real agent, including one approved change
-uv run paid-media-agent setup                  # the local setup console
+uv run paid-media-agent demo --with-proposal   # synthetic accounts through the real agent, with one approved change
+uv run paid-media-agent setup                  # the setup console
 ```
 
-The demo compares the last two weeks with the two before across the three accounts, proposes a
-budget change, approves it as the local user, executes it against a fake provider, reads the value
-back, and prints the receipt. The console then walks from a real model to real accounts to a
-deployment.
+The demo compares two weeks against the prior two, proposes a budget change, approves it,
+executes it against a fake provider, reads the value back, and prints the receipt.
 
 ## What it does
 
-Three jobs, split the same way each time.
-
 | | The model | Code |
 |---|---|---|
-| **Analyze** | Picks the window, the accounts, and the grain, then explains what moved and why it matters | Reads each platform once for the union of both windows, compares periods in `Decimal`, keeps missing metrics missing, and withholds a cross-platform total when windows, currencies, or coverage disagree |
-| **Change** | Proposes a typed change with a reason, a measurement plan, and a reversal plan | Persists the proposal under a digest, requires a signed single-use approval bound to that revision, makes one mutation attempt, reads the platform back, and records a receipt that says verified, failed, or unknown |
-| **Report** | Asks for the report and writes the executive summary | Renders a versioned payload to HTML and PDF in which every number reconciles to a source artifact; the weekly and monthly runs are schedules |
+| **Analyze** | Picks the window and the accounts, explains what moved | Compares periods in `Decimal`; keeps missing metrics missing; no cross-platform total when sources disagree |
+| **Change** | Proposes a typed change with a reason and a reversal plan | Stores the proposal, requires a signed single-use approval, makes one mutation attempt, reads back, returns a receipt: verified, failed, or unknown |
+| **Report** | Writes the summary | Renders HTML and PDF where every number reconciles to a source artifact; runs weekly and monthly on a schedule |
 
-The model decides. Code computes.
-
-Ask it *Compare the last 14 days with the prior 14 days*, *Where is spend rising while CPA gets
-worse*, or *Cut the Performance Max daily budget to 240*. The third ends in an approval card,
-never in a silent write.
+The model decides, the code calculates.
 
 ## Where it runs
-
-Teams differ in what they are allowed to operate, so there are two deployment paths on one code
-base. Managed Deep Agents supplies the threads, the sandbox, the schedules, identity, and Slack;
-self-hosting keeps all of that on infrastructure you run.
 
 | | Managed Deep Agents, recommended | Self-host |
 |---|---|---|
 | Deploy | `uv run mda deploy .` | `docker compose up` |
-| You run | Nothing; LangSmith Cloud hosts threads, a sandbox per thread, weekly and monthly schedules, identity, and the Slack app | Your API, Postgres, and a Slack app you own, with Block Kit review cards and edits |
-| Setup | One LangSmith key and one command | A Slack app, a database URL, and API tokens; the console collects each |
-| Local run | `uv run mda dev` with LangSmith Studio | `uv run paid-media-agent serve` and `uv run paid-media-agent slack` |
-| Guide | [Deploying with Managed Deep Agents](OPERATIONS.md#deploying-with-managed-deep-agents) | [docs/self-hosting.md](docs/self-hosting.md) |
+| Provides | Slack, schedules, threads, a sandbox per thread, identity | Your API, Postgres, and a Slack app you own |
+| Setup | One LangSmith key | A Slack app, a database URL, API tokens |
+| Locally | `uv run mda dev` | `uv run paid-media-agent serve` and `slack` |
+| Guide | [Operations](OPERATIONS.md#deploying-with-managed-deep-agents) | [Self-hosting](docs/self-hosting.md) |
 
-Before either, the same profile runs on your machine:
+Same agent either way. A surface changes how a result looks, not what the agent may do.
 
 ```bash
 uv run paid-media-agent ask "How did spend move week over week?"
-uv run paid-media-agent report --cadence weekly   # deterministic HTML and PDF, no model in the loop
-uv run paid-media-agent doctor --json             # every check, machine-readable
+uv run paid-media-agent report --cadence weekly
 ```
 
 ## What code guarantees
 
-- **Deny by default.** Provider tools enter through a catalog that host code builds from MCP
-  annotations and a reviewed policy file. A tool without a read-only annotation or an admitted
-  policy row does not exist to the model.
-- **Host-owned identity.** The model sees account aliases, never provider ids or credentials.
-  Approvers are an allowlist the host reads; where a card is posted is never authorization.
-- **One attempt.** A live mutation needs the kill switch clear, the global flag on, the catalog
-  revision pinned to the one an operator reviewed, and the tool on the canary list. The executor
-  calls the provider once. An uncertain outcome is reported as unknown and never retried.
-- **Plain text in chat.** Answers cite the window and the artifact they came from and carry no
-  markdown, because Slack renders none.
-- **Nothing phones home.** The agent talks only to the providers you configure. Adoption tracking
-  is a written plan, off by default.
+- **Deny by default.** Provider tools enter through a catalog built in host code. No read-only annotation or reviewed policy row, no tool.
+- **Host-owned identity.** The model sees account aliases, never provider ids or credentials. Approvers are an allowlist the host checks.
+- **One attempt.** A live write needs the kill switch clear, the flag on, the catalog revision pinned, and the tool on the canary list. Uncertain outcomes are reported as unknown, never retried.
+- **Nothing phones home.** The agent talks only to the providers you configure.
 
 ## Platforms
 
-[Pipeboard](https://pipeboard.co) already holds the OAuth for Google, Meta, and Reddit and exposes
-each as an MCP server, so the agent loads that catalog instead of owning three more integrations.
-LinkedIn, X, and OpenAI Ads are not on Pipeboard; small direct adapters place their read tools in
-the same catalog, so alias scope, schema validation, artifact offload, and `compare_periods` work
-the same way across all six.
-
 | Platform | Path | Reads | Writes |
 |---|---|---|---|
-| Google Ads, Meta Ads, Reddit Ads | Pipeboard Streamable HTTP MCP | live catalog, classified by MCP annotations | admitted rows only, behind the write gates |
-| LinkedIn Ads | direct adapter, OAuth 2.0 with refresh | accounts, campaigns, creatives, daily analytics | none in v1 |
-| X Ads | direct adapter, OAuth 1.0a | accounts, campaigns, line items, daily stats | none in v1 |
-| OpenAI Ads | direct adapter, bearer key | account, campaigns, ad groups, daily insights | none in v1 |
+| Google, Meta, Reddit | [Pipeboard](https://pipeboard.co) MCP | live catalog, classified by MCP annotations | admitted rows only |
+| LinkedIn | direct adapter | accounts, campaigns, creatives | none in v1 |
+| X | direct adapter | accounts, campaigns, line items | none in v1 |
+| OpenAI Ads | direct adapter | account, campaigns, ad groups | none in v1 |
 
 ## Onboarding
 
-Most of what the agent needs on its first day is not in the code: which model, which accounts,
-what the business sells, which conversion counts, who may approve a change. `uv run
-paid-media-agent setup` collects exactly that on a local-only page (127.0.0.1, per-run token,
-writes only your `.env`) in seven steps: **Model**, **Ad accounts**, **Your business**, **Try
-it**, **Where it lives**, then **Deploy** or **Self-host**, and **Done**. Every step shows the CLI
-command it runs, so a coding agent can do the same without a browser.
+The console asks for what the code cannot know: which model, which accounts, what you sell,
+which conversion counts, who may approve. Seven steps, each with its CLI command. The agent can
+also run the business interview in chat; answers live in `docs/org/`, out of git.
 
-- **Your business** is eight plain questions plus any briefs or exports you share. The agent reads
-  the answers before every analysis through `get_org_context`, can run the same interview in chat,
-  and stores them under `docs/org/`, which stays out of git.
-- **Inside your editor.** Claude Code desktop opens the console in its Browser pane from the
-  `setup` entry in `.claude/launch.json`; Cursor and the Codex app open it in their built-in
-  browser (`uv run paid-media-agent setup --no-open --no-token`).
-- **Models.** `PAID_MEDIA_MODEL` is `provider:model`. Anthropic and OpenAI keys unlock
-  provider-native tool search; every other tool-calling model, including the LangSmith Gateway
-  (`langsmith:anthropic/claude-sonnet-4-6`), uses a portable selector over the same catalog.
+Claude Code desktop opens the console in its Browser pane from `.claude/launch.json`. Cursor and
+the Codex app open it in their built-in browser (`uv run paid-media-agent setup --no-open --no-token`).
 
 ## How it is built
 
@@ -162,22 +112,16 @@ flowchart TD
     C --> W["Proposal → signed approval → one mutation → readback → receipt"]
 ```
 
-Deep Agents runs the loop. Middleware selects a bounded tool set per turn, checks every call
-against the catalog before it runs, writes large results to workspace artifacts and returns a
-summary, and redacts secrets from anything the model sees. The business wiki and the skills are
-prose files the agent reads at run time, so a change in judgment is a pull request, not a
-deploy. The wiki and the skills should work at another company; the organization context should
-not, which is why it lives outside git.
+Deep Agents runs the loop. Middleware picks a small tool set per turn, checks every call against
+the catalog, offloads large results to files, and redacts secrets. Skills say how to work. The
+wiki holds paid-media doctrine. Both should work at another company. Your organization context
+should not, so it stays out of git.
 
 ## Documentation
 
-- [Architecture](docs/architecture/README.md), [operations and command reference](OPERATIONS.md), [self-hosting](docs/self-hosting.md)
-- [Business wiki](skills/paid-media-wiki/SKILL.md) the agent reads, and the [analysis](skills/paid-media-analysis/SKILL.md), [writes](skills/paid-media-writes/SKILL.md), and [onboarding](skills/paid-media-org-onboarding/SKILL.md) skills
-- [Operating contract for humans and coding agents](AGENTS.md)
-- [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [changelog](CHANGELOG.md), [open questions before release](open-questions.md)
-- [The open-source principles this repository holds itself to](docs/open-source-principles.md)
+- [Architecture](docs/architecture/README.md) · [Operations](OPERATIONS.md) · [Self-hosting](docs/self-hosting.md) · [Business wiki](skills/paid-media-wiki/SKILL.md)
+- [AGENTS.md](AGENTS.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Principles](docs/open-source-principles.md)
 
 ## License
 
-Apache 2.0. The repository never contains customer data, account identifiers, private thresholds,
-credentials, or copied proprietary material.
+Apache 2.0.
