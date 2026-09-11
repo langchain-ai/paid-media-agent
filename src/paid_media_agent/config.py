@@ -38,8 +38,11 @@ class ModelConfig(BaseModel):
         base_url: str | None = None,
         tool_selector_model: str | None = None,
     ) -> ModelConfig:
-        """Parse `provider:model`. A bare model name is rejected to keep provider explicit."""
-        provider, sep, model = spec.partition(":")
+        """Parse `provider:model`. A bare `provider/model` is the older gateway form."""
+        raw = spec.strip()
+        if raw and ":" not in raw and "/" in raw:
+            raw = f"langsmith:{raw}"
+        provider, sep, model = raw.partition(":")
         if not sep or not provider.strip() or not model.strip():
             raise ValueError("PAID_MEDIA_MODEL must look like 'provider:model'")
         return cls(

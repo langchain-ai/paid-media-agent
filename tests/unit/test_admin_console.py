@@ -137,14 +137,18 @@ def test_invalid_model_spec_is_reported_not_raised(
 ) -> None:
     """A slash instead of a colon in PAID_MEDIA_MODEL used to blank the console with a 500."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
+    write_env(workspace, {"PAID_MEDIA_MODEL": "claude-sonnet-4-6"})
     result = actions.status(workspace)
-    assert result.detail["model"]["spec"] == "anthropic/claude-sonnet-4-6"
+    assert result.detail["model"]["spec"] == "claude-sonnet-4-6"
     assert "provider:model" in result.detail["model"]["error"]
     routes = {r.id: r for r in build_routes(result.detail)}
     assert {s.id: s.status for s in routes["local"].steps}["model"] == "todo"
     check = actions.mda_check(workspace)
     assert check.status == "warn" and "model_package" in check.summary
+    write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
+    gateway = actions.status(workspace)
+    assert gateway.detail["model"]["spec"] == "langsmith:anthropic/claude-sonnet-4-6"
+    assert not gateway.detail["model"]["error"]
 
 
 def test_fixture_discovery_and_alias_mapping_switch_the_active_file(
@@ -364,6 +368,13 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
     )
     assert presets["anthropic"]["recommended"] is False and presets["custom"]["key"] == ""
     assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
+    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-sonnet-4-6"
+    assert "langsmith:anthropic/claude-sonnet-4-6" in presets["langsmith"]["models"]
+    assert "anthropic:claude-sonnet-4-6" in presets["anthropic"]["models"]
+    assert "openai:gpt-5.5" in presets["openai"]["models"]
+    assert "openai:gpt-5.5" not in presets["moonshot"]["models"]
+    assert presets["xai"]["models"] == ["xai:grok-4"]
+    assert presets["custom"]["models"] == []
 
     seen: dict[str, str] = {}
 

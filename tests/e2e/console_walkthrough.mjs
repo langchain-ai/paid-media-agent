@@ -1,5 +1,5 @@
 // Headless walkthrough of the setup wizard: model presets and a custom key, ad accounts,
-// ask, path choice, MDA, done. Fails on any browser error.
+// path choice, MDA, done. Fails on any browser error.
 // Run against a throwaway project copy that includes pyproject.toml and langgraph.json.
 // Usage: node tests/e2e/console_walkthrough.mjs "<console url with #token>" <screenshot dir>
 import { chromium } from "playwright";
@@ -15,6 +15,10 @@ await page.waitForSelector(".hero-title", { timeout: 15000 });
 await page.waitForSelector(".stepper-item");
 r.rail = await page.$$eval(".stepper-item .step-label", (els) => els.map((e) => e.textContent));
 r.title = await page.$eval(".hero-title", (e) => e.textContent);
+if (await page.$(".onboard-foot .btn-primary:has-text('Start setup')")) {
+  await page.click(".onboard-foot .btn-primary:has-text('Start setup')");
+  await page.waitForSelector(".hero-title:has-text('Choose a model')");
+}
 await shot("01-model");
 await page.waitForSelector(".options .option", { timeout: 10000 });
 r.providers = await page.$$eval(".options .option .name", (els) => els.map((e) => e.textContent));
@@ -47,20 +51,14 @@ r.anthropicTest = (await page.$eval("#model-status", (e) => e.textContent)).slic
 await page.click(".onboard-foot .btn-primary");
 await page.waitForSelector("#w-token");
 await page.click(".onboard-foot .btn-primary");
-await page.waitForSelector("#w-q", { timeout: 10000 });
-r.askTitle = await page.$eval(".hero-title", (e) => e.textContent);
-r.askEnabled = await page.$eval("form button.btn-primary:has-text('Ask')", (e) => !e.disabled);
-await shot("04-try");
-await page.click("form button.btn-primary:has-text('Ask')");
-await page.waitForFunction(() => /FAIL|OK/.test(document.querySelector("#ask-status .badge")?.textContent || ""), null, { timeout: 180000 });
-r.ask = (await page.$eval("#ask-status", (e) => e.textContent)).slice(0, 140);
-await page.click(".onboard-foot .btn-primary");
-await page.waitForSelector(".options.two .option");
-r.pathRecommended = await page.$$eval(".options.two .rec", (els) => els.map((e) => e.textContent));
+await page.waitForSelector(".path-card");
+r.pathTitle = await page.$eval(".hero-title", (e) => e.textContent);
+r.pathRecommended = await page.$$eval(".path-kicker.rec", (els) => els.map((e) => e.textContent));
 await shot("06-path");
 await page.click("#theme-toggle");
 await shot("07-path-dark");
-await page.click(".options.two .option:has-text('Managed')");
+await page.click(".path-card:has-text('Managed')");
+await page.click(".onboard-foot .btn-primary");
 await page.waitForSelector("#w-ls", { timeout: 20000 });
 await shot("08-mda-dark");
 await page.click(".onboard-foot .btn-primary");

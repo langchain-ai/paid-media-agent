@@ -3,10 +3,9 @@
 Not part of `pytest`: needs Node 22, Playwright, and a throwaway project copy.
 
 `console_walkthrough.mjs` drives the setup wizard with headless Chromium and captures a screenshot
-per screen: welcome (capabilities and example prompts), model presets and a custom key name, ad
-accounts, try-it (an in-page question and LangGraph Studio start and stop), the managed vs
-self-hosted choice, MDA preflight, and the done screen in the dark theme. It fails on any browser
-console error.
+per screen: welcome (capabilities), model presets and a custom key name, ad
+accounts, the managed vs self-hosted choice, MDA preflight, and the done screen in the dark
+theme. It fails on any browser console error.
 
 Run it against a throwaway copy of the project so form submissions do not touch your real `.env`.
 The copy needs `pyproject.toml` and `langgraph.json` so Studio can load the graph:

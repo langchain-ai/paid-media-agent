@@ -35,9 +35,9 @@ from paid_media_agent.admin.envfile import (
     write_env,
 )
 from paid_media_agent.admin.model_presets import (
-    MODEL_PRESETS,
     _module_available,
     model_key_env,
+    model_preset_payloads,
 )
 from paid_media_agent.config import AccountBinding, ModelConfig, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
@@ -151,7 +151,7 @@ def status(root: Path) -> ActionResult:
         "env": env,
         "org": org_summary(root),
         "runtime": settings.paid_media_runtime,
-        "model_presets": [dict(p) for p in MODEL_PRESETS],
+        "model_presets": model_preset_payloads(),
         "model_key_env": key_env,
         "model_key_set": bool(key_env and env.get(key_env, False)),
         "model_base_url": settings.paid_media_model_base_url or "",

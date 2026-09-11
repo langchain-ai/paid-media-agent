@@ -6,12 +6,13 @@ import importlib.util
 
 from paid_media_agent.config import Settings
 from paid_media_agent.domain.common import JsonValue
+from paid_media_agent.middleware.tool_selection import CAPABILITY_REGISTRY
 
 MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
     {
         "id": "langsmith",
         "label": "LangSmith Gateway",
-        "model": "anthropic/claude-sonnet-4-6",
+        "model": "langsmith:anthropic/claude-sonnet-4-6",
         "key": "LANGSMITH_API_KEY",
         "url": "https://smith.langchain.com/settings",
         "note": "One key, every provider, traced",
@@ -148,8 +149,43 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
 """Model provider cards for the wizard. Key names are allowlisted env names; nothing else is written.
 
 OpenAI-compatible presets use the `openai:` prefix with a base URL and their own key env var,
-which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Model ids are examples to edit.
+which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Registered providers expose the
+specs in `CAPABILITY_REGISTRY`. Other presets keep their configured example.
 """
+
+
+def models_for_preset(preset: dict[str, JsonValue]) -> list[str]:
+    """Return the selectable specs for a wizard card. Custom has none."""
+    preset_id = str(preset.get("id") or "")
+    default = str(preset.get("model") or "")
+    if preset_id == "custom":
+        return []
+    prefixes = {
+        "langsmith": ("langsmith:",),
+        "anthropic": ("anthropic:",),
+        "openai": ("openai:",),
+        "google": ("google_genai:",),
+    }.get(preset_id)
+    if prefixes is None:
+        return [default] if default else []
+    models = [spec for spec in CAPABILITY_REGISTRY if spec.startswith(prefixes)]
+    if preset_id == "openai":
+        models = [
+            spec for spec in models if spec.startswith("openai:gpt-") or spec.startswith("openai:o")
+        ]
+    if default and default not in models:
+        models = [default, *models]
+    return models
+
+
+def model_preset_payloads() -> list[dict[str, JsonValue]]:
+    """Serialize wizard cards with the selectable model list attached."""
+    payloads: list[dict[str, JsonValue]] = []
+    for preset in MODEL_PRESETS:
+        payload = dict(preset)
+        payload["models"] = models_for_preset(payload)
+        payloads.append(payload)
+    return payloads
 
 
 PROVIDER_IMPORT_MODULES: dict[str, str] = {

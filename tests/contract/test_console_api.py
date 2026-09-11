@@ -38,6 +38,17 @@ def test_page_and_static_assets_are_served_with_csp(client: TestClient) -> None:
     assert "default-src 'self'" in page.headers["content-security-policy"]
     assert client.get("/static/app.js").status_code == 200
     assert client.get("/static/app.css").status_code == 200
+    for name in (
+        "logo-google.svg",
+        "logo-meta.svg",
+        "logo-linkedin.svg",
+        "logo-reddit.svg",
+        "logo-x.svg",
+        "logo-bigquery.svg",
+    ):
+        mark = client.get(f"/static/{name}")
+        assert mark.status_code == 200, name
+        assert mark.headers["content-type"].startswith("image/svg+xml")
     assert client.get("/static/../pyproject.toml").status_code in (404, 400)
 
 

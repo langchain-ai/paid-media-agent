@@ -20,6 +20,9 @@ def test_model_config_requires_provider_prefix() -> None:
     assert config.provider == "anthropic"
     assert config.spec == "anthropic:claude-sonnet-4-6"
     assert str(config.base_url).startswith("https://proxy.example")
+    assert ModelConfig.parse("anthropic/claude-sonnet-4-6").spec == (
+        "langsmith:anthropic/claude-sonnet-4-6"
+    )
 
 
 def test_registry_is_exact_not_substring() -> None:
