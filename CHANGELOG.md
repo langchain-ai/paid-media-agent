@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (README)
+
+- The README is a short landing page: tagline, badges, the console as the hero image (light and
+  dark), a three-command quick start, what the model does versus what code does, the two
+  deployment paths side by side, the trust properties, platforms, onboarding, and a diagram.
+  Details moved to OPERATIONS.md and the docs it links.
+
 ### Added (onboarding inside coding agents)
 
 - `paid-media-agent setup --no-token` serves the console at a plain URL for hosts whose browser
