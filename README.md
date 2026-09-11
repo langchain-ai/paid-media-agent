@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://github.com/amal-irgashev/paid-media-agent">
+  <a href="https://github.com/langchain-ai/open-paid-media-agent">
     <h1>Paid Media Agent</h1>
   </a>
 </div>
