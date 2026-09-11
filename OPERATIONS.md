@@ -89,16 +89,17 @@ sandbox; the model works with their ids.
 
 The organization profile (`docs/org/`) travels with the deploy from your checkout. Answers the
 agent saves in the hosted deployment live on that deployment's disk until the next deploy, so run
-the interview locally (console or CLI) before deploying and treat hosted answers as provisional.
+the interview locally (chat or CLI) before deploying and treat hosted answers as provisional.
 
 ## Organization context
 
 `docs/org/` holds what only your organization knows: what you sell, the conversion that counts,
 targets or "directional", monthly budget, markets and timezone, seasonality, campaign naming, and
 who approves changes, plus links and text files you share. It is ignored by git. Fill it from
-the console step "Your business", from `paid-media-agent org interview`, or by asking the agent
-to learn about your business (skill `paid-media-org-onboarding`, tools `get_org_context`,
-`update_org_profile`, and `add_org_source`). The agent calls `get_org_context` before every
+the CLI (`paid-media-agent org interview`), or by asking the coding agent in chat to learn
+about the business (skill `paid-media-org-onboarding`, tools `get_org_context`,
+`update_org_profile`, and `add_org_source`). The setup console does not collect it. The agent
+calls `get_org_context` before every
 analysis and says "not provided" rather than guessing when a field is empty. The "who approves"
 answer is the human list the agent names; the identities that can actually approve are
 `PAID_MEDIA_APPROVER_IDS`. Links must be public https pages under 1 MB; files
@@ -195,12 +196,14 @@ functions as the CLI subcommands (`admin/actions.py`), so agents can script the 
 and exposes the kill switch. It is not a hosted admin panel: do not expose the port, and prefer
 deployment secrets over `.env` in production.
 
-The wizard has seven steps: Model, Ad accounts, Your business, Try it, Where it lives, then Deploy
-or Self-host, and Done. "Try it" runs one question locally through the same profile a deployment
-runs. "Where it lives" offers Managed Deep Agents (recommended) and self-hosting. "Deploy"
-collects the LangSmith key and the approver identities, runs the preflight, and starts `mda dev`
-or `mda deploy`. "Self-host" collects the Slack tokens and approvers, the database URL, generates
-the API token and signing key, and starts `serve` and `slack`.
+The wizard is three decisions, then optional deploy: Model, Accounts, Ask. Each screen
+asks one thing. CLI equivalents and extra fields sit behind a disclosure. "Accounts" can be
+skipped to keep the fixture catalog. Organization context is not a console step; the coding
+agent fills it locally in chat (or `paid-media-agent org interview`). "Ask" runs one question
+locally through the same profile a deployment runs. After that, "Where it lives" offers Managed
+Deep Agents (recommended) or self-hosting, or you can stay local. "Deploy" collects the LangSmith
+key and approver identities, runs preflight, and starts `mda dev` or `mda deploy`. "Self-host"
+collects Slack tokens first; database, API token, and process controls stay behind a disclosure.
 
 ## Local run with LangSmith Studio
 

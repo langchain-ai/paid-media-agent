@@ -3,7 +3,8 @@
   "use strict";
   const LOGOS = window.PMA_LOGOS || {};
   const state = { token: "", view: "wizard", step: null, routeId: "local", status: null, routes: [], processes: [], config: null,
-    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, session: { modelTested: null, catalog: null, preflight: null, slack: null, db: null, answer: null } };
+    open: new Set(), results: new Map(), discovered: null, lastRouteId: null, picked: null, direction: "forward", maxReached: 0,
+    session: { modelTested: null, catalog: null, preflight: null, slack: null, db: null, answer: null, skipped: {} } };
   const $ = (sel, root = document) => root.querySelector(sel);
   const el = (tag, attrs = {}, children = []) => {
     const node = document.createElement(tag);
@@ -17,11 +18,19 @@
     for (const child of [].concat(children)) if (child) node.append(child);
     return node;
   };
-  const logo = (name, cls = "") => el("span", { class: `well ${cls}`, html: LOGOS[name] || "" });
+  const logo = (name, cls = "") => el("span", { class: `well icon ${cls}`, "data-slot": "icon-well", html: LOGOS[name] || "" });
   const check = (checked, large = false) => el("span", { class: `check${large ? " lg" : ""}`, "data-checked": checked ? "true" : "false", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' });
   const badge = (tone, text) => el("span", { class: "badge", "data-tone": tone, text });
-  const tick = () => el("span", { class: "tick", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' });
-  const facts = (items) => el("div", { class: "facts" }, items.map((t) => el("span", { class: "fact", text: t })));
+  const FEATURED_PRESETS = ["langsmith", "anthropic", "openai"];
+  const CORE = [
+    { id: "model", label: "Model", note: "Pick a provider and paste a key" },
+    { id: "pipeboard", label: "Accounts", note: "Connect or use demo data" },
+    { id: "try", label: "Ask", note: "One question through the real graph" },
+  ];
+  const RAIL = [
+    ...CORE,
+    { id: "path", label: "Where it lives", note: "Stay local, or deploy" },
+  ];
   // Every command is shown the way a fresh checkout runs it, matching README and OPERATIONS.
   // Answers arrive as markdown. Escape everything, then render the small subset the agent uses.
   const escapeHtml = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -51,6 +60,74 @@
   // Our own commands run through uv; anything else (docker, open, git) is shown as typed.
   const cli = (command) => el("div", { class: "cli" }, [el("span", { class: "sigil", text: "$" }), el("code", { text: /^(uv run |paid-media-agent |mda )/.test(command) && !command.startsWith("uv run ") ? `uv run ${command}` : command })]);
   const intro = (logoName, title, note, actions = null, cls = "") => el("div", { class: "intro" }, [logo(logoName, cls), el("div", {}, [el("span", { class: "name", text: title }), el("span", { class: "note", text: note }), actions])]);
+  const disclose = (summary, open, children) => el("details", { class: "disclose", open: open ? true : null }, [
+    el("summary", { text: summary }),
+    el("div", { class: "disclose-body" }, children),
+  ]);
+  const cliDetails = (command) => disclose("CLI equivalent", false, [cli(command)]);
+  const hero = (title, why) => el("div", { class: "hero", "data-slot": "form-section" }, [
+    el("h1", { class: "hero-title", text: title }),
+    why ? el("p", { class: "hero-sub", text: why }) : null,
+  ]);
+  function formField(id, label, control, help) {
+    if (!control.id) control.id = id;
+    const helpNode = help == null ? null
+      : typeof help === "string" ? el("p", { class: "hint", id: `${id}-help`, text: help })
+      : el("p", { class: "hint", id: `${id}-help` }, [].concat(help));
+    if (helpNode) control.setAttribute("aria-describedby", `${id}-help`);
+    return el("div", { class: "field", "data-slot": "form-field" }, [
+      el("label", { class: "text-label", for: id, text: label }),
+      control,
+      helpNode,
+    ]);
+  }
+  function foot({ skip, primary }) {
+    const nodes = [];
+    if (primary) {
+      if (primary.node) {
+        primary.node.classList.add("btn-block");
+        nodes.push(primary.node);
+      } else {
+        nodes.push(el("button", {
+          class: "btn btn-primary btn-block", type: primary.type || "button", text: primary.label,
+          disabled: primary.disabled ? true : null,
+          onclick: primary.onclick || (primary.step ? () => go(primary.step) : null),
+        }));
+      }
+    }
+    if (skip) {
+      nodes.push(el("button", {
+        class: "btn btn-ghost btn-block", type: "button", text: skip.label || "Skip",
+        onclick: skip.onclick || (() => { state.session.skipped[skip.mark || skip.step] = true; go(skip.step); }),
+      }));
+    }
+    return el("div", { class: "onboard-foot" }, nodes);
+  }
+  function frame(title, why, body, nav, command) {
+    return {
+      children: [
+        el("div", { class: "step-stack" }, [hero(title, why), ...[].concat(body || []), command ? cliDetails(command) : null]),
+        nav ? foot(nav) : null,
+      ],
+      nav,
+    };
+  }
+  function previousStep(step) {
+    if (step === "mda" || step === "selfhost" || step === "done") return "path";
+    if (step === "welcome") return null;
+    const idx = RAIL.findIndex((item) => item.id === step);
+    if (idx > 0) return RAIL[idx - 1].id;
+    if (idx === 0) return "welcome";
+    return null;
+  }
+  function railIndex(step) {
+    if (["mda", "selfhost", "done"].includes(step)) return RAIL.length - 1;
+    return RAIL.findIndex((item) => item.id === step);
+  }
+  function syncReached() {
+    const idx = railIndex(state.step);
+    if (idx >= 0) state.maxReached = Math.max(state.maxReached, idx);
+  }
 
   // ---- fragment: #token=...&view=...&step=...&route=...
   function readFragment() {
@@ -97,23 +174,26 @@
     const modelDone = !!model.package_installed && (d.model_key_env ? !!d.model_key_set : model.provider === "scripted");
     const tokenSet = !!d.pipeboard?.token_set;
     const realAccounts = String(d.accounts_path || "").endsWith("config/accounts.toml") && (d.accounts || []).length > 0;
-    const orgDone = !!d.org?.configured;
     const runtime = d.runtime || "local";
     const approvers = (d.writes?.approvers || []).length > 0;
     const slack = d.slack || {};
     const slackDone = !!slack.bot_token_set && (slack.transport === "socket_mode" ? !!slack.app_token_set : !!slack.signing_secret_set);
     const mdaDone = !!d.mda?.langsmith_key_set && modelDone && approvers;
     const selfDone = slackDone && approvers;
-    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, orgDone, runtime, approvers, slackDone, mdaDone, selfDone };
+    return { env, model, modelDone, tokenSet, realAccounts, pipeboardDone: tokenSet && realAccounts, runtime, approvers, slackDone, mdaDone, selfDone };
+  }
+  function coreDone(id, s) {
+    const skipped = state.session.skipped || {};
+    if (id === "model") return s.modelDone || !!skipped.model;
+    if (id === "pipeboard") return s.pipeboardDone || !!skipped.pipeboard;
+    if (id === "try") return !!state.session.answer || !!skipped.try;
+    return false;
   }
   function stepList() {
     const s = derive();
     const steps = [
       { id: "welcome", label: "Welcome", done: true },
-      { id: "model", label: "Model", done: s.modelDone },
-      { id: "pipeboard", label: "Ad accounts", done: s.pipeboardDone },
-      { id: "org", label: "Your business", done: s.orgDone },
-      { id: "try", label: "Try it", done: !!state.session.answer },
+      ...CORE.map((step) => ({ ...step, done: coreDone(step.id, s) })),
       { id: "path", label: "Where it lives", done: s.runtime !== "local" },
     ];
     if (s.runtime === "mda") steps.push({ id: "mda", label: "Deploy", done: s.mdaDone });
@@ -122,8 +202,8 @@
     return steps;
   }
   function firstOpenStep() {
-    const steps = stepList();
-    const next = steps.find((s) => !s.done && s.id !== "welcome" && s.id !== "done");
+    const s = derive();
+    const next = CORE.find((step) => !coreDone(step.id, s));
     return next ? next.id : "done";
   }
 
@@ -137,9 +217,10 @@
     document.body.classList.toggle("advanced", advanced);
     writeFragment();
     if (advanced) { renderAdvanced(); return; }
-    if (!state.step) state.step = "welcome";
+    if (!state.step) state.step = firstOpenStep();
     const known = stepList().map((s) => s.id);
     if (!known.includes(state.step)) state.step = firstOpenStep();
+    syncReached();
     writeFragment();
     renderProgress();
     renderScreen();
@@ -147,39 +228,93 @@
 
   function renderProgress() {
     const nav = $("#progress");
+    const mobile = $("#progress-mobile");
+    const back = $("#wizard-back");
     nav.replaceChildren();
-    for (const step of stepList()) {
-      const chip = el("button", { class: "chip", type: "button", "aria-current": step.id === state.step ? "step" : null, "data-done": step.done ? "true" : "false", onclick: () => go(step.id) }, [check(step.done), el("span", { text: step.label })]);
-      nav.append(chip);
+    if (mobile) mobile.replaceChildren();
+    const current = Math.max(0, railIndex(state.step));
+    const active = RAIL[current] || RAIL[0];
+    if (mobile) {
+      mobile.append(
+        el("div", { class: "stepper-compact-row" }, [
+          el("span", { class: "step-label", text: state.step === "done" ? "Setup complete" : active.label }),
+          el("span", { class: "step-note", text: `Step ${current + 1} of ${RAIL.length}` }),
+        ]),
+        el("div", { class: "stepper-dots", "aria-hidden": "true" }, RAIL.flatMap((step, i) => {
+          const selected = i === current;
+          const completed = i < current;
+          const mark = completed
+            ? el("span", { class: "step-num", "data-done": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' })
+            : el("span", { class: "step-num", "aria-current": selected ? "step" : null, text: String(i + 1) });
+          const nodes = [el("button", { class: "stepper-dot", type: "button", disabled: i > current ? true : null, onclick: () => go(step.id) }, [mark])];
+          if (i < RAIL.length - 1) nodes.push(el("span", { class: "stepper-dot-rule" }));
+          return nodes;
+        })),
+      );
+    }
+    RAIL.forEach((step, i) => {
+      const selected = i === current && state.step !== "welcome";
+      const completed = i < current || (state.step === "done" && i <= current);
+      const mark = completed && !selected
+        ? el("span", { class: "step-num", "aria-hidden": "true", html: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.4 2.4L9.5 3.7"/></svg>' })
+        : el("span", { class: "step-num", "aria-hidden": "true", text: String(i + 1) });
+      nav.append(el("button", {
+        class: "stepper-item", type: "button",
+        "aria-current": selected ? "step" : null,
+        "data-done": completed ? "true" : "false",
+        disabled: i > current ? true : null,
+        onclick: () => go(step.id),
+      }, [
+        mark,
+        el("span", { class: "step-copy" }, [
+          el("span", { class: "step-label", text: step.label }),
+          el("span", { class: "step-note", text: step.note }),
+        ]),
+      ]));
+    });
+    if (back) {
+      const prev = previousStep(state.step);
+      back.hidden = !prev;
+      back.onclick = prev ? () => go(prev) : null;
     }
   }
 
   let screenToken = 0;
   function go(step) {
     if (step === state.step) return;
+    const order = ["welcome", ...RAIL.map((item) => item.id), "mda", "selfhost", "done"];
+    const from = order.indexOf(state.step);
+    const to = order.indexOf(step);
+    state.direction = to !== -1 && from !== -1 && to < from ? "back" : "forward";
     state.step = step;
+    syncReached();
     writeFragment();
     renderProgress();
-    renderScreen(true);
+    renderScreen();
   }
 
-  function renderScreen(animate = true) {
+  function renderScreen() {
     const host = $("#screen");
+    const live = $("#wizard-live");
     const token = ++screenToken;
-    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, org: screenOrg, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
-    const next = el("section", { class: "screen", "data-enter": animate ? "" : null }, build());
-    const current = host.firstElementChild;
-    const swap = () => { if (token !== screenToken) return; host.replaceChildren(next); requestAnimationFrame(() => requestAnimationFrame(() => next.removeAttribute("data-enter"))); };
-    if (current && animate) { current.setAttribute("data-exit", ""); setTimeout(swap, 110); } else swap();
+    const build = { welcome: screenWelcome, model: screenModel, pipeboard: screenPipeboard, try: screenTry, path: screenPath, mda: screenMda, selfhost: screenSelfHost, done: screenDone }[state.step] || screenWelcome;
+    const built = build();
+    const idx = railIndex(state.step);
+    const title = RAIL[idx]?.label || state.step;
+    const next = el("section", {
+      class: "wizard-step-pane",
+      "data-slot": "wizard-step-pane",
+      "data-direction": state.direction,
+      role: "region",
+      "aria-label": idx >= 0 ? `Step ${idx + 1} of ${RAIL.length}, ${title}` : title,
+    }, built.children || built);
+    if (token !== screenToken) return;
+    host.replaceChildren(next);
+    if (live) live.textContent = idx >= 0 ? `Step ${idx + 1} of ${RAIL.length}, ${title}` : "";
   }
-  const refreshScreen = () => { renderProgress(); renderScreen(false); };
+  const refreshScreen = () => { renderProgress(); renderScreen(); };
 
   // ---- screens
-  const ILLUSTRATIONS = {
-    analyze: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="bar" x="18" y="34" width="14" height="22" rx="2"/><rect class="bar" x="40" y="22" width="14" height="34" rx="2"/><rect class="bar hi" x="62" y="12" width="14" height="44" rx="2"/><rect class="bar" x="84" y="28" width="14" height="28" rx="2"/><rect class="bar" x="106" y="38" width="14" height="18" rx="2"/><path class="ln" d="M140 44 L156 30 L170 36 L186 16"/><rect class="txt" x="140" y="52" width="46" height="3" rx="1.5"/></svg>',
-    approve: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="ln" x="14" y="10" width="172" height="44" rx="8"/><rect class="txt" x="26" y="20" width="70" height="4" rx="2"/><rect class="txt" x="26" y="30" width="46" height="3" rx="1.5"/><rect class="txt" x="26" y="38" width="58" height="3" rx="1.5"/><rect class="ok" x="118" y="26" width="30" height="14" rx="7"/><path class="okink" d="M128 33.5l2.6 2.6 5-5" stroke="var(--positive)" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect class="txt" x="154" y="26" width="24" height="14" rx="7"/></svg>',
-    report: '<svg class="art-ill" viewBox="0 0 200 64"><rect class="ln" x="60" y="6" width="80" height="58" rx="6"/><rect class="txt" x="70" y="16" width="40" height="4" rx="2"/><rect class="txt" x="70" y="26" width="60" height="3" rx="1.5"/><rect class="txt" x="70" y="33" width="52" height="3" rx="1.5"/><rect class="bar hi" x="70" y="42" width="24" height="12" rx="2"/><rect class="bar" x="98" y="46" width="14" height="8" rx="2"/><rect class="bar" x="116" y="44" width="14" height="10" rx="2"/></svg>',
-  };
   const EXAMPLES = [
     "Compare the last 14 days with the prior 14 days.",
     "Where is spend rising while CPA gets worse?",
@@ -187,37 +322,22 @@
   ];
 
   function screenWelcome() {
-    return [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Paid Media Agent" }),
-        el("p", { class: "hero-sub", text: "One Deep Agents core over your ad accounts. The model chooses evidence and explains it; code owns the arithmetic, the tool authorization, and every provider mutation behind a signed approval." }),
-      ]),
-      facts(["deepagents + langgraph", "pipeboard mcp", "deny-by-default tools", "hitl approvals"]),
-      el("div", { class: "caps-grid stagger" }, [
-        cap("analyze", "Analyze", "Period comparison in Decimal, per platform, with missing metrics kept missing and totals suppressed when sources disagree."),
-        cap("approve", "Change", "Typed ChangeSet, digest-bound approval, one mutation attempt, bounded readback, honest receipt."),
-        cap("report", "Report", "Versioned payload rendered by code to HTML and PDF; every value reconciles to a source artifact."),
-      ]),
-      el("div", { class: "form" }, [
-        el("span", { class: "mini", text: "Ask it things like" }),
-        el("div", { class: "prompts" }, EXAMPLES.slice(0, 2).map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { state.session.draft = q; go("try"); } }))),
-      ]),
-      el("div", { class: "actions" }, [
-        el("button", { class: "btn btn-primary", type: "button", text: "Start setup", onclick: () => go(firstOpenStep() === "done" ? "model" : firstOpenStep()) }),
-        el("button", { class: "btn btn-outline", type: "button", text: "Run the fixture demo", onclick: (ev) => demoInline(ev.currentTarget) }),
-      ]),
-      cli("paid-media-agent demo --with-proposal"),
-      el("div", { class: "status-line", id: "welcome-status" }),
-    ];
+    const line = el("div", { class: "status-line", id: "welcome-status" });
+    const demo = el("button", { class: "btn btn-outline", type: "button", text: "Run the fixture demo", onclick: (ev) => demoInline(ev.currentTarget) });
+    return frame(
+      "Paid Media Agent",
+      "Ask a question about your ads. Code does the math. You approve every change.",
+      [
+        line,
+        disclose("Prove the install first", false, [
+          el("p", { class: "sub", text: "Runs the fixture demo with no credentials." }),
+          demo,
+          cli("paid-media-agent demo --with-proposal"),
+        ]),
+      ],
+      { primary: { label: "Start setup", onclick: () => go(firstOpenStep() === "done" ? "model" : firstOpenStep()) } },
+    );
   }
-
-  const cap = (art, name, note) => {
-    const tile = el("div", { class: "art-tile" });
-    const img = el("img", { src: `/static/art-${art}.webp`, alt: "", decoding: "async" });
-    img.addEventListener("error", () => { tile.innerHTML = ILLUSTRATIONS[art]; });
-    tile.append(img);
-    return el("div", { class: "cap" }, [tile, el("span", { class: "name", text: name }), el("span", { class: "note", text: note })]);
-  };
 
   async function demoInline(button) {
     const line = $("#welcome-status");
@@ -241,19 +361,29 @@
       const byProvider = presets.find((p) => p.id !== "custom" && currentSpec && currentSpec.startsWith(p.model.split(":")[0] + ":"));
       state.picked = (byModel || byKey || byProvider)?.id || (s.modelDone ? "custom" : null);
     }
-    const cards = el("div", { class: "options stagger" }, presets.map((p) => el("button", { class: "option compact", type: "button", "aria-pressed": state.picked === p.id ? "true" : "false", onclick: () => { state.picked = p.id; state.session.modelTested = null; refreshScreen(); } }, [
-      el("div", { class: "row" }, [logo(p.logo, p.logo === "langchain" ? "lc" : ""), el("span", { class: "name", text: p.label })]),
-      el("span", { class: "note" }, [el("span", { text: p.note }), p.recommended ? badge("info", "Recommended") : null]),
-    ])));
-    const nodes = [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Model" }),
-        el("p", { class: "hero-sub", text: s.modelDone ? `${currentSpec} is configured. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector.` : "PAID_MEDIA_MODEL takes provider:model. Registered Anthropic and OpenAI models use provider-native tool search; everything else uses the portable selector with a bounded tool set." }),
+    const card = (p) => el("button", {
+      class: "option", type: "button", "data-slot": "choice-card",
+      "aria-pressed": state.picked === p.id ? "true" : "false",
+      onclick: () => { state.picked = p.id; state.session.modelTested = null; refreshScreen(); },
+    }, [
+      el("div", { class: "row" }, [
+        logo(p.logo, p.logo === "langchain" ? "lc" : ""),
+        el("span", { class: "stack" }, [
+          el("span", { class: "name", text: p.label }),
+          el("span", { class: "note", text: p.recommended ? `Recommended. ${p.note}` : p.note }),
+        ]),
       ]),
-      d.model?.error ? el("div", { class: "status-line" }, [badge("fail", "FAIL"), el("span", { text: `${d.model.error} (currently "${currentSpec}"). Pick a provider below and save.` })]) : null,
-      cards,
+    ]);
+    const featured = presets.filter((p) => FEATURED_PRESETS.includes(p.id));
+    const extra = presets.filter((p) => !FEATURED_PRESETS.includes(p.id));
+    const moreOpen = !!(state.picked && extra.some((p) => p.id === state.picked));
+    const body = [
+      d.model?.error ? el("div", { class: "status-line" }, [badge("fail", "FAIL"), el("span", { text: `${d.model.error} (currently "${currentSpec}"). Pick a provider and save.` })]) : null,
+      el("div", { class: "options featured", "data-slot": "choice-cards" }, featured.map(card)),
+      disclose("More providers", moreOpen, [el("div", { class: "options", "data-slot": "choice-cards" }, extra.map(card))]),
     ];
     const preset = presets.find((p) => p.id === state.picked);
+    let save = null;
     if (preset) {
       const isCustom = preset.id === "custom";
       const sameProvider = currentSpec && preset.model && currentSpec.split(":")[0] === preset.model.split(":")[0];
@@ -262,22 +392,17 @@
       const keyInput = el("input", { class: "input", id: "w-key", type: "password", placeholder: (d.env || {})[isCustom ? d.model_key_env : preset.key] ? "Key already set. Paste to replace." : "API key", autocomplete: "off" });
       const showBase = isCustom || !!preset.base_url;
       const baseInput = el("input", { class: "input", id: "w-base", value: preset.base_url || (isCustom ? d.model_base_url || "" : ""), placeholder: "https://api.example.com/v1 (optional)", spellcheck: "false" });
-      const form = el("form", { class: "form" }, [
-        el("div", { class: "field-row" }, [
-          el("div", { class: "field" }, [el("label", { for: "w-model", text: "Model" }), modelInput, el("span", { class: "hint", text: "provider:model. Edit the model id to what your account allows." })]),
-          el("div", { class: "field" }, [el("label", { for: "w-key", text: "API key" }), keyInput, el("span", { class: "hint" }, [el("span", { text: "Stored as " }), el("code", { class: "mono", text: isCustom ? "the name you choose" : preset.key })])]),
-        ]),
-        el("div", { class: "field-row" }, [
-          isCustom ? el("div", { class: "field" }, [el("label", { for: "w-keyname", text: "Key name in .env" }), keyNameInput, el("span", { class: "hint", text: "Must end with _API_KEY." })]) : null,
-          showBase ? el("div", { class: "field" }, [el("label", { for: "w-base", text: "Base URL" }), baseInput, el("span", { class: "hint", text: "For OpenAI-compatible endpoints. Native tool search is off through a proxy." })]) : null,
-        ]),
+      const form = el("form", { class: "form", "data-slot": "form-fields" }, [
+        formField("w-model", "Model", modelInput),
+        formField("w-key", "API key", keyInput, [el("span", { text: "Stored as " }), el("code", { class: "mono", text: isCustom ? "the name you choose" : preset.key })]),
+        isCustom ? formField("w-keyname", "Key name in .env", keyNameInput, "Must end with _API_KEY.") : null,
+        showBase ? formField("w-base", "Base URL", baseInput) : null,
         preset.url ? el("p", { class: "sub" }, [el("a", { href: preset.url, target: "_blank", rel: "noopener", text: `Create a key at ${preset.label}` })]) : null,
-        preset.extra && !isCustom ? el("p", { class: "mini" }, [el("span", { text: "Needs the provider package: " }), el("code", { class: "mono", text: `uv sync --extra ${preset.extra}` })]) : null,
       ]);
       const line = el("div", { class: "status-line", id: "model-status" });
       if (state.session.modelTested) setLine(line, state.session.modelTested.status, state.session.modelTested.text);
-      const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test" });
-      form.append(line, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("pipeboard") })]), cli("paid-media-agent test model"));
+      save = el("button", { class: "btn btn-primary", type: "submit", text: "Save and test" });
+      form.append(line, el("div", { class: "actions" }, [save]));
       form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(save, async () => {
         const keyName = (isCustom ? keyNameInput.value : preset.key).trim();
         if (!/^[A-Z][A-Z0-9_]{1,40}_API_KEY$/.test(keyName)) { setLine(line, "fail", "Key name must look like MY_PROVIDER_API_KEY."); return; }
@@ -290,27 +415,31 @@
         state.session.modelTested = { status: test.status, text: test.status === "ok" ? `${test.summary}. Tool selection: ${test.detail.selection}.` : test.summary };
         await loadStatus();
       }); });
-      nodes.push(form);
-    } else {
-      nodes.push(el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Skip", onclick: () => go("pipeboard") })]));
+      body.push(form);
     }
-    return nodes;
+    return frame(
+      "Choose a model",
+      s.modelDone ? `${currentSpec} is saved on this machine.` : "Pick a provider and paste a key. We write it to .env here.",
+      body,
+      {
+        back: { step: "welcome" },
+        primary: { label: "Continue", step: "pipeboard" },
+      },
+      "paid-media-agent test model",
+    );
   }
 
   function screenPipeboard() {
-    const d = state.status.detail;
     const s = derive();
-    const nodes = [el("div", { class: "hero" }, [
-      el("h1", { class: "hero-title", text: "Ad accounts" }),
-      el("p", { class: "hero-sub", text: "Pipeboard owns the platform OAuth and exposes each one as a Streamable HTTP MCP server. The host loads that catalog, classifies every tool, and denies anything without a read-only hint." }),
-    ])];
-    const introNode = intro("pipeboard", "Pipeboard", "Handles the Google, Meta, and Reddit logins. Connect them there, create a scoped read-only token, and paste it here.",
-      el("div", { class: "actions" }, [el("a", { class: "btn btn-outline btn-compact", href: "https://pipeboard.co/api-tokens", target: "_blank", rel: "noopener", text: "Open Pipeboard" })]));
     const tokenInput = el("input", { class: "input", id: "w-token", type: "password", placeholder: s.tokenSet ? "Token already set. Paste to replace." : "Pipeboard API token", autocomplete: "off" });
     const connect = el("button", { class: "btn btn-primary", type: "submit", text: s.tokenSet ? "Reconnect" : "Connect" });
     const line = el("div", { class: "status-line", id: "pb-status" });
     if (state.session.catalog) setLine(line, state.session.catalog.status, state.session.catalog.text);
-    const form = el("form", { class: "form" }, [el("div", { class: "field" }, [el("label", { for: "w-token", text: "API token" }), tokenInput]), line, el("div", { class: "actions" }, [connect])]);
+    const form = el("form", { class: "form", "data-slot": "form-fields" }, [
+      formField("w-token", "API token", tokenInput, [el("a", { href: "https://pipeboard.co/api-tokens", target: "_blank", rel: "noopener", text: "Create a token at Pipeboard" })]),
+      line,
+      el("div", { class: "actions" }, [connect]),
+    ]);
     form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(connect, async () => {
       if (tokenInput.value) { const saved = await saveConfig({ PIPEBOARD_API_TOKEN: tokenInput.value }); if (!saved.ok) { setLine(line, "fail", saved.summary); return; } }
       setLine(line, "info", "Loading the live catalog…");
@@ -320,22 +449,29 @@
       state.discovered = disc.detail.accounts || [];
       await loadStatus();
     }); });
-    nodes.push(introNode, form);
     if (state.discovered === null && s.tokenSet) {
       runAction("accounts_discover").then((disc) => { state.discovered = disc.detail.accounts || []; refreshScreen(); }).catch(() => {});
     }
-    if (state.discovered && state.discovered.length) nodes.push(accountsPicker());
-    else if (!s.tokenSet) nodes.push(el("p", { class: "sub", text: `No token yet, so reads resolve against the fixture catalog: ${(d.accounts || []).map((a) => a.alias).join(", ")}.` }));
-    nodes.push(el("p", { class: "sub" }, [
-      el("span", { text: "LinkedIn Ads, X Ads, and OpenAI Ads are not on Pipeboard. " }),
-      el("a", { href: "#", text: "Direct platforms", onclick: (ev) => { ev.preventDefault(); state.view = "advanced"; state.routeId = "direct"; render(); } }),
-      el("span", { text: " takes their credentials and adds them to the same catalog." }),
+    const body = [form];
+    if (state.discovered && state.discovered.length) body.push(accountsPicker());
+    else if (!s.tokenSet) body.push(el("p", { class: "sub", text: "Skip to use the demo accounts." }));
+    body.push(disclose("LinkedIn, X, and OpenAI Ads", false, [
+      el("p", { class: "sub" }, [
+        el("a", { href: "#", text: "Direct platforms", onclick: (ev) => { ev.preventDefault(); state.view = "advanced"; state.routeId = "direct"; render(); } }),
+        el("span", { text: " takes those credentials in Advanced." }),
+      ]),
     ]));
-    nodes.push(
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]),
-      cli("paid-media-agent accounts discover"),
+    return frame(
+      "Connect ad accounts",
+      "A Pipeboard token loads Google, Meta, and Reddit. Or skip and use demo data.",
+      body,
+      {
+        back: { step: "model" },
+        skip: { label: "Skip with demo data", mark: "pipeboard", step: "try" },
+        primary: { label: "Continue", step: "try" },
+      },
+      "paid-media-agent accounts discover",
     );
-    return nodes;
   }
 
   function accountsPicker() {
@@ -382,64 +518,6 @@
   const platformLogo = (platform) => ({ google_ads: "google", meta_ads: "langchain", reddit_ads: "langchain" }[platform] || "langchain");
   const suggestAlias = (row) => `${row.platform.replace("_ads", "")}-${(row.name || "main").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 24) || "main"}`;
 
-  function screenOrg() {
-    const d = state.status.detail;
-    const org = d.org || {};
-    const nodes = [el("div", { class: "hero" }, [
-      el("h1", { class: "hero-title", text: "Your business" }),
-      el("p", { class: "hero-sub", text: "Eight plain questions the agent reads before every analysis. Answer what you know; skip the rest. Nothing here is committed to git." }),
-    ])];
-    const fields = [];
-    const form = el("form", { class: "form org-form" });
-    const status = el("div", { class: "status-line", id: "org-status" });
-    if (state.session.orgStatus) setLine(status, state.session.orgStatus.status, state.session.orgStatus.text);
-    const questions = state.session.orgQuestions || [];
-    const profile = state.session.orgProfile || {};
-    if (!state.session.orgQuestions) {
-      api("/api/org").then((r) => { state.session.orgQuestions = r.detail.questions || []; state.session.orgProfile = r.detail.profile || {}; refreshScreen(); }).catch((e) => setLine(status, "fail", e.message));
-      nodes.push(el("p", { class: "sub", text: "Loading the questions…" }));
-      return nodes;
-    }
-    for (const q of questions) {
-      const input = el("textarea", { class: "input org-answer", id: `org-${q.field}`, rows: "2", placeholder: q.example });
-      input.value = profile[q.field] || "";
-      fields.push([q.field, input]);
-      form.append(el("div", { class: "field" }, [el("label", { for: `org-${q.field}`, text: q.question }), el("span", { class: "hint", text: q.why }), input]));
-    }
-    const links = el("textarea", { class: "input", id: "org-links", rows: "2", placeholder: "https://... one public link per line (a brief, a plan, a dashboard export)" });
-    form.append(el("div", { class: "field" }, [el("label", { for: "org-links", text: "Links the agent should read" }), links]));
-    const file = el("input", { class: "input", type: "file", id: "org-file", accept: ".md,.txt,.csv,.json,.html" });
-    const attach = el("button", { class: "btn btn-outline btn-compact", type: "button", text: "Attach file" });
-    attach.addEventListener("click", () => busy(attach, async () => {
-      if (!file.files.length) { setLine(status, "info", "Choose a text file first (.md, .txt, .csv, .json, .html; up to 1 MB)."); return; }
-      const body = new FormData(); body.append("file", file.files[0]);
-      const response = await fetch("/api/org/files", { method: "POST", headers: { "X-Admin-Token": state.token }, body });
-      const data = await response.json().catch(() => ({}));
-      state.session.orgStatus = { status: response.ok && data.ok ? "ok" : "fail", text: data.summary || data.detail || "upload failed" };
-      state.session.orgQuestions = null;
-      await loadStatus();
-    }));
-    form.append(el("div", { class: "field" }, [el("label", { for: "org-file", text: "Attach a file" }), el("div", { class: "row" }, [file, attach])]));
-    const save = el("button", { class: "btn btn-primary", type: "submit", text: "Save" });
-    form.append(status, el("div", { class: "actions" }, [save, el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("try") })]));
-    form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(save, async () => {
-      const answers = {};
-      for (const [field, input] of fields) if ((input.value || "").trim() !== (profile[field] || "")) answers[field] = input.value.trim();
-      const urls = links.value.split("\n").map((l) => l.trim()).filter(Boolean);
-      if (!Object.keys(answers).length && !urls.length) { setLine(status, "info", "Nothing changed."); return; }
-      setLine(status, "info", "Saving…");
-      const result = await api("/api/org", { method: "POST", body: { answers, links: urls } });
-      const failed = (result.detail?.links || []).filter((l) => !l.ok).map((l) => l.summary);
-      const stored = (result.detail?.links || []).filter((l) => l.ok).length;
-      const text = [result.summary, stored ? `${stored} link(s) stored` : "", ...failed].filter(Boolean).join("; ");
-      state.session.orgStatus = { status: failed.length ? "warn" : "ok", text };
-      state.session.orgQuestions = null; links.value = "";
-      await loadStatus();
-    }); });
-    nodes.push(form, el("p", { class: "sub", text: `Saved to docs/org: ${org.answered || 0} of ${org.questions || 8} answered, ${(org.sources || []).length} source(s). The agent can also run this interview in chat: ask it to learn about your business.` }), cli("paid-media-agent org interview"));
-    return nodes;
-  }
-
   function screenTry() {
     const d = state.status.detail;
     const s = derive();
@@ -449,11 +527,12 @@
     const line = el("div", { class: "status-line", id: "ask-status" });
     const answerBox = el("div", { class: "answer md", hidden: state.session.answer ? null : true });
     if (state.session.answer) answerBox.innerHTML = renderMarkdown(state.session.answer);
-    const form = el("form", { class: "form" }, [
-      el("div", { class: "field" }, [el("label", { for: "w-q", text: "Ask the agent" }), question]),
-      el("div", { class: "prompts" }, EXAMPLES.map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { question.value = q; } }))),
+    const form = el("form", { class: "form", "data-slot": "form-fields" }, [
+      formField("w-q", "Question", question),
+      el("div", { class: "prompts" }, EXAMPLES.slice(0, 2).map((q) => el("button", { class: "prompt", type: "button", text: q, onclick: () => { question.value = q; } }))),
       line, answerBox,
-      el("div", { class: "actions" }, [ask, el("span", { class: "mini", text: s.modelDone ? (s.tokenSet ? "Runs against your live catalog." : "Runs against the demo accounts until Pipeboard is connected.") : "Add a model first." })]),
+      el("div", { class: "actions" }, [ask]),
+      el("p", { class: "mini", text: s.modelDone ? (s.tokenSet ? "Runs against your accounts." : "Runs against the demo accounts.") : "Add a model first." }),
     ]);
     form.addEventListener("submit", (ev) => { ev.preventDefault(); busy(ask, async () => {
       setLine(line, "info", "Thinking…");
@@ -461,39 +540,47 @@
       if (!result.ok) { setLine(line, "fail", result.summary); return; }
       state.session.answer = result.detail.answer;
       answerBox.hidden = false; answerBox.innerHTML = renderMarkdown(result.detail.answer);
-      setLine(line, "ok", `Answered with ${d.model?.spec} (${result.detail.selection} tool selection).`);
+      setLine(line, "ok", `Answered with ${d.model?.spec}.`);
       renderProgress();
     }); });
-    return [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Try it" }),
-        el("p", { class: "hero-sub", text: "The question runs locally through the same profile a deployment runs: your accounts when connected, the demo accounts otherwise. To step through tool calls and the approval interrupt in LangSmith Studio, run mda dev from the Deploy step." }),
-      ]),
-      form,
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("path") })]),
-      cli('paid-media-agent ask "How did spend move week over week?"'),
-    ];
+    return frame(
+      "Ask a question",
+      "This is the product. One question through the same profile a deploy runs.",
+      [form],
+      {
+        back: { step: "pipeboard" },
+        skip: { label: "Skip", mark: "try", step: "path" },
+        primary: { label: "Continue", step: "path" },
+      },
+      'paid-media-agent ask "How did spend move week over week?"',
+    );
   }
 
   function screenPath() {
     const s = derive();
     const choose = async (button, runtime) => busy(button, async () => { await saveConfig({ PAID_MEDIA_RUNTIME: runtime }); await loadStatus(); go(runtime === "mda" ? "mda" : "selfhost"); });
-    const card = (id, logoNode, title, note, bullets, pressed, recommended) => el("button", { class: "option", type: "button", "aria-pressed": pressed ? "true" : "false", onclick: (ev) => choose(ev.currentTarget, id) }, [
-      el("div", { class: "row" }, [logoNode, el("span", { class: "name", text: title })]),
-      el("span", { class: "note" }, [recommended ? el("b", { class: "rec", text: "Recommended · " }) : null, el("span", { text: note })]),
-      el("ul", {}, bullets.map((b) => el("li", {}, [tick(), el("span", { text: b })]))),
+    const card = (id, logoNode, title, note, pressed, recommended) => el("button", {
+      class: "option", type: "button", "data-slot": "choice-card",
+      "aria-pressed": pressed ? "true" : "false",
+      onclick: (ev) => choose(ev.currentTarget, id),
+    }, [
+      el("div", { class: "row" }, [
+        logoNode,
+        el("span", { class: "stack" }, [
+          el("span", { class: "name", text: title }),
+          el("span", { class: "note" }, [recommended ? el("b", { class: "rec", text: "Recommended. " }) : null, el("span", { text: note })]),
+        ]),
+      ]),
     ]);
-    return [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Where it lives" }),
-        el("p", { class: "hero-sub", text: "Both run the same agent. Managed Deep Agents is one command and supplies threads, a sandbox, schedules, identity, and Slack. Self-hosting takes a few more steps and gives you your own API, Postgres, and Slack app with Block Kit review cards." }),
-      ]),
-      el("div", { class: "options two stagger" }, [
-        card("mda", logo("langchain", "lc"), "Managed Deep Agents", "One command deploy on LangSmith Cloud.", ["uv run mda deploy . and you are in Slack", "Threads, sandbox, schedules, identity managed", "mda dev runs it locally with Studio", "Secrets forwarded from your .env"], s.runtime === "mda", true),
-        card("self_hosted", logo("slack"), "Self-host", "A little more setup. All yours.", ["docker compose up: API plus Postgres", "Your own Slack app, Block Kit cards with edits", "Bearer-token API for your tools", "Full control of data and auth"], s.runtime === "self_hosted", false),
-      ]),
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-ghost", type: "button", text: "Stay local for now", onclick: () => go("done") })]),
-    ];
+    return frame(
+      "Where it lives",
+      "Same agent either way. You can stay local.",
+      [el("div", { class: "options two", "data-slot": "choice-cards" }, [
+        card("mda", logo("langchain", "lc"), "Managed Deep Agents", "One command on LangSmith Cloud. Threads, sandbox, Slack.", s.runtime === "mda", true),
+        card("self_hosted", logo("slack"), "Self-host", "Your API, Postgres, and Slack app.", s.runtime === "self_hosted", false),
+      ])],
+      { back: { step: "try" }, primary: { label: "Stay local", step: "done" } },
+    );
   }
 
   function screenMda() {
@@ -506,11 +593,9 @@
     const preflight = state.session.preflight;
     // [label, done, optional]: optional rows inform, they never block the deploy.
     const items = preflight ? [["mda CLI installed", preflight.cli_installed], ["LangSmith key", preflight.langsmith_key_set], ["agent.py imports", preflight.import_smoke === "ok"], ["Model package and key", preflight.model_package && preflight.provider_key_set], ["Slack channel and identity declared", preflight.slack_channel && preflight.identity], ["Approvers named", s.approvers], ["Sandbox snapshot declared (PDF reports; optional)", preflight.sandbox_declared, true]] : [];
-    const form = el("form", { class: "form" }, [
-      el("div", { class: "field-row" }, [
-        el("div", { class: "field" }, [el("label", { for: "w-ls", text: "LangSmith API key" }), keyInput, el("span", { class: "hint" }, [el("a", { href: "https://smith.langchain.com/settings", target: "_blank", rel: "noopener", text: "Create a key in LangSmith" }), el("span", { text: " with deployment permissions." })])]),
-        el("div", { class: "field" }, [el("label", { for: "w-approvers", text: "Who can approve changes" }), approvers, el("span", { class: "hint", text: "A refused approval names the ref the platform presented; paste that here. Where a card is posted is never authorization." })]),
-      ]),
+    const form = el("form", { class: "form", "data-slot": "form-fields" }, [
+      formField("w-ls", "LangSmith API key", keyInput, [el("a", { href: "https://smith.langchain.com/settings", target: "_blank", rel: "noopener", text: "Create a key in LangSmith" })]),
+      formField("w-approvers", "Who can approve changes", approvers),
       line,
       el("div", { class: "actions" }, [save]),
     ]);
@@ -525,24 +610,19 @@
       state.session.preflightSummary = result.summary;
       await loadStatus();
     }); });
-    const nodes = [el("div", { class: "hero" }, [
-      el("h1", { class: "hero-title", text: "Deploy" }),
-      el("p", { class: "hero-sub", text: "Managed Deep Agents runs the agent: threads, checkpoints, a sandbox per thread, the weekly and monthly schedules, identity, and Slack. agent.py, instructions.md, skills/, channels/slack.py, identity.py, and schedules/ are the project files; deploy forwards your .env values as deployment secrets." }),
-    ]), form];
+    const body = [form];
     if (preflight) {
-      nodes.push(el("ul", { class: "checklist" }, items.map(([label, done]) => el("li", { "data-done": done ? "true" : "false" }, [check(!!done), el("span", { text: label })]))));
+      body.push(el("ul", { class: "checklist" }, items.map(([label, done]) => el("li", { "data-done": done ? "true" : "false" }, [check(!!done), el("span", { text: label })]))));
       const ready = items.filter(([, , optional]) => !optional).every(([, done]) => done);
-      nodes.push(processControls("mda-deploy", ready ? "Deploy" : "Deploy (blocked)", !ready, true, "mda-dev", "Run locally with Studio"));
-      nodes.push(el("p", { class: "sub", text: "The first deploy prints a Slack authorization link in the log: open it, pick the workspace, approve, then press Enter in the terminal that runs the deploy. Afterwards the agent DMs you in Slack; reply there or mention it in a channel." }));
+      body.push(processControls("mda-deploy", ready ? "Deploy" : "Deploy (blocked)", !ready, true, "mda-dev", "Run locally with Studio"));
     }
-    nodes.push(
-      el("div", { class: "actions" }, [
-        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
-        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to self-host", onclick: () => go("path") }),
-      ]),
-      cli("mda deploy ."),
+    return frame(
+      "Deploy",
+      "LangSmith key and who may approve changes. Then preflight.",
+      body,
+      { back: { step: "path" }, skip: { label: "Switch to self-host", step: "path" }, primary: { label: "Continue", step: "done" } },
+      "mda deploy .",
     );
-    return nodes;
   }
 
   function screenSelfHost() {
@@ -558,8 +638,8 @@
     const slackForm = el("form", { class: "form" }, [
       intro("slack", "Slack", "Create the app from the manifest, install it to your workspace, then paste the bot token and the app-level token. Socket Mode needs no public URL.",
         el("div", { class: "actions" }, [el("a", { class: "btn btn-outline btn-compact", href: "https://api.slack.com/apps?new_app=1", target: "_blank", rel: "noopener", text: "Create Slack app" }), el("code", { class: "mono", text: "config/slack-manifest.example.yaml" })])),
-      el("div", { class: "field-row" }, [el("div", { class: "field" }, [el("label", { text: "Bot token" }), bot]), el("div", { class: "field" }, [el("label", { text: "App-level token" }), app])]),
-      el("div", { class: "field" }, [el("label", { text: "Who can approve changes" }), approvers, el("span", { class: "hint", text: "Slack refs look like slack:<team_id>:<user_id>; API callers use the name from PAID_MEDIA_API_TOKENS. Where a card is posted is never authorization." })]),
+      el("div", { class: "field-row" }, [formField("w-bot", "Bot token", bot), formField("w-app", "App-level token", app)]),
+      formField("w-approvers-sh", "Who can approve changes", approvers, "Slack refs look like slack:<team_id>:<user_id>; API callers use the name from PAID_MEDIA_API_TOKENS. Where a card is posted is never authorization."),
       slackLine,
       el("div", { class: "actions" }, [slackSave]),
     ]);
@@ -588,7 +668,7 @@
     }));
     const dbForm = el("form", { class: "form" }, [
       intro("postgres", "Storage and API", "Postgres keeps threads, proposals, approvals, and receipts across restarts; docker compose brings one up for you. Leave it empty to run in memory."),
-      el("div", { class: "field" }, [el("label", { text: "Database URL" }), db]),
+      formField("w-db", "Database URL", db),
       dbLine,
       el("div", { class: "actions" }, [dbSave, gen]),
     ]);
@@ -598,20 +678,20 @@
       state.session.db = { status: test.status, text: test.summary };
       await loadStatus();
     }); });
-    return [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Self-host" }),
-        el("p", { class: "hero-sub", text: "Three pieces: a Slack app you own, a database, and the API. The quickest route is docker compose up, which builds the API image with the PDF libraries and starts Postgres. Run the pieces here to try them without Docker." }),
-      ]),
-      slackForm,
-      el("div", { class: "block" }, [dbForm]),
-      el("div", { class: "block" }, [el("h2", { class: "section-title", text: "Run it" }), processControls("serve", "Start API", false, false, "slack", "Start Slack adapter"), cli("docker compose up  # API on :8080 with Postgres")]),
-      el("div", { class: "actions" }, [
-        el("button", { class: "btn btn-outline", type: "button", text: "Continue", onclick: () => go("done") }),
-        el("button", { class: "btn btn-ghost", type: "button", text: "Switch to managed", onclick: () => go("path") }),
-      ]),
-      cli("paid-media-agent serve"),
-    ];
+    return frame(
+      "Self-host",
+      "Slack first. Database and API can wait.",
+      [
+        slackForm,
+        disclose("Storage, API, and run", false, [
+          dbForm,
+          processControls("serve", "Start API", false, false, "slack", "Start Slack adapter"),
+          cli("docker compose up  # API on :8080 with Postgres"),
+        ]),
+      ],
+      { back: { step: "path" }, skip: { label: "Switch to managed", step: "path" }, primary: { label: "Continue", step: "done" } },
+      "paid-media-agent serve",
+    );
   }
 
   function processControls(name, label, disabled, confirm, secondName, secondLabel) {
@@ -642,26 +722,19 @@
     const s = derive();
     const d = state.status.detail;
     const runtimeLabel = s.runtime === "mda" ? "Managed Deep Agents" : s.runtime === "self_hosted" ? "Self-hosted" : "local only";
-    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Your business", s.orgDone, `${d.org?.answered || 0} of ${d.org?.questions || 8} answered`], ["Approvers", s.approvers, (d.writes?.approvers || []).length ? `${(d.writes?.approvers || []).length} ref(s)` : "none"], ["Where it lives", s.runtime !== "local", runtimeLabel]];
+    const items = [["Model", s.modelDone, d.model?.spec], ["Ad accounts", s.pipeboardDone, s.tokenSet ? `${(d.accounts || []).length} alias(es)` : "demo accounts"], ["Approvers", s.approvers, (d.writes?.approvers || []).length ? `${(d.writes?.approvers || []).length} ref(s)` : "none"], ["Where it lives", s.runtime !== "local", runtimeLabel]];
     if (s.runtime === "mda") items.push(["Deploy", s.mdaDone, s.mdaDone ? "ready: uv run mda deploy ." : "LangSmith key or approvers missing"]);
     if (s.runtime === "self_hosted") items.push(["Slack", s.slackDone, s.slackDone ? d.slack?.transport : "not connected"]);
-    return [
-      el("div", { class: "hero" }, [
-        el("h1", { class: "hero-title", text: "Configured" }),
-        el("p", { class: "hero-sub", text: "The advanced console holds the authorized catalog, the reviewed mutation policy, the write gates, and the running processes." }),
-      ]),
-      el("ul", { class: "checklist stagger" }, items.map(([label, done, meta]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label }), el("span", { class: "sub mono", text: meta || "" })]))),
-      el("h2", { class: "sub-title", text: "Next" }),
-      el("ul", { class: "next" }, [
-        el("li", { text: "Ask from the terminal: uv run paid-media-agent ask \"How did spend move week over week?\"" }),
-        el("li", { text: "Render the weekly report: uv run paid-media-agent report --cadence weekly" }),
-        s.runtime === "self_hosted" ? el("li", { text: "Self-host: docker compose up, or uv run paid-media-agent serve and uv run paid-media-agent slack." }) : el("li", { text: "Run the managed build locally with Studio: uv run mda dev. Deploy: uv run mda deploy ." }),
-        el("li", { text: "In Slack, DM the agent or mention it in a channel it was invited to. Every proposed change arrives with Approve and Reject." }),
-        el("li", { text: "Read OPERATIONS.md for the full command reference and the write-enable runbook." }),
-      ]),
-      el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Open the advanced console", onclick: () => { state.view = "advanced"; render(); } })]),
-      cli("paid-media-agent doctor"),
-    ];
+    return frame(
+      "Ready",
+      "Catalog, write gates, and running processes live in Advanced.",
+      [el("ul", { class: "checklist stagger" }, items.map(([label, done, meta]) => el("li", { "data-done": done ? "true" : "false" }, [check(done), el("span", { text: label }), el("span", { class: "mini", text: meta || "" })])))],
+      {
+        back: { step: "path" },
+        primary: { label: "Open Advanced", onclick: () => { state.view = "advanced"; render(); } },
+      },
+      "paid-media-agent doctor",
+    );
   }
 
   // ---- helpers
@@ -674,7 +747,7 @@
     const label = button.textContent;
     button.disabled = true; button.textContent = "Working…";
     try { await fn(); }
-    catch (error) { const line = button.closest("form, .form, .screen")?.querySelector(".status-line"); if (line) setLine(line, "fail", error.message); else showFatal(error); }
+    catch (error) { const line = button.closest("form, .form, [data-slot='wizard-step-pane']")?.querySelector(".status-line"); if (line) setLine(line, "fail", error.message); else showFatal(error); }
     finally { button.disabled = false; button.textContent = label; }
   }
   function showFatal(error) { $("#foot").textContent = error.message; }

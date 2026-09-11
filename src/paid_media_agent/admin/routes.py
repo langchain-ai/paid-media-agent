@@ -232,9 +232,9 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
     org_configured = bool(isinstance(org, dict) and org.get("configured"))
     org_route = Route(
         id="org",
-        title="Your business",
-        tagline="Goals, conversions, targets, naming, approvers, and the docs you share",
-        description="Eight plain questions the agent reads before every analysis, plus links and files. Stored in docs/org, never committed.",
+        title="Organization context",
+        tagline="Goals, conversions, targets, naming, approvers — filled in chat, not this wizard",
+        description="Filled by the coding agent in chat (skill paid-media-org-onboarding), or by paid-media-agent org interview. Stored in docs/org, never committed.",
         steps=(
             Step(
                 id="org_profile",

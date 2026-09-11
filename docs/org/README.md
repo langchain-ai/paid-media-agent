@@ -4,12 +4,13 @@ This folder is yours and stays out of version control. It holds a short profile 
 before every analysis: what you sell, the conversion that counts, targets, budget, markets,
 seasonality, campaign naming, approvers, plus any briefs or exports you share.
 
-Fill it three ways, all producing the same files:
+Fill it two ways, both producing the same files:
 
-- the setup console, step "Your business" (`uv run paid-media-agent setup`)
+- the coding agent in chat: ask it to "learn about my business" and it runs the interview and saves
 - the CLI: `uv run paid-media-agent org interview` or `org set business="..."`, `org add-link`,
   `org add-file`
-- the agent itself: ask it to "learn about my business" and it runs the interview and saves
+
+The setup console does not collect this. Secrets and account ids still go through the console.
 
 Files: `profile.json` (source of truth), `goals.md` and `conventions.md` (rendered for the agent),
 `sources.md` and `sources/` (links and files). Delete a file to forget it. The agent reads all

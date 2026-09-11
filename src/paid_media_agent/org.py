@@ -1,8 +1,8 @@
 """The organization's own context: a short profile and sources the agent reads before analysis.
 
-It lives in `docs/org/` (ignored by git, mounted at `/docs/org` in every runtime). Three entry
-points write it, the console step, `paid-media-agent org`, and the onboarding skill through a host
-tool, and all of them render the same pages from one profile, so the model never sees a schema.
+It lives in `docs/org/` (ignored by git, mounted at `/docs/org` in every runtime). Two entry
+points write it, the coding agent through the onboarding skill and `paid-media-agent org`,
+and both render the same pages from one profile, so the model never sees a schema.
 """
 
 from __future__ import annotations

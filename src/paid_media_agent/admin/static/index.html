@@ -11,38 +11,49 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <div class="desk">
-    <header class="topbar">
-      <div class="brand">
-        <span class="mark-tile" id="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">Paid Media Agent</span>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-compact" id="view-toggle" type="button">Advanced</button>
-        <button class="btn btn-ghost btn-compact" id="theme-toggle" type="button" aria-label="Toggle theme">Dark</button>
-      </div>
-    </header>
+  <header class="chrome">
+    <button class="btn btn-ghost btn-compact" id="view-toggle" type="button">Advanced</button>
+    <button class="btn btn-ghost btn-compact" id="theme-toggle" type="button" aria-label="Toggle theme">Dark</button>
+  </header>
 
-    <main class="stage" id="wizard">
-      <nav class="progress" id="progress" aria-label="Setup progress"></nav>
-      <section class="screen-host" id="screen" aria-live="polite"></section>
-    </main>
-
-    <div class="shell" id="advanced" hidden>
-      <aside class="rail" aria-label="Setup routes"><nav class="rail-nav" id="rail-nav"></nav></aside>
-      <div class="canvas" id="canvas">
-        <div class="page-band">
-          <div><h1 class="page-title" id="page-title">Loading</h1><p class="page-tagline" id="page-tagline"></p></div>
-          <div class="page-actions" id="page-actions"></div>
+  <div class="onboard" id="wizard">
+    <aside class="step-rail">
+      <header class="rail-head">
+        <div class="brand">
+          <span class="mark-tile" id="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="text-label" id="wizard-title">Setup</p>
+            <p class="text-help" id="wizard-desc">Model, accounts, one question. Deploy is optional.</p>
+          </div>
         </div>
-        <p class="page-desc" id="page-desc"></p>
-        <div id="banner" class="banner" hidden></div>
-        <section class="steps" id="steps"></section>
-        <section class="processes" id="processes"></section>
+        <button class="btn btn-ghost btn-compact" id="wizard-back" type="button" hidden>Back</button>
+      </header>
+      <div class="stepper-compact" id="progress-mobile"></div>
+      <nav class="stepper" id="progress" aria-label="Setup progress"></nav>
+      <p class="wizard-status" id="foot">127.0.0.1 only. Secrets stay in .env</p>
+    </aside>
+    <section class="onboard-main">
+      <div class="onboard-frame">
+        <div class="onboard-panel">
+          <p class="sr-only" id="wizard-live" aria-live="polite"></p>
+          <div id="screen"></div>
+        </div>
       </div>
-    </div>
+    </section>
+  </div>
 
-    <p class="desk-foot" id="foot">127.0.0.1 only · secrets stay in .env · every action here has a CLI equivalent</p>
+  <div class="shell" id="advanced" hidden>
+    <aside class="rail" aria-label="Setup routes"><nav class="rail-nav" id="rail-nav"></nav></aside>
+    <div class="canvas" id="canvas">
+      <div class="page-band">
+        <div><h1 class="page-title" id="page-title">Loading</h1><p class="page-tagline" id="page-tagline"></p></div>
+        <div class="page-actions" id="page-actions"></div>
+      </div>
+      <p class="page-desc" id="page-desc"></p>
+      <div id="banner" class="banner" hidden></div>
+      <section class="steps" id="steps"></section>
+      <section class="processes" id="processes"></section>
+    </div>
   </div>
 
   <template id="tpl-step">

@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://github.com/amal-irgashev/paid-media-agent-open-source">
+  <a href="https://github.com/amal-irgashev/paid-media-agent">
     <h1>Paid Media Agent</h1>
   </a>
 </div>
@@ -95,9 +95,9 @@ uv run paid-media-agent report --cadence weekly
 
 ## Onboarding
 
-The console asks for what the code cannot know: which model, which accounts, what you sell,
-which conversion counts, who may approve. Seven steps, each with its CLI command. The agent can
-also run the business interview in chat; answers live in `docs/org/`, out of git.
+The console asks for what the code cannot know: which model, which accounts, who may approve.
+Organization context (what you sell, which conversion counts) is filled by the coding agent in
+chat, or `paid-media-agent org interview`. Answers live in `docs/org/`, out of git.
 
 Claude Code desktop opens the console in its Browser pane from `.claude/launch.json`. Cursor and
 the Codex app open it in their built-in browser (`uv run paid-media-agent setup --no-open --no-token`).

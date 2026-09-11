@@ -6,6 +6,8 @@ alwaysApply: false
 When the user asks to set up, onboard, configure, or connect this agent, follow the "Onboarding a
 user" section of AGENTS.md. Start the console in a background terminal with
 `uv run paid-media-agent setup --no-open --no-token --port 8765` and open http://127.0.0.1:8765
-in Cursor's built-in browser so they can walk through Model, Ad accounts, Your business, Try it,
-and Where it lives without leaving the editor. Every step shows the CLI command it runs; use those
-when the browser is unavailable. Never ask for API keys or provider account ids in chat.
+in Cursor's built-in browser so they can walk through Model, Ad accounts, Try it, and Where it
+lives without leaving the editor. After credentials are in, fill organization context in this
+chat (skill `paid-media-org-onboarding`) or with `paid-media-agent org interview` — not in the
+console. Every console step shows the CLI command it runs; use those when the browser is
+unavailable. Never ask for API keys or provider account ids in chat.

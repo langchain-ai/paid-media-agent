@@ -1,5 +1,5 @@
-// Headless walkthrough of the setup wizard: welcome, model presets and a custom key, ad accounts,
-// try-it (ask + LangGraph Studio start/stop), path choice, MDA, done. Fails on any browser error.
+// Headless walkthrough of the setup wizard: model presets and a custom key, ad accounts,
+// ask, path choice, MDA, done. Fails on any browser error.
 // Run against a throwaway project copy that includes pyproject.toml and langgraph.json.
 // Usage: node tests/e2e/console_walkthrough.mjs "<console url with #token>" <screenshot dir>
 import { chromium } from "playwright";
@@ -11,20 +11,22 @@ page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 page.on("pageerror", (e) => errors.push(String(e)));
 const shot = async (name) => { await page.waitForTimeout(500); await page.screenshot({ path: `${out}/${name}.png`, fullPage: true }); };
 await page.goto(url, { waitUntil: "networkidle" });
-await page.waitForSelector(".screen .cap", { timeout: 15000 });
-r.caps = await page.$$eval(".cap .name", (els) => els.map((e) => e.textContent));
-r.prompts = await page.$$eval(".prompt", (els) => els.length);
-await shot("01-welcome");
-await page.click("button:has-text(\"Start setup\")");
+await page.waitForSelector(".hero-title", { timeout: 15000 });
+await page.waitForSelector(".stepper-item");
+r.rail = await page.$$eval(".stepper-item .step-label", (els) => els.map((e) => e.textContent));
+r.title = await page.$eval(".hero-title", (e) => e.textContent);
+await shot("01-model");
 await page.waitForSelector(".options .option", { timeout: 10000 });
 r.providers = await page.$$eval(".options .option .name", (els) => els.map((e) => e.textContent));
-r.recommended = await page.$$eval(".options .option .badge", (els) => els.map((e) => e.textContent));
+r.recommended = await page.$$eval(".options .option .note", (els) => els.map((e) => e.textContent).filter((t) => t.includes("Recommended")));
+await page.click("summary:has-text('More providers')");
 await page.click(".options .option:has-text('Kimi')");
 await page.waitForSelector("#w-model");
 r.kimiModel = await page.$eval("#w-model", (e) => e.value);
 r.kimiBase = await page.$eval("#w-base", (e) => e.value);
 r.kimiKeyName = await page.$eval("form .field .hint code", (e) => e.textContent);
 await shot("02-model-kimi");
+await page.click("summary:has-text('More providers')");
 await page.click(".options .option:has-text('Custom')");
 await page.waitForSelector("#w-keyname:not([disabled])");
 await page.fill("#w-model", "openai:my-model");
@@ -42,26 +44,17 @@ await page.fill("#w-key", "sk-ant-" + "a".repeat(30));
 await page.click("button:has-text('Save and test')");
 await page.waitForFunction(() => /FAIL|OK|WARN/.test(document.querySelector("#model-status .badge")?.textContent || ""), null, { timeout: 90000 });
 r.anthropicTest = (await page.$eval("#model-status", (e) => e.textContent)).slice(0, 100);
-await page.click("button:has-text('Continue')");
+await page.click(".onboard-foot .btn-primary");
 await page.waitForSelector("#w-token");
-await page.click("button:has-text('Continue')");
+await page.click(".onboard-foot .btn-primary");
 await page.waitForSelector("#w-q", { timeout: 10000 });
-r.chips = await page.$$eval(".chip", (els) => els.map((e) => e.textContent.trim()));
+r.askTitle = await page.$eval(".hero-title", (e) => e.textContent);
 r.askEnabled = await page.$eval("form button.btn-primary:has-text('Ask')", (e) => !e.disabled);
 await shot("04-try");
 await page.click("form button.btn-primary:has-text('Ask')");
 await page.waitForFunction(() => /FAIL|OK/.test(document.querySelector("#ask-status .badge")?.textContent || ""), null, { timeout: 180000 });
 r.ask = (await page.$eval("#ask-status", (e) => e.textContent)).slice(0, 140);
-await page.click("button:has-text('Start Studio')");
-await page.waitForFunction(() => /running/.test(document.body.textContent), null, { timeout: 30000 });
-await page.waitForTimeout(12000);
-await page.click("#view-toggle"); await page.waitForTimeout(300); await page.click("#view-toggle"); await page.waitForTimeout(600);
-await page.click(".chip:has-text('Try it')"); await page.waitForTimeout(500);
-r.studioLog = (await page.$eval(".block .log", (e) => e.textContent)).slice(-400);
-await shot("05-try-studio");
-await page.click(".block button:has-text('Stop')");
-await page.waitForTimeout(1500);
-await page.click("button:has-text('Continue')");
+await page.click(".onboard-foot .btn-primary");
 await page.waitForSelector(".options.two .option");
 r.pathRecommended = await page.$$eval(".options.two .rec", (els) => els.map((e) => e.textContent));
 await shot("06-path");
@@ -70,8 +63,8 @@ await shot("07-path-dark");
 await page.click(".options.two .option:has-text('Managed')");
 await page.waitForSelector("#w-ls", { timeout: 20000 });
 await shot("08-mda-dark");
-await page.click("button:has-text('Continue')");
-await page.waitForSelector(".hero-title:has-text(\"Configured\")");
+await page.click(".onboard-foot .btn-primary");
+await page.waitForSelector(".hero-title:has-text(\"Ready\")");
 await shot("09-done-dark");
 r.errors = errors;
 console.log(JSON.stringify(r, null, 2));

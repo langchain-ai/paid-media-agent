@@ -43,9 +43,9 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/amal-irgashev/paid-media-agent-open-source"
-Changelog = "https://github.com/amal-irgashev/paid-media-agent-open-source/blob/main/CHANGELOG.md"
-Security = "https://github.com/amal-irgashev/paid-media-agent-open-source/blob/main/SECURITY.md"
+Repository = "https://github.com/amal-irgashev/paid-media-agent"
+Changelog = "https://github.com/amal-irgashev/paid-media-agent/blob/main/CHANGELOG.md"
+Security = "https://github.com/amal-irgashev/paid-media-agent/blob/main/SECURITY.md"
 
 [project.scripts]
 paid-media-agent = "paid_media_agent.cli:main"

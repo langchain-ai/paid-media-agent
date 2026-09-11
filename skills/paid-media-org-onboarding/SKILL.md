@@ -18,7 +18,8 @@ organization knows (a target, the conversion that counts, a naming convention).
    markets and timezone; seasonality and planned spikes; campaign naming; who approves changes.
 3. Offer to take links or files at any point: "If you have a brief, a planning doc, or a dashboard
    export, share the link and I will read it." For a public https link call `add_org_source`.
-   Files are attached through the setup console or `paid-media-agent org add-file`; say so.
+   Files go through `paid-media-agent org add-file`; say so. Do not send the user to the setup
+   console for this interview.
 4. Save after every answer with `update_org_profile`, passing only the fields just answered.
    Never rewrite a field the user did not change.
 5. Confirm in one sentence what was saved, then ask the next question or offer a first

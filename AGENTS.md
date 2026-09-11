@@ -96,8 +96,9 @@ Run the fixture demo, then the setup console. Show the console where the user al
   token in the URL.
 - Without any browser, every console step prints the CLI command it runs; use those.
 
-Before the first real analysis, fill the organization context: `paid-media-agent org interview`,
-or let the agent run the interview in chat. Ask for links and text files the organization already
+Before the first real analysis, fill the organization context in this chat (skill
+`paid-media-org-onboarding`) or with `paid-media-agent org interview`. Do not collect it in the
+setup console. Ask for links and text files the organization already
 has (briefs, plans, dashboard exports) rather than asking people to retype them. Never ask for keys
 or provider account ids in chat; those go through the console or `config set`.
 
