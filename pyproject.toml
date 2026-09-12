@@ -62,7 +62,7 @@ self-host = [
     "uvicorn[standard]>=0.35,<1",
 ]
 # PDF rendering on the host. Needs Pango and Cairo; the Docker image and the sandbox snapshot bake them in.
-reports = ["weasyprint>=68,<69"]
+reports = ["weasyprint>=70,<71"]
 # Extra model providers. Each adds a `provider:` prefix for PAID_MEDIA_MODEL.
 groq = ["langchain-groq>=1,<2"]
 xai = ["langchain-xai>=1,<2"]
