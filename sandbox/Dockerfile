@@ -9,6 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "weasyprint==68.1" "jinja2==3.1.6"
+RUN pip install --no-cache-dir "weasyprint==70.0" "jinja2==3.1.6"
 RUN mkdir -p /workspace/in /workspace/out /workspace/analysis /skills /docs/business-context
 WORKDIR /workspace
