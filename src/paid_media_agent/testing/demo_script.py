@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, timedelta
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -20,12 +21,11 @@ from paid_media_agent.testing.scripted_model import (
     last_tool_results,
     tool_call_message,
 )
+from paid_media_agent.tools.fixtures import fixture_anchor
 
-DEMO_CURRENT = (date(2026, 8, 15), date(2026, 8, 28))
-DEMO_PREVIOUS = (date(2026, 8, 1), date(2026, 8, 14))
 DEMO_QUESTION = (
-    "Compare the last two weeks (2026-08-15 to 2026-08-28) with the prior two weeks across all connected "
-    "accounts and tell me what needs attention."
+    "Compare the last two complete weeks of sample data with the prior two weeks "
+    "across all connected accounts and tell me what needs attention."
 )
 
 
@@ -39,7 +39,7 @@ def _list_accounts(_: Sequence[BaseMessage]) -> AIMessage:
     return tool_call_message("list_accounts", {})
 
 
-def _read_all(messages: Sequence[BaseMessage]) -> AIMessage:
+def _read_all(messages: Sequence[BaseMessage], *, anchor: date) -> AIMessage:
     accounts: dict[str, Any] = next(
         (r for r in last_tool_results(messages) if "accounts" in r), {"accounts": []}
     )
@@ -50,8 +50,8 @@ def _read_all(messages: Sequence[BaseMessage]) -> AIMessage:
                 "name": f"{account['platform']}__get_campaign_performance",
                 "args": {
                     "account_alias": account["alias"],
-                    "start_date": DEMO_PREVIOUS[0].isoformat(),
-                    "end_date": DEMO_CURRENT[1].isoformat(),
+                    "start_date": (anchor - timedelta(days=27)).isoformat(),
+                    "end_date": anchor.isoformat(),
                 },
                 "id": f"call_read_{account['alias']}",
                 "type": "tool_call",
@@ -62,7 +62,7 @@ def _read_all(messages: Sequence[BaseMessage]) -> AIMessage:
     )
 
 
-def _compare(messages: Sequence[BaseMessage]) -> AIMessage:
+def _compare(messages: Sequence[BaseMessage], *, anchor: date) -> AIMessage:
     reads = [r for r in last_tool_results(messages) if r.get("kind") == "read_result"]
     unavailable = [
         r.get("_tool_name", "unknown")
@@ -73,10 +73,10 @@ def _compare(messages: Sequence[BaseMessage]) -> AIMessage:
         "compare_periods",
         {
             "artifact_ids": [r["artifact_id"] for r in reads],
-            "current_start": DEMO_CURRENT[0].isoformat(),
-            "current_end": DEMO_CURRENT[1].isoformat(),
-            "previous_start": DEMO_PREVIOUS[0].isoformat(),
-            "previous_end": DEMO_PREVIOUS[1].isoformat(),
+            "current_start": (anchor - timedelta(days=13)).isoformat(),
+            "current_end": anchor.isoformat(),
+            "previous_start": (anchor - timedelta(days=27)).isoformat(),
+            "previous_end": (anchor - timedelta(days=14)).isoformat(),
             "unavailable_sources": unavailable,
         },
     )
@@ -140,8 +140,15 @@ def _answer(messages: Sequence[BaseMessage]) -> AIMessage:
     return AIMessage(content=compose_answer(summary, reads))
 
 
-def demo_steps() -> list[Step]:
-    return [_discover, _list_accounts, _read_all, _compare, _answer]
+def demo_steps(anchor: date | None = None) -> list[Step]:
+    end = fixture_anchor(anchor)
+    return [
+        _discover,
+        _list_accounts,
+        partial(_read_all, anchor=end),
+        partial(_compare, anchor=end),
+        _answer,
+    ]
 
 
 def build_demo_model(steps: list[Step] | None = None) -> ScriptedChatModel:
@@ -197,10 +204,32 @@ def write_demo_steps() -> list[Step]:
 async def run_demo(
     settings: Settings, *, with_proposal: bool, root: Path | None = None
 ) -> dict[str, Any]:
+    from langsmith import tracing_context
+
+    with tracing_context(enabled=False):
+        return await _run_demo(settings, with_proposal=with_proposal, root=root)
+
+
+async def _run_demo(
+    settings: Settings, *, with_proposal: bool, root: Path | None = None
+) -> dict[str, Any]:
     from paid_media_agent.runtime.local import build_local_runtime
 
     root = root or project_root()
-    steps = demo_steps() + (write_demo_steps() if with_proposal else [])
+    settings = settings.model_copy(
+        update={
+            "paid_media_model": "scripted:demo",
+            "paid_media_model_base_url": None,
+            "paid_media_approver_ids": "local-user",
+            "paid_media_allow_self_approval": True,
+            "paid_media_data_mode": "sample",
+            "paid_media_account_config_path": Path("config/accounts.example.toml"),
+            "paid_media_fixture_anchor": fixture_anchor(settings.paid_media_fixture_anchor),
+        }
+    )
+    steps = demo_steps(settings.paid_media_fixture_anchor) + (
+        write_demo_steps() if with_proposal else []
+    )
     model = build_demo_model(steps)
     runtime = build_local_runtime(settings, project_root=root, model=model)
     config: RunnableConfig = {
@@ -210,11 +239,18 @@ async def run_demo(
         {"messages": [{"role": "user", "content": DEMO_QUESTION}]}, config=config
     )
     answer = state["messages"][-1].content
+    analysis = next(
+        (r for r in all_tool_results(state["messages"]) if r.get("kind") == "analysis_summary"),
+        None,
+    )
+    if not analysis or not analysis.get("reconciled"):
+        raise ValueError(str(answer))
     result: dict[str, Any] = {
         "answer": answer,
         "audit": runtime.components.read_dispatcher.audit,
         "catalog_revision": runtime.catalog.revision,
         "selection": runtime.components.metadata.selection.strategy.value,
+        "analysis": analysis,
     }
     if not with_proposal:
         return result
@@ -231,9 +267,7 @@ async def run_demo(
     )
     snapshot = runtime.graph.get_state(config)
     if not snapshot.interrupts:
-        result["receipt_message"] = state["messages"][-1].content
-        result["proposal"] = None
-        return result
+        raise ValueError(str(state["messages"][-1].content))
     service = runtime.components.proposal_service
     records = service.proposals.list_for_thread("demo-thread")
     record = records[-1]
@@ -246,5 +280,7 @@ async def run_demo(
     )
     result["receipt_message"] = state["messages"][-1].content
     receipt = runtime.profile.receipts.get(record.changeset.proposal_id)
+    if receipt is None or receipt.status != "verified":
+        raise ValueError(str(result["receipt_message"]))
     result["receipt"] = receipt.model_dump(mode="json") if receipt else None
     return result

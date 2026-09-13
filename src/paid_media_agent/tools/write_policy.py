@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, RiskLevel
+from paid_media_agent.domain.common import FIXTURE_PLATFORMS, RiskLevel
 from paid_media_agent.domain.proposals import (
     canonical_json,
 )
@@ -166,7 +166,7 @@ class WritePolicyFile(BaseModel):
 
 def fixture_write_policy() -> WritePolicy:
     ops: list[WriteOperation] = []
-    for platform in PIPEBOARD_PLATFORMS:
+    for platform in FIXTURE_PLATFORMS:
         prefix = f"{platform.value}__"
         ops.append(
             WriteOperation(

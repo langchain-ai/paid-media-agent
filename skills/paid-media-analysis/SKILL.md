@@ -23,11 +23,16 @@ recommendations.
    name the missing days rather than silently shrinking it.
 3. Call `list_accounts` for aliases, then `discover_tools` with keywords. Never invent a tool name.
    Platform tools are named `<platform>__<tool>` and take `account_alias`, never a provider id.
-4. Pull the smallest complete data: one `<platform>__get_campaign_performance` read per account for
-   the union of both windows. Go one grain lower only when the question needs it:
+   Pipeboard loads all tools exposed by its eight configured MCP servers. Search the live catalog;
+   availability depends on connected accounts and host policy. GA4 uses property aliases.
+4. Pull the smallest complete data using the performance/report tool returned by discovery, for
+   the union of both windows. `get_campaign_performance` is a fixture tool, not a universal live name.
+   Go one grain lower only when the question needs it:
    `get_ad_group_performance` (ad sets, line items) or `get_creative_performance` where the
    platform exposes it; rows carry the parent campaign id. Run independent platform reads in parallel. Each read returns a
    compact `read_result` with an `artifact_id`, row count, actual window, missing fields, and flags.
+   Native analytics and platforms without verified spend-unit mappings stay as `provider_result`
+   artifacts. Do not pass them to spend comparisons or treat GA4 conversions as ad-attributed conversions.
 5. Validate source coverage with `references/validation-checklist.md`.
 6. For pacing, anomalies, top spenders, or per-entity efficiency inside one window, call
    `summarize_window` with the performance artifacts (and the `list_campaigns` artifacts for daily

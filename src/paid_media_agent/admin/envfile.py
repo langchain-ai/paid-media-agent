@@ -96,6 +96,43 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="Reddit Ads MCP endpoint",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_DATA_MODE",
+        group="runtime",
+        secret=False,
+        description="auto, sample (fixtures only), or live (requires credentials)",
+        example="sample",
+    ),
+    EnvKeySpec(
+        name="PIPEBOARD_TIKTOK_ADS_MCP_URL",
+        group="pipeboard",
+        secret=False,
+        description="TikTok Ads MCP endpoint",
+    ),
+    EnvKeySpec(
+        name="PIPEBOARD_PINTEREST_ADS_MCP_URL",
+        group="pipeboard",
+        secret=False,
+        description="Pinterest Ads MCP endpoint",
+    ),
+    EnvKeySpec(
+        name="PIPEBOARD_SNAP_ADS_MCP_URL",
+        group="pipeboard",
+        secret=False,
+        description="Snap Ads MCP endpoint",
+    ),
+    EnvKeySpec(
+        name="PIPEBOARD_GOOGLE_ANALYTICS_MCP_URL",
+        group="pipeboard",
+        secret=False,
+        description="Google Analytics MCP endpoint",
+    ),
+    EnvKeySpec(
+        name="PIPEBOARD_LINKEDIN_ADS_MCP_URL",
+        group="pipeboard",
+        secret=False,
+        description="LinkedIn Ads MCP endpoint",
+    ),
+    EnvKeySpec(
         name="PAID_MEDIA_ACCOUNT_CONFIG_PATH",
         group="pipeboard",
         secret=False,

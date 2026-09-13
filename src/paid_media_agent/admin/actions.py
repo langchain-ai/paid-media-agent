@@ -41,13 +41,18 @@ from paid_media_agent.admin.model_presets import (
 )
 from paid_media_agent.config import AccountBinding, ModelConfig, Settings
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
-from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
+from paid_media_agent.domain.common import (
+    FIXTURE_PLATFORMS,
+    PIPEBOARD_PLATFORMS,
+    JsonValue,
+    Platform,
+)
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.middleware.tool_selection import capabilities_for, plan_selection
 from paid_media_agent.org import org_summary
 from paid_media_agent.runtime.profiles import load_write_policy_file
 from paid_media_agent.surfaces.runner import _content_text
-from paid_media_agent.tools.catalog import AuthorizedToolCatalog
+from paid_media_agent.tools.catalog import AuthorizedToolCatalog, CatalogEntry, ToolClass
 from paid_media_agent.tools.fixtures import build_fixture_catalog, load_fixture_dataset
 
 Status = Literal["ok", "warn", "fail", "skipped"]
@@ -365,7 +370,9 @@ class LiveCatalog(BaseModel):
 async def _load_live(settings: Settings, root: Path) -> LiveCatalog:
     from paid_media_agent.runtime.catalog import load_catalog
 
-    loaded = await load_catalog(settings, project_root=root)
+    loaded = await load_catalog(
+        settings.model_copy(update={"paid_media_data_mode": "live"}), project_root=root
+    )
     return LiveCatalog(catalog=loaded.catalog, loader=loaded.provider)
 
 
@@ -386,13 +393,13 @@ def pipeboard_test(
     except Exception as exc:
         return _result("pipeboard_test", "fail", f"catalog load failed: {sanitize_exception(exc)}")
     summary = catalog_summary(live.catalog)
-    empty = (
-        [p for p, counts in summary["platforms"].items() if counts.get("read", 0) == 0]
-        if isinstance(summary["platforms"], dict)
-        else []
-    )
     missing = [p.value for p in PIPEBOARD_PLATFORMS if p.value not in (summary["platforms"] or {})]
-    status_value: Status = "ok" if not missing and not empty else "warn"
+    connected = any(
+        entry.platform in PIPEBOARD_PLATFORMS and entry.tool_class is ToolClass.READ
+        for entry in live.catalog.entries
+    )
+    # A user can connect any subset. An unavailable connector must not block the others.
+    status_value: Status = "ok" if connected else "warn"
     note = ""
     if missing:
         note = f"; no tools loaded for {', '.join(missing)} (not connected in Pipeboard, or endpoint unreachable)"
@@ -405,15 +412,29 @@ def pipeboard_test(
     )
 
 
-_LISTING_TOOL_RE = re.compile(r"^(list|get)_.*(customers|ad_accounts|accounts)$|^list_ad_accounts$")
+_LISTING_TOOL_RE = re.compile(
+    r"^(list|get)_(?:.*_)?(customers|ad_accounts|accounts|advertisers|properties|account_summaries)$"
+)
 _ID_KEYS = ("customer_id", "account_id", "ad_account_id", "id")
-_NAME_KEYS = ("descriptive_name", "account_name", "name", "title")
+_NAME_KEYS = (
+    "descriptive_name",
+    "account_name",
+    "advertiser_name",
+    "displayName",
+    "display_name",
+    "name",
+    "title",
+)
 _CURRENCY_KEYS = ("currency_code", "currency", "account_currency")
 _TZ_KEYS = ("time_zone", "timezone", "timezone_name")
 
 
 def _extract_accounts(platform: str, payload: Any) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
+    id_keys = {
+        Platform.TIKTOK_ADS.value: ("advertiser_id", "id"),
+        Platform.GOOGLE_ANALYTICS.value: ("property_id", "property", "id"),
+    }.get(platform, _ID_KEYS)
 
     def visit(node: Any) -> None:
         if isinstance(node, list):
@@ -422,7 +443,35 @@ def _extract_accounts(platform: str, payload: Any) -> list[dict[str, str]]:
             return
         if not isinstance(node, dict):
             return
-        identifier = next((str(node[k]) for k in _ID_KEYS if node.get(k) not in (None, "")), None)
+        # Organization/account wrappers may also have ids and names. Prefer their child accounts.
+        children = [
+            node[key]
+            for key in (
+                "accounts",
+                "ad_accounts",
+                "adaccounts",
+                "advertisers",
+                "properties",
+                "propertySummaries",
+                "property_summaries",
+            )
+            if isinstance(node.get(key), (list, dict))
+        ]
+        if children:
+            for child in children:
+                visit(child)
+            return
+        identifier = next((str(node[k]) for k in id_keys if node.get(k) not in (None, "")), None)
+        if platform == Platform.GOOGLE_ANALYTICS.value:
+            resource = node.get("name")
+            if (
+                identifier is None
+                and isinstance(resource, str)
+                and resource.startswith("properties/")
+            ):
+                identifier = resource
+            if identifier and identifier.startswith("properties/"):
+                identifier = identifier.removeprefix("properties/")
         if identifier is not None and any(
             k in node for k in (*_NAME_KEYS, *_CURRENCY_KEYS, *_TZ_KEYS)
         ):
@@ -464,7 +513,7 @@ def accounts_discover(
     settings = load_settings(root)
     if settings.pipeboard_api_token is None and not settings.direct_platforms():
         fixture_rows: list[dict[str, str]] = []
-        for platform in PIPEBOARD_PLATFORMS:
+        for platform in FIXTURE_PLATFORMS:
             data = load_fixture_dataset(platform)
             fixture_rows.append(
                 {
@@ -495,16 +544,11 @@ def accounts_discover(
     rows: list[dict[str, str]] = []
     used: list[str] = []
     errors: list[str] = []
-    for entry in live.catalog.entries:
-        if (
-            entry.read_only_hint is not True
-            or not _LISTING_TOOL_RE.match(entry.name)
-            or entry.account_arg is not None
-        ):
-            continue
+
+    async def list_accounts(entry: CatalogEntry) -> tuple[str, Any, str | None]:
         try:
             if entry.platform in direct_providers:
-                result = asyncio.run(direct_providers[entry.platform].call_read(entry, {}))
+                result = await direct_providers[entry.platform].call_read(entry, {})
                 payload: Any = result.payload
             else:
                 tool = (
@@ -513,12 +557,31 @@ def accounts_discover(
                     else None
                 )
                 if tool is None:
-                    continue
-                payload = asyncio.run(invoke_mcp_tool(tool, {}, timeout=60))
+                    return entry.qualified_name, None, None
+                payload = await invoke_mcp_tool(tool, {}, timeout=60)
         except Exception as exc:
-            errors.append(f"{entry.qualified_name}: {sanitize_exception(exc)}")
+            return entry.qualified_name, None, sanitize_exception(exc)
+        return entry.qualified_name, payload, None
+
+    entries = [
+        entry
+        for entry in live.catalog.entries
+        if entry.read_only_hint is True
+        and _LISTING_TOOL_RE.match(entry.name)
+        and entry.account_arg is None
+        and entry.policy.reason == "no_account_scope"
+    ]
+
+    async def discover() -> list[tuple[str, Any, str | None]]:
+        return await asyncio.gather(*(list_accounts(entry) for entry in entries))
+
+    for entry, (name, payload, error) in zip(entries, asyncio.run(discover()), strict=True):
+        if error is not None:
+            errors.append(f"{name}: {error}")
             continue
-        used.append(entry.qualified_name)
+        if payload is None:
+            continue
+        used.append(name)
         rows.extend(_extract_accounts(entry.platform.value, payload))
     status_value: Status = "ok" if rows else "warn"
     summary = (

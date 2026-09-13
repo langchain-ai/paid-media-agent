@@ -3,14 +3,37 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
+import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from paid_media_agent.config import Settings
 from paid_media_agent.testing.demo_script import DEMO_QUESTION, demo_steps
 from paid_media_agent.testing.scripted_model import tool_call_message
 from tests.contract.helpers import build_runtime, config
+
+
+async def test_demo_uses_the_fixture_anchor_and_fails_on_unreconciled_analysis(
+    settings: Settings,
+    project_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The no-key demo must work after August and never claim success on failed analysis."""
+    from paid_media_agent.testing import demo_script
+
+    shifted = settings.model_copy(update={"paid_media_fixture_anchor": date(2026, 9, 9)})
+    result = await demo_script.run_demo(shifted, root=project_root, with_proposal=True)
+    assert "2026-09-09" in result["answer"] and "reconciled=yes" in result["answer"]
+    assert result["receipt"]["status"] == "verified"
+    monkeypatch.setattr(
+        demo_script,
+        "demo_steps",
+        lambda _anchor=None: [lambda _: AIMessage(content="Analysis failed")],
+    )
+    with pytest.raises(ValueError, match="Analysis failed"):
+        await demo_script.run_demo(shifted, root=project_root, with_proposal=True)
 
 
 async def test_discovers_instead_of_inventing_and_cites_evidence(

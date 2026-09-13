@@ -13,6 +13,10 @@ class Platform(StrEnum):
     GOOGLE_ADS = "google_ads"
     META_ADS = "meta_ads"
     REDDIT_ADS = "reddit_ads"
+    TIKTOK_ADS = "tiktok_ads"
+    PINTEREST_ADS = "pinterest_ads"
+    SNAP_ADS = "snap_ads"
+    GOOGLE_ANALYTICS = "google_analytics"
     LINKEDIN_ADS = "linkedin_ads"
     X_ADS = "x_ads"
     OPENAI_ADS = "openai_ads"
@@ -22,8 +26,20 @@ PIPEBOARD_PLATFORMS: tuple[Platform, ...] = (
     Platform.GOOGLE_ADS,
     Platform.META_ADS,
     Platform.REDDIT_ADS,
+    Platform.TIKTOK_ADS,
+    Platform.PINTEREST_ADS,
+    Platform.SNAP_ADS,
+    Platform.GOOGLE_ANALYTICS,
+    Platform.LINKEDIN_ADS,
 )
 """Platforms reached through Pipeboard MCP. The others use direct adapters in tools/direct."""
+
+FIXTURE_PLATFORMS: tuple[Platform, ...] = (
+    Platform.GOOGLE_ADS,
+    Platform.META_ADS,
+    Platform.REDDIT_ADS,
+)
+"""Platforms with shipped synthetic datasets, independent of live connector coverage."""
 
 
 class EntityType(StrEnum):

@@ -16,6 +16,7 @@ from paid_media_agent.tools.direct import (
     CompositeReadProvider,
     configured_direct_platforms,
     direct_raw_tools,
+    direct_read_providers,
 )
 from paid_media_agent.tools.direct.linkedin import LinkedInReadProvider, linkedin_raw_tools
 from paid_media_agent.tools.direct.openai_ads import OpenAIAdsReadProvider, openai_ads_raw_tools
@@ -57,6 +58,21 @@ def test_settings_direct_platforms_require_complete_credentials(tmp_path: Any) -
     settings = Settings(_env_file=None, linkedin_access_token="tok", x_ads_consumer_key="k")  # type: ignore[call-arg]
     assert configured_direct_platforms(settings) == (Platform.LINKEDIN_ADS,)
     assert {t.platform for t in direct_raw_tools(settings)} == {"linkedin_ads"}
+
+
+def test_pipeboard_linkedin_takes_precedence_over_saved_direct_credentials() -> None:
+    settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        pipeboard_api_token="pipeboard-test-token",
+        linkedin_access_token="legacy-direct-token",
+    )
+    assert (
+        settings.pipeboard_endpoints()[Platform.LINKEDIN_ADS]
+        == "https://linkedin-ads.mcp.pipeboard.co/"
+    )
+    assert Platform.LINKEDIN_ADS not in configured_direct_platforms(settings)
+    assert not any(tool.platform == "linkedin_ads" for tool in direct_raw_tools(settings))
+    assert Platform.LINKEDIN_ADS not in direct_read_providers(settings)
 
 
 async def test_linkedin_daily_analytics_request_and_refresh_on_401() -> None:

@@ -13,7 +13,7 @@ from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ConfigDict
 
 from paid_media_agent.config import AccountRegistry
-from paid_media_agent.domain.common import DataQualityFlag, EntityType, JsonValue
+from paid_media_agent.domain.common import DataQualityFlag, EntityType, JsonValue, Platform
 from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import (
@@ -23,6 +23,7 @@ from paid_media_agent.tools.catalog import (
     ToolClass,
 )
 from paid_media_agent.tools.normalize import (
+    PERFORMANCE_PLATFORMS,
     ROWS_SCHEMA_VERSION,
     NormalizationError,
     normalize_rows,
@@ -178,6 +179,11 @@ class ReadDispatcher:
             if isinstance(value, str) and value in self._accounts.provider_ids():
                 raise ReadDenied("raw_account_id_rejected", "provider account ids are host-owned")
         args[entry.account_arg] = binding.provider_account_id
+        if entry.platform is Platform.GOOGLE_ANALYTICS:
+            property_id = binding.provider_account_id.removeprefix("properties/")
+            args[entry.account_arg] = (
+                f"properties/{property_id}" if entry.account_arg == "property" else property_id
+            )
         try:
             jsonschema.validate(instance=args, schema=entry.input_schema)
         except jsonschema.ValidationError as exc:
@@ -232,7 +238,7 @@ class ReadDispatcher:
             else None
         )
         rows = result.payload.get("rows")
-        if isinstance(rows, list) and rows:
+        if entry.platform in PERFORMANCE_PLATFORMS and isinstance(rows, list) and rows:
             try:
                 normalized, missing = normalize_rows(
                     platform=entry.platform,

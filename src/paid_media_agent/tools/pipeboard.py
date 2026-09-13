@@ -22,6 +22,7 @@ from paid_media_agent.tools.catalog import (
     LocalPolicy,
     RawTool,
     build_authorized_catalog,
+    qualified_name,
 )
 from paid_media_agent.tools.providers import ProviderError, ProviderResult, ProviderTimeout
 
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 PIPEBOARD_SOURCE = "pipeboard"
 STREAMABLE_HTTP = "streamable_http"
+CATALOG_LOAD_TIMEOUT_SECONDS = 20
 _OPERATION_REF_KEYS = ("operation_ref", "operation_id", "resource_name", "id", "campaign_id")
 
 
@@ -69,7 +71,7 @@ def raw_tools_from_langchain(platform: str, endpoint: str, tools: list[BaseTool]
 
 
 class PipeboardCatalogLoader:
-    """Loads the authenticated catalog host-side and caches it for a bounded period."""
+    """Loads every server's tool catalog concurrently; keeps schemas host-side per assembly."""
 
     def __init__(
         self,
@@ -105,17 +107,25 @@ class PipeboardCatalogLoader:
         client = MultiServerMCPClient(pipeboard_connections(endpoints, token))  # type: ignore[arg-type]
         raw_tools: list[RawTool] = []
         tools_by_name: dict[str, BaseTool] = {}
-        for platform, url in endpoints.items():
+
+        async def load_endpoint(platform: Platform) -> list[BaseTool]:
             try:
-                tools = await client.get_tools(server_name=platform.value)
+                return await asyncio.wait_for(
+                    client.get_tools(server_name=platform.value),
+                    timeout=CATALOG_LOAD_TIMEOUT_SECONDS,
+                )
             except Exception as exc:
                 logger.warning(
                     "catalog load failed for %s: %s", platform.value, sanitize_exception(exc)
                 )
-                continue
+                return []
+
+        loaded = await asyncio.gather(*(load_endpoint(p) for p in endpoints))
+        for (platform, url), tools in zip(endpoints.items(), loaded, strict=True):
             raw_tools.extend(raw_tools_from_langchain(platform.value, url, tools))
             for tool in tools:
-                tools_by_name[f"{platform.value}__{tool.name}"] = tool
+                # Catalog lookup keeps the first entry and denies duplicate qualified names.
+                tools_by_name.setdefault(qualified_name(platform, tool.name), tool)
         catalog = build_authorized_catalog(
             [*raw_tools, *self._extra_raw_tools], policy=self._policy, source=PIPEBOARD_SOURCE
         )
