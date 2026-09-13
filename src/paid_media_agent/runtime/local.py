@@ -26,13 +26,22 @@ from paid_media_agent.tools.fixtures import FixtureState, build_fixture_catalog
 
 
 def filesystem_permissions() -> list[FilesystemPermission]:
-    """Deny secrets and tooling paths; allow writes only under the workspace."""
+    """Hide secrets and coding-agent files; keep runtime skills read-only."""
     return [
         FilesystemPermission(
             operations=["read", "write"],
-            paths=["/.env", "/.env.*", "/.venv/**", "/.git/**", "/.mda/**"],
+            paths=[
+                "/.env",
+                "/.env.*",
+                "/.venv/**",
+                "/.git/**",
+                "/.mda/**",
+                "/.agents/**",
+                "/.claude/**",
+            ],
             mode="deny",
         ),
+        FilesystemPermission(operations=["write"], paths=["/workspace/skills/**"], mode="deny"),
         FilesystemPermission(operations=["write"], paths=["/workspace/**"], mode="allow"),
         FilesystemPermission(operations=["write"], paths=["/**"], mode="deny"),
     ]

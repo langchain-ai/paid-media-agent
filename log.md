@@ -4,6 +4,13 @@ Append-only record of material changes to this repository's behavior. Newest fir
 journal (2026-08-31 to 2026-09-03) is preserved in
 [docs/history/build-log-2026-09.md](docs/history/build-log-2026-09.md).
 
+## 2026-09-12 (separate coding-agent and runtime skills)
+
+- Corrected the shared-skills layout before merge: `.agents/skills` holds local coding-agent
+  workflows; `workspace/skills` holds only the paid-media agent's runtime skills. The root `skills`
+  link is MDA's sync input. Split local CLI onboarding from the deployed tool-based interview.
+  Runtime skills remain read-only locally, and coding-agent directories are not exposed to it.
+
 ## 2026-09-12 (shared skills)
 
 - Moved repository skills to `.agents/skills`, with relative links for Claude Code, the runtime,

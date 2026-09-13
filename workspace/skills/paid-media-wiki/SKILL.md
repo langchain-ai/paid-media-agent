@@ -7,7 +7,7 @@ description: The paid-media business wiki the other skills route to. General doc
 
 This wiki gives the agent enough general business context to analyze paid media without pretending
 every company has the same goals, attribution model, sales cycle, or risk tolerance. Edit it in
-`.agents/skills/paid-media-wiki/` in the checkout. At runtime, pages live next to this file at
+`workspace/skills/paid-media-wiki/` in the checkout. At runtime, pages live next to this file at
 `/skills/paid-media-wiki/<page>.md`.
 
 ## Read order

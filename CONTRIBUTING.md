@@ -9,11 +9,12 @@ uv sync --all-extras --dev
 uv run paid-media-agent demo
 ```
 
-## Shared skills
+## Coding-agent and runtime skills
 
-Edit skills in [.agents/skills/](.agents/skills/). Claude Code discovers the same files through
-`.claude/skills`. The root `skills/` link keeps the local runtime and MDA deployment paths working;
-`docs/business-context` links to the business wiki. Keep these as relative symlinks, not copies.
+Local coding-agent workflows live in [.agents/skills/](.agents/skills/), linked from `.claude/skills`.
+The paid-media agent reads [workspace/skills/](workspace/skills/). Only those runtime skills are
+synced to MDA, through the root `skills/` link. `docs/business-context` links to the runtime wiki.
+Keep these as relative symlinks, not copies.
 
 ## Optional named local URL
 

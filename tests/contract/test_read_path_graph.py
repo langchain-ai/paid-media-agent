@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -10,6 +11,45 @@ from paid_media_agent.testing.demo_script import DEMO_QUESTION, demo_steps
 from paid_media_agent.testing.scripted_model import tool_call_message
 from paid_media_agent.tools.fixtures import build_fixture_catalog
 from tests.contract.helpers import build_runtime, config
+
+
+async def test_runtime_loads_only_runtime_skills_and_keeps_them_read_only(
+    settings: Settings, project_root: Path, tmp_path: Path
+) -> None:
+    shutil.copy(project_root / "instructions.md", tmp_path / "instructions.md")
+    shutil.copytree(project_root / "workspace" / "skills", tmp_path / "workspace" / "skills")
+    shutil.copytree(project_root / ".agents", tmp_path / ".agents")
+    (tmp_path / "skills").symlink_to("workspace/skills", target_is_directory=True)
+    steps = [
+        lambda _m: tool_call_message(
+            "read_file", {"file_path": "/skills/paid-media-wiki/SKILL.md"}
+        ),
+        lambda _m: tool_call_message(
+            "write_file", {"file_path": "/workspace/skills/unwanted.md", "content": "overwrite"}
+        ),
+        lambda _m: tool_call_message(
+            "read_file", {"file_path": "/.agents/skills/paid-media-onboarding/SKILL.md"}
+        ),
+        lambda _m: tool_call_message(
+            "write_file", {"file_path": "/workspace/note.txt", "content": "analysis notes"}
+        ),
+        lambda _m: AIMessage(content="done"),
+    ]
+    runtime, _ = build_runtime(settings, tmp_path, steps)
+
+    state = await runtime.graph.ainvoke(
+        {"messages": [{"role": "user", "content": "Read the runtime skills."}]}, config=config()
+    )
+
+    expected = {p.parent.name for p in (project_root / "workspace" / "skills").glob("*/SKILL.md")}
+    checkpoint = await runtime.graph.aget_state(config())
+    assert {skill["name"] for skill in checkpoint.values["skills_metadata"]} == expected
+    messages = [m for m in state["messages"] if isinstance(m, ToolMessage)]
+    assert "Paid-media business context" in str(messages[0].content)
+    assert "permission denied" in str(messages[1].content)
+    assert "permission denied" in str(messages[2].content)
+    assert not (tmp_path / "workspace" / "skills" / "unwanted.md").exists()
+    assert (tmp_path / "workspace" / "note.txt").read_text() == "analysis notes"
 
 
 async def test_fixture_demo_reconciles_and_cites_artifacts(

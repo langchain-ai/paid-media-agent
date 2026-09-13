@@ -27,7 +27,7 @@ Conventional Commits (release notes that write themselves).
 ## 2. Documentation is the product surface
 
 7. **One canonical page per question.** Commands live in `OPERATIONS.md`; architecture in
-   `docs/architecture/`; the agent's knowledge in `.agents/skills/`. Nothing restates another
+   `docs/architecture/`; the paid-media agent's knowledge in `workspace/skills/`. Nothing restates another
    page.
 8. **A map for coding agents.** `AGENTS.md` names every directory and the verification commands;
    `CLAUDE.md` only points at it. Frontier repos now ship this alongside the human README.
@@ -67,7 +67,7 @@ Conventional Commits (release notes that write themselves).
 ## 5. Agent-native repositories (the newer discipline)
 
 22. **The agent's knowledge is versioned prose**, reviewable in pull requests: `instructions.md`,
-    `.agents/skills/`, the business wiki.
+    `workspace/skills/`, the business wiki.
 23. **Deterministic code owns numbers, permissions, and mutations.** The model chooses and
     explains; code computes and executes.
 24. **Evals are in the repo and runnable by anyone.** `tests/eval/` holds the questions, the
@@ -92,7 +92,7 @@ Conventional Commits (release notes that write themselves).
 | 17 | done | `RUF100` in `pyproject.toml` |
 | 18 | done | `Dockerfile`, `docker-compose.yml`, `docs/self-hosting.md` |
 | 19-21 | done | one assembly; no telemetry; `.env` handling |
-| 22-25 | done | `instructions.md`, `.agents/skills/`, `tests/eval/`, `docs/audits/` |
+| 22-25 | done | `instructions.md`, `workspace/skills/`, `tests/eval/`, `docs/audits/` |
 
 Open: rule 10 (run the example in CI) and, beyond hygiene, the ranked functional gaps in
 [docs/audits/parity-audit-2026-09-03.md](audits/parity-audit-2026-09-03.md).
