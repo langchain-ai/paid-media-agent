@@ -29,7 +29,8 @@ test suite.
 ## What the model can read
 
 In the deployment the model's filesystem is the MDA sandbox: `/skills` (synced by MDA, the wiki
-included as `skills/paid-media-wiki/`) and `/workspace` (the thread's scratch space). Nothing else
+included as `skills/paid-media-wiki/`) and `/workspace` (the thread's scratch space). The checkout's
+`skills/` is a relative link to the canonical `.agents/skills/`. Nothing else
 from the repository is present. Every other input reaches the model through host tools: the
 organization profile through `get_org_context`, artifacts through their ids, files through
 `render_report`. Locally the repository is the filesystem, with writes allowed only under

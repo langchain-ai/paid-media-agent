@@ -63,7 +63,8 @@ def _sandbox(backend: FakeSandboxBackend) -> Sandbox:
 
 
 def test_mount_uses_the_same_absolute_paths_as_the_repository(tmp_path: Path) -> None:
-    (tmp_path / "skills" / "paid-media-analysis").mkdir(parents=True)
+    (tmp_path / ".agents" / "skills" / "paid-media-analysis").mkdir(parents=True)
+    (tmp_path / "skills").symlink_to(".agents/skills", target_is_directory=True)
     (tmp_path / "skills" / "paid-media-analysis" / "SKILL.md").write_text("# skill")
     (tmp_path / "skills" / "paid-media-wiki").mkdir(parents=True)
     (tmp_path / "skills" / "paid-media-wiki" / "goals.md").write_text("# goals")

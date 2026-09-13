@@ -60,9 +60,9 @@ them in the separate Agent Server where report tools currently render. `serve` n
 
 ## Deploying with Managed Deep Agents
 
-`mda deploy .` compiles `agent.py`, syncs `instructions.md` and `skills/` (the business wiki is
-the skill `paid-media-wiki`) as managed context, forwards the non-reserved values of `.env` as
-deployment secrets, registers the schedules, and provisions the Slack app declared in
+`mda deploy .` compiles `agent.py` and syncs `instructions.md` and `skills/` as managed context.
+`skills/` links to `.agents/skills/`, including the `paid-media-wiki` skill. The CLI forwards the
+non-reserved values of `.env` as deployment secrets, registers the schedules, and provisions the Slack app declared in
 `channels/slack.py`. On the first deploy the CLI prints a Slack authorization link: open it, pick
 the workspace, approve, then return to the terminal and press Enter so the CLI can verify the
 grant and finish provisioning. Approve the link while signed into the LangSmith organization that
@@ -188,7 +188,7 @@ probe. They never call a provider mutation.
 
 Before changing a claim about Deep Agents, MDA, model support, provider tool search, Slack, or
 Pipeboard, refresh the relevant official source in [docs/sources/official-links.md](docs/sources/official-links.md).
-Before changing paid-media doctrine, update [skills/paid-media-wiki/sources.md](skills/paid-media-wiki/sources.md).
+Before changing paid-media doctrine, update [.agents/skills/paid-media-wiki/sources.md](.agents/skills/paid-media-wiki/sources.md).
 
 Source order:
 
@@ -233,9 +233,8 @@ canary steps: [docs/operations/live-write-runbook.md](docs/operations/live-write
 Coding agents with a browser pane cannot pass a fragment, so `--no-token` serves the console at
 the plain URL and accepts same-origin calls only (the `Origin` and `Sec-Fetch-Site` headers a
 browser always sends); a page on another site still cannot drive it. `.claude/launch.json` holds
-a `setup` entry that Claude Code desktop starts and shows in its Browser pane, and
-`.cursor/rules/onboarding.mdc` tells Cursor to open it in its built-in browser; the Codex app's
-in-app browser opens the same URL. `AGENTS.md` carries the host-neutral instruction. On macOS
+a `setup` entry that Claude Code desktop starts and shows in its Browser pane. Cursor and the
+Codex app open the same URL in their browser panes using the instructions in `AGENTS.md`. On macOS
 the launch configuration can only start when the app has access to the folder holding the
 checkout (Desktop, Documents, and Downloads are protected); a launched server that exits at
 `getcwd` with "Operation not permitted" needs that permission granted, or the checkout moved. Every page action calls the same

@@ -61,7 +61,7 @@ The setup console opens in your browser at [localhost:8765](http://localhost:876
 3. **Deployment:** choose Managed Deep Agents or self-hosting.
 
 Using a coding agent? Point it to [AGENTS.md](AGENTS.md) and the
-[onboarding skill](skills/paid-media-onboarding/SKILL.md). The CLI supports the same setup
+[onboarding skill](.agents/skills/paid-media-onboarding/SKILL.md). The CLI supports the same setup
 actions with JSON output. No frontend build is required.
 
 <details>
@@ -94,7 +94,7 @@ Connect any subset. Tools and metrics depend on platform permissions and API acc
 Direct adapters are read-only.
 
 Add your goals, conversion definitions, and campaign briefs before the first real analysis.
-Use the [business-context skill](skills/paid-media-org-onboarding/SKILL.md) with your coding agent,
+Use the [business-context skill](.agents/skills/paid-media-org-onboarding/SKILL.md) with your coding agent,
 or the terminal interview:
 
 ```bash
@@ -136,7 +136,7 @@ extend its tools without maintaining a separate agent for each interface.
 
 | Change or explore | Start here |
 | --- | --- |
-| Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [skills/](skills/) |
+| Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [.agents/skills/](.agents/skills/) |
 | Tools and runtime | [src/paid_media_agent/](src/paid_media_agent/) · [Architecture](docs/architecture/README.md) |
 | Managed channels and schedules | [channels/](channels/) · [schedules/](schedules/) · [sandbox/](sandbox/) |
 | Configuration and troubleshooting | [Operations](OPERATIONS.md) |

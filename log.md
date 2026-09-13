@@ -4,6 +4,12 @@ Append-only record of material changes to this repository's behavior. Newest fir
 journal (2026-08-31 to 2026-09-03) is preserved in
 [docs/history/build-log-2026-09.md](docs/history/build-log-2026-09.md).
 
+## 2026-09-12 (shared skills)
+
+- Moved repository skills to `.agents/skills`, with relative links for Claude Code, the runtime,
+  and the business wiki. Removed the Cursor rule; `AGENTS.md` keeps the shared onboarding guidance.
+  Docker copies the canonical skills into `/app/skills`; MDA continues syncing the root `skills` path.
+
 ## 2026-09-10 (onboarding inside coding agents)
 
 - Investigated how Claude Code desktop (Browser pane, `.claude/launch.json`), Cursor (Navigate

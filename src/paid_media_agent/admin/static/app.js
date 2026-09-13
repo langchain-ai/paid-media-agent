@@ -1015,7 +1015,7 @@
     });
   }
   function renderOrgContext(route) {
-    const prompt = "Use skills/paid-media-org-onboarding/SKILL.md to set up my business context locally. Read any existing context first. Use the briefs, public links, or text files I share, ask only for missing details, and save my answers with the paid-media-agent org CLI. Don't invent targets or overwrite unrelated answers.";
+    const prompt = "Use .agents/skills/paid-media-org-onboarding/SKILL.md to set up my business context locally. Read any existing context first. Use the briefs, public links, or text files I share, ask only for missing details, and save my answers with the paid-media-agent org CLI. Don't invent targets or overwrite unrelated answers.";
     const manual = route.steps.map(step => el("div", { class: "org-manual-step" }, [
       el("p", { class: "name", text: step.title }),
       el("p", { class: "note", text: step.description }),

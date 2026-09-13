@@ -1,8 +1,8 @@
 # Sandbox and snapshots
 
 Managed Deep Agents gives every durable thread its own LangSmith sandbox as the model's
-filesystem and syncs `skills/` into it. The repository declares which image that sandbox starts
-from and proves the image before a deploy.
+filesystem and syncs `skills/` (a link to `.agents/skills/`) into it. The repository declares
+which image that sandbox starts from and proves the image before a deploy.
 
 ## Snapshot contents
 

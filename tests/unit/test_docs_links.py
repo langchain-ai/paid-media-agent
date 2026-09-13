@@ -65,7 +65,9 @@ def test_documented_commands_exist(project_root: Path) -> None:
 
 
 def test_skills_have_valid_frontmatter(project_root: Path) -> None:
-    for skill in (project_root / "skills").glob("*/SKILL.md"):
+    skills = list((project_root / ".agents" / "skills").glob("*/SKILL.md"))
+    assert skills, "No shared skills found"
+    for skill in skills:
         text = skill.read_text(encoding="utf-8")
         assert text.startswith("---\nname: "), skill
         header = text.split("---")[1]
