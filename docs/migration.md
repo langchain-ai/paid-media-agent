@@ -10,13 +10,13 @@
    provider-native fields under `source_fields` instead of widening the common model.
 4. Replace "are you sure?" confirmations with `propose_change` and `execute_change`: persisted
    ChangeSet, signed single-use approval, one attempt, readback, receipt.
-5. Encode business judgment in `.agents/skills/` (the wiki is `.agents/skills/paid-media-wiki/`); keep
+5. Encode business judgment in `workspace/skills/` (the wiki is `workspace/skills/paid-media-wiki/`); keep
    organization-specific goals, thresholds, and account ids in host configuration and `docs/org/`.
 
 ## Between the two deployment paths
 
 - Self-hosted to Managed Deep Agents: keep `agent.py`, `identity.py`, `instructions.md`,
-  `.agents/skills/` and its root `skills/` link, `schedules/`, `channels/slack.py`, `config/`, and
+  `workspace/skills/` and its root `skills/` link, `schedules/`, `channels/slack.py`, `config/`, and
   `docs/org/`; MDA supplies threads, checkpoints, the sandbox, identity, and Slack. Replace `slack:<team>:<user>` approver refs with
   the identities MDA presents (a refused approval names one).
 - Managed Deep Agents to self-hosted: set `DATABASE_URL`, generate `PAID_MEDIA_API_TOKENS` and the

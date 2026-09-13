@@ -136,11 +136,11 @@ extend its tools without maintaining a separate agent for each interface.
 
 | Change or explore | Start here |
 | --- | --- |
-| Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [.agents/skills/](.agents/skills/) |
+| Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [workspace/skills/](workspace/skills/) |
 | Tools and runtime | [src/paid_media_agent/](src/paid_media_agent/) · [Architecture](docs/architecture/README.md) |
 | Managed channels and schedules | [channels/](channels/) · [schedules/](schedules/) · [sandbox/](sandbox/) |
 | Configuration and troubleshooting | [Operations](OPERATIONS.md) |
-| Development and tests | [Contributing](CONTRIBUTING.md) · [Agent instructions](AGENTS.md) |
+| Development and tests | [Contributing](CONTRIBUTING.md) · [Agent instructions](AGENTS.md) · [Coding-agent skills](.agents/skills/) |
 
 Use synthetic data for development. Run `make check` before submitting a change; see
 [Contributing](CONTRIBUTING.md) for the development dependencies and checks.

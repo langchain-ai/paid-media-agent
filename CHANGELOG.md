@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-### Changed (shared skills)
+### Changed (coding-agent and runtime skills)
 
-- Skills now live in `.agents/skills/`, linked from `.claude/skills` and the runtime's `skills/`
-  path. Removed `.cursor` and replaced the duplicate business wiki with a link to the same source.
+- Local coding-agent skills live in `.agents/skills/`, linked from `.claude/skills`. Runtime skills
+  live in `workspace/skills/`, synced to MDA through the root `skills/` link and kept read-only
+  locally. Removed `.cursor` and replaced the duplicate business wiki with a link to the runtime wiki.
 
 ### Changed (repository name)
 

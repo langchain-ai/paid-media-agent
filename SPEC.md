@@ -139,9 +139,10 @@ number that code can assert.
 ### 4.3 Context architecture
 
 Keep the always-loaded prompt small and stable. It contains role, source precedence, safety boundaries,
-completion rules, and links to skills. Business doctrine lives in `.agents/skills/paid-media-wiki/`.
-Reusable task workflows live in `.agents/skills/<name>/SKILL.md` with references, scripts, and
+completion rules, and links to skills. Business doctrine lives in `workspace/skills/paid-media-wiki/`.
+Reusable runtime workflows live in `workspace/skills/<name>/SKILL.md` with references, scripts, and
 templates loaded on demand. The root `skills/` link preserves the runtime's `/skills/` paths.
+Local coding-agent workflows live separately in `.agents/skills/`, linked from `.claude/skills`.
 
 Large tool results are offloaded before they crowd the conversation. Summarization must preserve user
 intent, source windows, selected accounts, proposal ids, approval state, unresolved data gaps, and
@@ -528,4 +529,3 @@ The first public release is done when:
 - public docs contain no private data;
 - commands, links, install steps, and examples work from a clean environment;
 - the license and security contact are explicit.
-

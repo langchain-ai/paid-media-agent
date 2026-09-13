@@ -61,7 +61,8 @@ them in the separate Agent Server where report tools currently render. `serve` n
 ## Deploying with Managed Deep Agents
 
 `mda deploy .` compiles `agent.py` and syncs `instructions.md` and `skills/` as managed context.
-`skills/` links to `.agents/skills/`, including the `paid-media-wiki` skill. The CLI forwards the
+`skills/` links to `workspace/skills/`, including the `paid-media-wiki` skill. Local coding-agent
+skills in `.agents/skills/` are not synced to the sandbox. The CLI forwards the
 non-reserved values of `.env` as deployment secrets, registers the schedules, and provisions the Slack app declared in
 `channels/slack.py`. On the first deploy the CLI prints a Slack authorization link: open it, pick
 the workspace, approve, then return to the terminal and press Enter so the CLI can verify the
@@ -188,7 +189,7 @@ probe. They never call a provider mutation.
 
 Before changing a claim about Deep Agents, MDA, model support, provider tool search, Slack, or
 Pipeboard, refresh the relevant official source in [docs/sources/official-links.md](docs/sources/official-links.md).
-Before changing paid-media doctrine, update [.agents/skills/paid-media-wiki/sources.md](.agents/skills/paid-media-wiki/sources.md).
+Before changing paid-media doctrine, update [workspace/skills/paid-media-wiki/sources.md](workspace/skills/paid-media-wiki/sources.md).
 
 Source order:
 

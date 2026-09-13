@@ -30,12 +30,13 @@ test suite.
 
 In the deployment the model's filesystem is the MDA sandbox: `/skills` (synced by MDA, the wiki
 included as `skills/paid-media-wiki/`) and `/workspace` (the thread's scratch space). The checkout's
-`skills/` is a relative link to the canonical `.agents/skills/`. Nothing else
+`skills/` is a relative link to `workspace/skills/`. Local coding-agent skills in `.agents/skills/`
+are not synced to the sandbox. Nothing else
 from the repository is present. Every other input reaches the model through host tools: the
 organization profile through `get_org_context`, artifacts through their ids, files through
-`render_report`. Locally the repository is the filesystem, with writes allowed only under
-`/workspace`, and the same tools are used, so a prompt or skill never names a path that exists in
-only one world.
+`render_report`. Locally the repository is the filesystem. Writes are allowed under `/workspace`
+except `workspace/skills`, which stays read-only; `.agents` and `.claude` are inaccessible to the
+paid-media agent. The same host tools are used in both runtimes.
 
 ## Parity contract
 

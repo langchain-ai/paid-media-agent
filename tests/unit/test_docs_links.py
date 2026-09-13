@@ -15,7 +15,11 @@ LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 def _markdown_files(root: Path) -> list[Path]:
     files = []
     for path in root.rglob("*.md"):
-        if any(part in {".venv", ".git", ".mda", "workspace"} for part in path.parts):
+        if any(part in {".venv", ".git", ".mda"} for part in path.parts):
+            continue
+        if path.is_relative_to(root / "workspace") and not path.is_relative_to(
+            root / "workspace" / "skills"
+        ):
             continue
         files.append(path)
     return files
@@ -65,8 +69,10 @@ def test_documented_commands_exist(project_root: Path) -> None:
 
 
 def test_skills_have_valid_frontmatter(project_root: Path) -> None:
-    skills = list((project_root / ".agents" / "skills").glob("*/SKILL.md"))
-    assert skills, "No shared skills found"
+    local_skills = list((project_root / ".agents" / "skills").glob("*/SKILL.md"))
+    runtime_skills = list((project_root / "workspace" / "skills").glob("*/SKILL.md"))
+    assert local_skills and runtime_skills, "Both coding-agent and runtime skills must exist"
+    skills = local_skills + runtime_skills
     for skill in skills:
         text = skill.read_text(encoding="utf-8")
         assert text.startswith("---\nname: "), skill
