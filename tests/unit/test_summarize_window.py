@@ -52,6 +52,8 @@ def test_summary_computes_pacing_top_spenders_and_flagged_days(tmp_path: Path) -
             }
         },
         schema_version="provider-result/1",
+        platform="google_ads",
+        account_ref="demo-google",
     )
 
     out = run_summarize_window(
@@ -64,7 +66,7 @@ def test_summary_computes_pacing_top_spenders_and_flagged_days(tmp_path: Path) -
         ),
     )
 
-    google = out["platforms"]["google_ads"]
+    google = out["platforms"]["google_ads"]["demo-google"]
     assert google["totals"]["spend"] == "900.00"
     top, second = google["entities"]
     assert (top["entity_ref"], top["pacing"], top["daily_budget"]) == ("g-1", "1.1111", "90.00")
@@ -72,6 +74,74 @@ def test_summary_computes_pacing_top_spenders_and_flagged_days(tmp_path: Path) -
     assert google["over_budget"] == ["g-1"]
     assert google["flagged_days"] == ["2026-08-05"]  # +50% day; the -33% return is below the flag
     assert store.read(out["artifact_id"]).metadata.tool_name == "summarize_window"
+
+
+def test_summary_keeps_accounts_and_their_budgets_separate(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path)
+    performance_ids = []
+    budget_ids = []
+    for account, budget in (("account-a", 50), ("account-b", 200)):
+        row = _row(1, "same-campaign-id", "100", "2").model_copy(update={"account_ref": account})
+        performance_ids.append(
+            store.write_json(
+                "performance_rows",
+                rows_to_payload([row]),
+                schema_version=ROWS_SCHEMA_VERSION,
+                platform="google_ads",
+                account_ref=account,
+            ).artifact_id
+        )
+        budget_ids.append(
+            store.write_json(
+                "provider_result",
+                {"result": {"campaigns": [{"id": "same-campaign-id", "daily_budget": budget}]}},
+                schema_version="provider-result/1",
+                platform="google_ads",
+                account_ref=account,
+            ).artifact_id
+        )
+
+    result = run_summarize_window(
+        store,
+        SummarizeWindowArgs(
+            artifact_ids=performance_ids,
+            budgets_artifact_ids=budget_ids,
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 1),
+        ),
+    )
+
+    accounts = result["platforms"]["google_ads"]
+    assert set(accounts) == {"account-a", "account-b"}
+    assert accounts["account-a"]["entities"][0]["pacing"] == "2.0000"
+    assert accounts["account-b"]["entities"][0]["pacing"] == "0.5000"
+
+
+def test_summary_keeps_missing_daily_conversions_unavailable(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path)
+    rows = [_row(1, "g-1", "100", "2"), _row(2, "g-1", "100", "0")]
+    rows[1] = rows[1].model_copy(update={"conversions": None})
+    artifact = store.write_json(
+        "performance_rows",
+        rows_to_payload(rows),
+        schema_version=ROWS_SCHEMA_VERSION,
+        platform="google_ads",
+        account_ref="demo-google",
+    )
+
+    result = run_summarize_window(
+        store,
+        SummarizeWindowArgs(
+            artifact_ids=[artifact.artifact_id],
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 2),
+        ),
+    )
+
+    summary = result["platforms"]["google_ads"]["demo-google"]
+    assert summary["daily"][1]["conversions"] is None
+    assert summary["daily"][1]["conversions_change"] is None
+    assert summary["flagged_days"] == []
 
 
 def test_compare_periods_refuses_an_empty_window_instead_of_reporting_zero(tmp_path: Path) -> None:

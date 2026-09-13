@@ -1,77 +1,96 @@
 # Self-hosting
 
-Managed Deep Agents is the one-command path and the recommended one. Self-hosting is for teams
-that want the agent behind their own API, database, and Slack app. It is the same agent: the
-components `agent.py` hands to MDA, compiled with `create_deep_agent`, with durable state in
-Postgres and a small authenticated boundary. Expect a few more steps than `mda deploy .`, not a
-different product.
+Run the paid-media agent on your own infrastructure with Docker, Postgres, and an optional Slack
+app. MDA remains the shortest hosted path. Both use the same agent tools and approval policy.
 
-## What you get
-
-- `paid-media-agent serve`: a FastAPI boundary with health, thread messages, proposal read,
-  approve, edit, reject, and artifact download, behind bearer tokens mapped to caller names.
-- Postgres persistence for checkpoints, proposals, approval claims, receipts, dedupe keys, and
-  thread ownership (`DATABASE_URL`), with in-memory state as the fallback for trying things out.
-- The rich Slack adapter: Block Kit review cards with Approve, Edit, and Reject, edits typed in
-  the thread, receipts, and report files, over Socket Mode (`paid-media-agent slack`) or signed
-  HTTP events mounted on the API (`SLACK_TRANSPORT=http`).
-- A Docker image with the PDF libraries and a compose file that brings up the API and Postgres.
-
-## Fastest route
+## Start the API
 
 ```bash
-cp .env.example .env                       # add a model key
+cp .env.example .env
 uv run paid-media-agent config generate PAID_MEDIA_API_TOKENS PAID_MEDIA_APPROVAL_SIGNING_KEY
-docker compose up                          # API on :8080, Postgres alongside
-curl -s localhost:8080/health
+# Add your model key and connect accounts with the setup console or CLI.
+docker compose up --build -d
+curl http://localhost:8080/health
 ```
 
-`config generate` prints the API token once; clients send the part before `:operator` as the
-bearer. Compose sets `DATABASE_URL` for the API container and reads everything else from your
-`.env`. The image copies no env file.
+`config generate` prints the API token once. Send the part before `:operator` as a bearer token.
+The API listens on localhost. Postgres stores conversations and approvals; a Docker volume stores
+report files. Your local `config/` and `workspace/skills/` folders are mounted read-only, so account
+mappings, write policy, and business context are available in both containers.
 
-Compose mounts `docs/org/` from the checkout into the API container. Business context saved
-by your coding agent or `uv run paid-media-agent org interview` is available immediately and
-survives container replacement. If you run the image without Compose, mount that folder at
-`/app/docs/org` yourself.
+Give your coding agent the [onboarding skill](../.agents/skills/paid-media-onboarding/SKILL.md), or
+follow [customization](customization.md) to edit business context and skills manually.
 
-## Slack
+## Connect Slack
 
-1. Create a Slack app from `config/slack-manifest.example.yaml` and install it to the workspace.
-2. In **OAuth & Permissions**, install the app to your workspace and copy the **Bot User OAuth
-   Token** (`xoxb-`). In **Basic Information → App-Level Tokens → Generate Token and Scopes**,
-   add `connections:write` and copy the app-level token (`xapp-`). Enable **Socket Mode**.
-   Store the tokens: `uv run paid-media-agent config set SLACK_BOT_TOKEN=xoxb-... SLACK_APP_TOKEN=xapp-...`
-   (Socket Mode, no public URL). For a hosted deployment set `SLACK_TRANSPORT=http` and
-   `SLACK_SIGNING_SECRET`, and point the app's request URL at `/slack/events` on your API.
-3. Name the approvers: `PAID_MEDIA_APPROVER_IDS=slack:<team_id>:<user_id>,...`. The requester
-   cannot approve their own change unless `PAID_MEDIA_ALLOW_SELF_APPROVAL=true`.
-4. `uv run paid-media-agent test slack`, then `uv run paid-media-agent slack`.
+1. Create an app from [the Slack manifest](../config/slack-manifest.example.yaml). It enables the
+   Agent messaging experience, mentions, and direct messages.
+2. In **OAuth & Permissions**, install it to your workspace and copy the **Bot User OAuth Token**
+   (`xoxb-`) into `SLACK_BOT_TOKEN` in your local `.env`.
+3. In **Basic Information → App-Level Tokens → Generate Token and Scopes**, add
+   `connections:write`. Save the `xapp-` token as `SLACK_APP_TOKEN` and enable **Socket Mode**.
+4. Start the Slack worker alongside the API:
 
-Mention the app in a channel or DM it. A proposed change arrives as a card; Approve records a
-signed, single-use claim for that revision, Edit asks for `edit <field> <value>` in the thread and
-produces a new revision, Reject ends it. The receipt says verified, failed, or unknown.
+```bash
+docker compose --profile slack up --build -d
+```
+
+Mention the app in a channel or send it a DM. Replies stream text and tool progress using Slack's
+native agent APIs. Slack's agent features depend on your workspace's plan and admin settings.
+Customize the app's name, icon, and description in Slack's app settings.
+
+When writes are enabled, the agent presents the proposed action and approval controls. Set
+`PAID_MEDIA_APPROVER_IDS=slack:<team_id>:<user_id>,...` to authorize reviewers. Approve verifies the
+saved revision and payload; Reject stops the action. To change it, reject and ask the agent for a
+revised proposal. Self-approval is disabled unless explicitly enabled. There are no tool-specific Slack cards.
+
+## Deploy to your server
+
+Clone the project on a host with Docker, configure `.env`, and run the same Compose command. Both
+containers connect to the same Postgres service. Back up the Postgres and workspace volumes, and
+protect the local `.env` and configuration files.
+
+Socket Mode needs only outbound network access. To expose the API remotely, put an HTTPS reverse
+proxy in front of port 8080 and keep bearer authentication enabled. Do not expose Postgres.
+
+For Slack over HTTPS instead of Socket Mode:
+
+1. Set `SLACK_TRANSPORT=http`, `SLACK_SIGNING_SECRET`, and `SLACK_BOT_TOKEN`.
+2. Disable Socket Mode in Slack and point both **Event Subscriptions** and **Interactivity** at
+   `https://your-host/slack/events`.
+3. Start only the API and Postgres with `docker compose up --build -d`.
+
+Bolt verifies Slack signatures and acknowledges events before running the agent. Accepted runs
+continue in that server process; keep it running until they finish. The starter does not include
+a durable background job queue.
+
+## API and reports
+
+`POST /threads/{thread_id}/messages` accepts `{"text":"..."}` and returns the completed response.
+Proposal routes support read, approve, edit, and reject. This API does not implement the LangGraph
+Agent Server protocol.
+
+Download a generated report with `GET /threads/{thread_id}/artifacts/{name}` using the thread
+owner's bearer token. Only files returned by `render_report` in that thread are accessible.
+Slack replies can describe the report, but the adapter does not automatically upload files.
+
+Use your existing scheduler for recurring self-hosted reports:
+
+```bash
+docker compose exec -T api paid-media-agent report --cadence weekly
+```
+
+MDA's `schedules/` declarations are managed by MDA; Compose does not run them automatically.
 
 ## Without Docker
 
 ```bash
 uv sync --all-extras --dev
-uv run paid-media-agent config set DATABASE_URL=postgresql://...   # or leave empty for in-memory
-uv run paid-media-agent test db
 uv run paid-media-agent serve --port 8080
+# In a second terminal, if Slack is configured:
+uv run paid-media-agent slack
 ```
 
-The console (`uv run paid-media-agent setup`, step "Self-host") runs the same actions with
-buttons and shows each command it runs.
-
-## Boundaries that do not change
-
-Self-hosting changes where the agent runs, not what it may do. The authorized catalog, account
-aliases, write policy, approval claims, one mutation attempt, and bounded readback are the same
-code as in the managed deployment. The API cannot approve a change for a caller who is not in
-`PAID_MEDIA_APPROVER_IDS`, and no surface can execute a mutation outside `execute_change`.
-
-## History
-
-Between 2026-09-08 and 2026-09-09 `main` was Managed Deep Agents only and this path lived on the
-`self-hosted` branch (frozen at `a5477d9`). It is back on `main`; that branch is history.
+Set the same `DATABASE_URL` for both processes to share durable state. Without it, each process
+uses its own temporary in-memory conversations. Install the native PDF libraries if you need PDF
+reports; HTML reports remain available.

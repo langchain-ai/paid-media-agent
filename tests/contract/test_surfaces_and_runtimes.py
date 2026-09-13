@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
-import time
 from pathlib import Path
 
 import pytest
@@ -15,7 +12,6 @@ from paid_media_agent.persistence.memory import InMemoryDedupeStore, InMemoryThr
 from paid_media_agent.surfaces.api.app import create_app
 from paid_media_agent.surfaces.runner import AgentRunner
 from paid_media_agent.surfaces.slack.blocks import ACTION_APPROVE
-from paid_media_agent.surfaces.slack.http import SlackSignatureError, verify_signature
 from paid_media_agent.surfaces.slack.service import (
     SlackApplicationService,
     slack_caller_ref,
@@ -63,10 +59,19 @@ async def test_slack_review_and_button_approval_resume_the_same_graph(
     )
     slack = SlackApplicationService(runner=runner, dedupe=InMemoryDedupeStore())
 
+    events = []
+
+    async def observe(event):
+        events.append(event)
+
     reply = await slack.handle_event(
-        _slack_event("T1", "C1", "1.0", "U-requester", "<@BOT> lower the PMax budget", "Ev1")
+        _slack_event("T1", "C1", "1.0", "U-requester", "<@BOT> lower the PMax budget", "Ev1"),
+        on_event=observe,
     )
     assert reply is not None and reply.outcome is not None and reply.outcome.interrupted
+    assert events[0].kind == "start"
+    assert any(event.kind == "tool" and event.status == "in_progress" for event in events)
+    assert any(event.kind == "tool" and event.status == "complete" for event in events)
     actions = next(b for b in reply.message.blocks if b["type"] == "actions")
     routing_id = next(e["value"] for e in actions["elements"] if e["action_id"] == ACTION_APPROVE)
     assert routing_id == reply.outcome.proposal.routing_id  # type: ignore[union-attr]
@@ -102,11 +107,13 @@ async def test_slack_review_and_button_approval_resume_the_same_graph(
             "channel": {"id": "C1"},
             "message": {"ts": "1.0"},
             "trigger_id": "tr2",
-        }
+        },
+        on_event=observe,
     )
     assert approved is not None and approved.outcome is not None
     assert approved.outcome.receipt is not None and approved.outcome.receipt.status == "verified"
-    assert "Change verified" in json.dumps(list(approved.message.blocks))
+    assert approved.message.text and not approved.message.blocks
+    assert "".join(event.text for event in events if event.kind == "text") == approved.message.text
     assert len(provider.mutation_calls) == 1
     assert runner.receipt(proposal.proposal_id) is not None
     assert threads.owner(thread_id) == slack_caller_ref("T1", "U-requester")
@@ -174,42 +181,6 @@ async def test_api_and_slack_share_persisted_state(settings: Settings, project_r
     assert fastapi is not None
 
 
-def test_signed_http_transport_rejects_bad_and_stale_signatures() -> None:
-    secret = "slack-signing-secret-example"
-    body = b'{"type":"url_verification","challenge":"x"}'
-    ts = str(int(time.time()))
-    sig = (
-        "v0="
-        + hmac.new(secret.encode(), f"v0:{ts}:{body.decode()}".encode(), hashlib.sha256).hexdigest()
-    )
-    verify_signature(
-        signing_secret=secret,
-        body=body,
-        headers={"X-Slack-Request-Timestamp": ts, "X-Slack-Signature": sig},
-    )
-    with pytest.raises(SlackSignatureError):
-        verify_signature(
-            signing_secret=secret,
-            body=body + b" ",
-            headers={"X-Slack-Request-Timestamp": ts, "X-Slack-Signature": sig},
-        )
-    old = str(int(time.time()) - 3600)
-    old_sig = (
-        "v0="
-        + hmac.new(
-            secret.encode(), f"v0:{old}:{body.decode()}".encode(), hashlib.sha256
-        ).hexdigest()
-    )
-    with pytest.raises(SlackSignatureError, match="replay"):
-        verify_signature(
-            signing_secret=secret,
-            body=body,
-            headers={"X-Slack-Request-Timestamp": old, "X-Slack-Signature": old_sig},
-        )
-    with pytest.raises(SlackSignatureError):
-        verify_signature(signing_secret=secret, body=body, headers={})
-
-
 def test_mda_definition_uses_shared_components(
     project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -255,7 +226,6 @@ def test_configured_runtime_compiles_the_deployment_profile_locally(
         "discover_tools",
         "compare_periods",
         "render_report",
-        "get_org_context",
     }
 
 
@@ -275,5 +245,152 @@ async def test_self_hosted_runtime_uses_the_same_profile(
         "discover_tools",
         "compare_periods",
         "render_report",
-        "get_org_context",
     }
+
+
+async def test_signed_http_ack_precedes_agent_work_and_verifies_requests(
+    settings: Settings, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+    import hashlib
+    import hmac
+    import time
+    from types import SimpleNamespace
+
+    import httpx
+    from pydantic import SecretStr
+    from slack_sdk.web.async_client import AsyncWebClient
+    from slack_sdk.web.async_slack_response import AsyncSlackResponse
+
+    from paid_media_agent.surfaces.slack import socket_mode
+
+    class Client(AsyncWebClient):
+        async def auth_test(self, **kwargs):
+            return AsyncSlackResponse(
+                client=self,
+                http_verb="POST",
+                api_url="https://slack.com/api/auth.test",
+                req_args={},
+                data={"ok": True, "team_id": "T1", "user_id": "BOT", "bot_id": "B1"},
+                headers={},
+                status_code=200,
+            )
+
+    monkeypatch.setattr("slack_sdk.web.async_client.AsyncWebClient", Client)
+    started, release, finished = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def slow_run(*args, **kwargs):
+        started.set()
+        await release.wait()
+        finished.set()
+
+    monkeypatch.setattr(socket_mode, "deliver", slow_run)
+    configured = settings.model_copy(
+        update={
+            "slack_transport": "http",
+            "slack_bot_token": SecretStr("xoxb-test"),
+            "slack_signing_secret": SecretStr("test-signature"),
+        }
+    )
+    runtime, _ = build_runtime(configured, project_root, [final_step])
+    app = create_app(
+        SimpleNamespace(
+            settings=configured,
+            graph=runtime.graph,
+            components=runtime.components,
+            profile=runtime.profile,
+            catalog=runtime.catalog,
+            persistence="memory",
+            dedupe=InMemoryDedupeStore(),
+            threads=InMemoryThreadOwnershipStore(),
+        )
+    )
+    body = json.dumps(_slack_event("T1", "C1", "1.0", "U1", "Analyze spend", "Ev-ack")).encode()
+
+    def headers(timestamp):
+        signature = hmac.new(
+            b"test-signature", b"v0:" + timestamp.encode() + b":" + body, hashlib.sha256
+        ).hexdigest()
+        return {
+            "Content-Type": "application/json",
+            "X-Slack-Request-Timestamp": timestamp,
+            "X-Slack-Signature": f"v0={signature}",
+        }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app), base_url="http://test"
+    ) as client:
+        assert (await client.post("/slack/events", content=body)).status_code == 401
+        assert (
+            await client.post(
+                "/slack/events", content=body, headers=headers(str(int(time.time()) - 3600))
+            )
+        ).status_code == 401
+        response = await asyncio.wait_for(
+            client.post(
+                "/slack/events",
+                content=body,
+                headers=headers(str(int(time.time()))),
+            ),
+            timeout=1,
+        )
+        assert response.status_code == 200
+        await asyncio.wait_for(started.wait(), timeout=1)
+        assert not finished.is_set()
+        release.set()
+        await asyncio.wait_for(finished.wait(), timeout=1)
+
+
+async def test_artifacts_require_thread_owner_and_persisted_report_reference(
+    settings: Settings, project_root: Path
+) -> None:
+    from types import SimpleNamespace
+
+    import httpx
+    from langchain_core.messages import ToolMessage
+    from pydantic import SecretStr
+
+    configured = settings.model_copy(
+        update={"paid_media_api_tokens": SecretStr("alice-token:alice,bob-token:bob")}
+    )
+    runtime, _ = build_runtime(configured, project_root, [final_step])
+    threads = InMemoryThreadOwnershipStore()
+    threads.claim("alice-thread", "alice")
+    output = runtime.profile.workspace_root / "out"
+    (output / "report.html").write_text("<p>Alice's report</p>")
+    (output / "other.html").write_text("<p>Other report</p>")
+    await runtime.graph.aupdate_state(
+        {"configurable": {"thread_id": "alice-thread", "caller_ref": "alice"}},
+        {
+            "messages": [
+                ToolMessage(
+                    name="render_report",
+                    tool_call_id="report-1",
+                    content=json.dumps({"files": [{"path": "report.html"}]}),
+                )
+            ]
+        },
+    )
+    app = create_app(
+        SimpleNamespace(
+            settings=configured,
+            graph=runtime.graph,
+            components=runtime.components,
+            profile=runtime.profile,
+            catalog=runtime.catalog,
+            persistence="memory",
+            threads=threads,
+        )
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app), base_url="http://test"
+    ) as client:
+        path = "/threads/alice-thread/artifacts/report.html"
+        alice = {"Authorization": "Bearer alice-token"}
+        bob = {"Authorization": "Bearer bob-token"}
+        assert (await client.get(path, headers=alice)).text == "<p>Alice's report</p>"
+        assert (await client.get(path, headers=bob)).status_code == 403
+        assert (
+            await client.get("/threads/alice-thread/artifacts/other.html", headers=alice)
+        ).status_code == 404
+        assert (await client.get("/artifacts/report.html", headers=alice)).status_code == 404

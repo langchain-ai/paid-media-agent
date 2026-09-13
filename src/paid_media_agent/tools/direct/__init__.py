@@ -1,16 +1,10 @@
-"""Direct read adapters for X and OpenAI Ads, plus legacy standalone LinkedIn connections.
-
-Each adapter contributes `RawTool` entries that go through the same deny-by-default catalog as
-Pipeboard tools, and a `ReadProvider` that executes them host-side. Mutations are never defined
-here; a direct write adapter would need its own reviewed policy rows and canary.
-"""
+"""Read-only X and OpenAI Ads adapters for the shared tool catalog."""
 
 from __future__ import annotations
 
 from paid_media_agent.config import Settings
 from paid_media_agent.domain.common import JsonValue, Platform
 from paid_media_agent.tools.catalog import CatalogEntry, RawTool
-from paid_media_agent.tools.direct.linkedin import LinkedInReadProvider, linkedin_raw_tools
 from paid_media_agent.tools.direct.openai_ads import OpenAIAdsReadProvider, openai_ads_raw_tools
 from paid_media_agent.tools.direct.x_ads import XAdsReadProvider, x_ads_raw_tools
 from paid_media_agent.tools.providers import ProviderError, ProviderResult, ReadProvider
@@ -24,9 +18,7 @@ def configured_direct_platforms(settings: Settings) -> tuple[Platform, ...]:
 def direct_raw_tools(settings: Settings) -> list[RawTool]:
     tools: list[RawTool] = []
     for platform in configured_direct_platforms(settings):
-        if platform is Platform.LINKEDIN_ADS:
-            tools.extend(linkedin_raw_tools())
-        elif platform is Platform.X_ADS:
+        if platform is Platform.X_ADS:
             tools.extend(x_ads_raw_tools())
         elif platform is Platform.OPENAI_ADS:
             tools.extend(openai_ads_raw_tools())
@@ -36,9 +28,7 @@ def direct_raw_tools(settings: Settings) -> list[RawTool]:
 def direct_read_providers(settings: Settings) -> dict[Platform, ReadProvider]:
     providers: dict[Platform, ReadProvider] = {}
     for platform in configured_direct_platforms(settings):
-        if platform is Platform.LINKEDIN_ADS:
-            providers[platform] = LinkedInReadProvider.from_settings(settings)
-        elif platform is Platform.X_ADS:
+        if platform is Platform.X_ADS:
             providers[platform] = XAdsReadProvider.from_settings(settings)
         elif platform is Platform.OPENAI_ADS:
             providers[platform] = OpenAIAdsReadProvider.from_settings(settings)

@@ -28,6 +28,7 @@ from paid_media_agent.middleware.redaction import RedactionMiddleware
 from paid_media_agent.middleware.timeout import ModelTimeoutMiddleware
 from paid_media_agent.middleware.tool_selection import (
     SelectionPlan,
+    SelectionStrategy,
     build_selection_middleware,
     lenient_selector,
     plan_selection,
@@ -41,7 +42,6 @@ from paid_media_agent.tools.discovery import (
     build_discover_tools_tool,
     build_list_accounts_tool,
 )
-from paid_media_agent.tools.org import ORG_TOOLS, build_org_tools
 from paid_media_agent.tools.reads import ReadDispatcher, build_platform_read_tools
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL, build_render_report_tool
 from paid_media_agent.tools.summary import SUMMARIZE_WINDOW_TOOL, build_summarize_window_tool
@@ -60,7 +60,6 @@ FILESYSTEM_TOOLS: tuple[str, ...] = ("ls", "read_file", "write_file", "edit_file
 CORE_TOOLS: tuple[str, ...] = (
     LIST_ACCOUNTS_TOOL,
     DISCOVER_TOOLS_TOOL,
-    *ORG_TOOLS,
     COMPARE_PERIODS_TOOL,
     SUMMARIZE_WINDOW_TOOL,
     RENDER_REPORT_TOOL,
@@ -84,7 +83,6 @@ class AssemblyMetadata:
     mutation_entry_count: int
     denied_entry_count: int
     tool_names: tuple[str, ...]
-    run_mode: str
     write_gate: str
     write_policy_issues: tuple[str, ...]
 
@@ -206,16 +204,23 @@ def build_agent_components(
         build_compare_periods_tool(runtime.artifacts),
         build_summarize_window_tool(runtime.artifacts),
         build_render_report_tool(runtime.artifacts),
-        *build_org_tools(project_root),
     ]
-    write_tools: list[BaseTool] = []
-    if runtime.run_mode == "conversation":
-        write_tools = build_write_tools(services.proposal_service, services.write_executor)
+    write_tools = build_write_tools(services.proposal_service, services.write_executor)
     tools: tuple[BaseTool, ...] = (*core_tools, *write_tools, *platform_tools)
 
     allowed = frozenset({*FILESYSTEM_TOOLS, *(t.name for t in tools)})
     surface = ToolSurfacePolicy(allowed_tool_names=allowed, hidden_tool_names=HIDDEN_BUILTIN_TOOLS)
     plan = plan_selection(model_config, max_tools=settings.paid_media_max_selected_tools)
+    selection_model = selector_model
+    if selection_model is None and plan.strategy is SelectionStrategy.PORTABLE_SELECTOR:
+        if plan.selector_model:
+            selector_config = ModelConfig.parse(plan.selector_model)
+            selected = resolve_model(
+                selector_config, timeout_seconds=settings.paid_media_model_timeout_seconds
+            )
+            selection_model = lenient_selector(selected, selector_config) or selected
+        else:
+            selection_model = lenient_selector(resolved_model, model_config)
     selection = build_selection_middleware(
         plan,
         searchable_tool_names=[t.name for t in platform_tools],
@@ -224,7 +229,7 @@ def build_agent_components(
             *(t.name for t in core_tools),
             *(t.name for t in write_tools),
         ],
-        selector_model=selector_model or lenient_selector(resolved_model, model_config),
+        selector_model=selection_model,
     )
     secrets = tuple(s for s in _secret_values(settings) if s)
     retry: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
@@ -266,7 +271,6 @@ def build_agent_components(
         mutation_entry_count=len(catalog.mutation_entries()),
         denied_entry_count=len(catalog.denied_entries()),
         tool_names=tuple(t.name for t in tools),
-        run_mode=runtime.run_mode,
         write_gate=services.write_executor.gate.describe(),
         write_policy_issues=tuple(
             f"{i.tool_name}: {i.reason}" for i in runtime.write_policy_issues

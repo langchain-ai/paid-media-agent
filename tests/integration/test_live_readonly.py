@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
+from uuid import uuid4
 
 import pytest
 
@@ -43,9 +46,30 @@ def test_postgres_repositories_roundtrip(project_root: Path) -> None:
     repos = PostgresRepositories(settings.database_url.get_secret_value())
     repos.setup()
     record = ProposalRecord(
-        changeset=_changeset(), state=ProposalState.AWAITING_APPROVAL, routing_id="rt-int"
+        changeset=_changeset(proposal_id=uuid4()),
+        state=ProposalState.AWAITING_APPROVAL,
+        routing_id=f"rt-{uuid4()}",
     )
-    repos.proposals.save(record)
-    assert repos.proposals.get(record.changeset.proposal_id) == record
-    assert repos.dedupe.seen("k") is False and repos.dedupe.seen("k") is True
-    repos.close()
+    try:
+        assert repos.proposals.save(record)
+        assert repos.proposals.get(record.changeset.proposal_id) == record
+        updates = [
+            record.model_copy(update={"state": ProposalState.EXECUTING}),
+            record.model_copy(update={"state": ProposalState.REJECTED}),
+        ]
+        ready = Barrier(2, timeout=5)
+
+        def compete(updated: ProposalRecord) -> bool:
+            ready.wait()
+            return repos.proposals.save(updated, expected=record)
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            results = list(workers.map(compete, updates))
+        assert sorted(results) == [False, True]
+        assert not repos.proposals.save(record)
+        assert not repos.proposals.save(record, expected=record)
+        assert repos.proposals.get(record.changeset.proposal_id) == updates[results.index(True)]
+        dedupe_key = str(uuid4())
+        assert repos.dedupe.seen(dedupe_key) is False and repos.dedupe.seen(dedupe_key) is True
+    finally:
+        repos.close()

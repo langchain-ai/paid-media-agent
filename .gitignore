@@ -26,9 +26,10 @@ config/write-policy.toml
 channels/slack-icon.png
 workspace/logs/
 workspace/sessions/
+workspace/sources/
+workspace/skills/company-context/
 !workspace/*/.gitkeep
 workspace/KILL_SWITCH
 supabase/
 # The organization's own context; never committed.
-docs/org/*
-!docs/org/README.md
+docs/org/

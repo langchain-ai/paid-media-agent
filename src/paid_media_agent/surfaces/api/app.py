@@ -1,9 +1,6 @@
 """Small authenticated API: threads, proposals, receipts, artifacts, health."""
 
-from __future__ import annotations
-
 import hmac
-import json
 from typing import Any
 from uuid import UUID
 
@@ -11,8 +8,8 @@ from pydantic import BaseModel, Field
 
 from paid_media_agent.domain.common import JsonValue
 from paid_media_agent.reports.bridge import ArtifactBridge, BridgeError
+from paid_media_agent.surfaces.api.views import outcome_view
 from paid_media_agent.surfaces.runner import AgentRunner, RunOutcome, ThreadAccessDenied
-from paid_media_agent.surfaces.ui.views import outcome_view
 from paid_media_agent.tools.writes import WriteDenied
 
 
@@ -69,35 +66,16 @@ def create_app(runtime: Any) -> Any:
         and settings.slack_signing_secret
         and settings.slack_bot_token
     ):
-        # The rich Slack adapter over signed HTTP lives on the same server as the API.
-        from slack_sdk import WebClient
+        from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 
-        from paid_media_agent.surfaces.slack.http import SlackHttpTransport, SlackSignatureError
         from paid_media_agent.surfaces.slack.service import build_slack_service
-        from paid_media_agent.surfaces.slack.socket_mode import post_reply
+        from paid_media_agent.surfaces.slack.socket_mode import build_bolt_app
 
-        transport = SlackHttpTransport(
-            signing_secret=settings.slack_signing_secret.get_secret_value(),
-            service=build_slack_service(runtime),
-        )
-        slack_client = WebClient(token=settings.slack_bot_token.get_secret_value())
+        transport = AsyncSlackRequestHandler(build_bolt_app(settings, build_slack_service(runtime)))
 
         @app.post("/slack/events")
         async def slack_events(request: Request) -> Any:
-            body = await request.body()
-            try:
-                status, payload, reply = await transport.handle(
-                    body=body,
-                    headers=dict(request.headers),
-                    content_type=request.headers.get("content-type", ""),
-                )
-            except SlackSignatureError as exc:
-                raise HTTPException(status_code=401, detail=str(exc)) from None
-            if reply is not None:
-                post_reply(slack_client, reply)
-            return Response(
-                content=json.dumps(payload), status_code=status, media_type="application/json"
-            )
+            return await transport.handle(request)
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -169,10 +147,17 @@ def create_app(runtime: Any) -> Any:
             ) from None
         return {"proposal": view.model_dump(mode="json")}
 
-    @app.get("/artifacts/{name}")
-    def artifact(name: str, who: str = Depends(caller)) -> Response:  # noqa: ARG001
+    @app.get("/threads/{thread_id}/artifacts/{name}")
+    async def artifact(thread_id: str, name: str, who: str = Depends(caller)) -> Response:
+        if runtime.threads.owner(thread_id) != who:
+            raise HTTPException(status_code=403, detail="thread belongs to another caller")
         if "/" in name or "\\" in name or name.startswith("."):
             raise HTTPException(status_code=400, detail="invalid artifact name")
+        allowed = await runner.report_files(
+            thread_id=thread_id, caller_ref=who, artifacts=runtime.profile.artifacts
+        )
+        if name not in allowed:
+            raise HTTPException(status_code=404, detail="artifact is not part of this thread")
         try:
             receipt = bridge.validate(runtime.profile.workspace_root / "out" / name)
             data = bridge.open_bytes(receipt)

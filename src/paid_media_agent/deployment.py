@@ -85,6 +85,8 @@ def schedule_sources(root: Path, settings: DeploymentSettings) -> dict[Path, str
             raise ValueError(
                 "Report schedules must be files inside the project's schedules directory"
             )
+        if not path.exists():
+            continue
         source = path.read_bytes()
         module = ast.parse(source)
         definition = next(

@@ -1,9 +1,14 @@
-# Slack app manifest for the rich adapter. Socket Mode needs an app-level token with
-# connections:write; the signed HTTP transport needs the request URL instead.
+# Socket Mode requires an app-level token with connections:write.
 display_information:
   name: Paid Media Agent
-  description: Analyzes connected ad accounts and stages changes for human approval.
+  description: Analyze campaigns and report on your connected ad accounts.
 features:
+  agent_view:
+    agent_description: Analyze campaign performance, compare periods, and create paid-media reports.
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
   bot_user:
     display_name: Paid Media Agent
     always_online: false
@@ -12,10 +17,10 @@ oauth_config:
     bot:
       - app_mentions:read
       - chat:write
+      - assistant:write
       - im:history
       - im:read
       - im:write
-      - files:write
 settings:
   event_subscriptions:
     # Set request_url only for the signed HTTP transport.

@@ -127,7 +127,7 @@ def normalize_rows(
             else (entity_names or {}).get(entity_ref_str, entity_ref_str)
         )
         impressions = _int(raw.get("impressions"))
-        clicks = _int(raw.get("clicks") or raw.get("link_clicks"))
+        clicks = _int(_first(raw, ("clicks", "link_clicks")))
         conversions = _decimal(_first(raw, _CONVERSION_KEYS))
         conversion_value = _decimal(_first(raw, _VALUE_KEYS))
         for metric, present in (

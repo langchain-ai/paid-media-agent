@@ -47,10 +47,10 @@ unbounded provider payloads.
 ## Filesystem
 
 The runtime may read wiki and skill files, write analysis artifacts, and render reports. It cannot
-read `.env`, host home directories, SSH material, cloud metadata, or arbitrary absolute paths. Archive
-extraction and uploaded filenames are normalized and size-bounded.
+read secret files, coding-agent files, original business sources, or paths outside its configured
+filesystem root. Runtime skills, including curated company context, are read-only.
 
-## Implementation notes (2026-09-01)
+## Trusted tool boundary
 
 - `tools/catalog.py` classifies every `RawTool` with `classify()`. Denied reasons are explicit:
   `unknown_platform`, `malformed_schema`, `denied_name_policy`, `missing_mutation_metadata`,
@@ -70,7 +70,7 @@ extraction and uploaded filenames are normalized and size-bounded.
   and never in state. Tool annotations arrive as LangChain tool metadata; a tool without
   `readOnlyHint` is treated as mutation and denied.
 
-## Direct adapters (2026-09-02)
+## Direct adapters
 
 Platforms outside Pipeboard live under `tools/direct/`. Each adapter publishes `RawTool` entries
 with `readOnlyHint=true` and an account argument, so `build_authorized_catalog` classifies them

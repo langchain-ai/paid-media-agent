@@ -212,31 +212,12 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
         ),
     )
 
-    org = _get(detail, "org") or {}
-    org_configured = bool(isinstance(org, dict) and org.get("configured"))
     org_route = Route(
         id="org",
         title="Business context",
-        tagline="Context from your local coding agent",
-        description="Your conversion goals, targets, and campaign briefs. Add them with your coding agent before the first real analysis.",
-        steps=(
-            Step(
-                id="org_profile",
-                title="Answer in your terminal",
-                description="Run from the project folder. Eight short questions cover your business and campaign goals. Enter keeps an existing answer or skips an empty one.",
-                status="done" if org_configured else "optional",
-                cli="uv run paid-media-agent org interview",
-                action=StepAction(kind="command", label="Copy command"),
-            ),
-            Step(
-                id="org_sources",
-                title="Add an existing brief",
-                description="Use either command with your own public URL or text-file path. Supports Markdown, text, CSV, JSON, and HTML.",
-                status="optional",
-                cli="uv run paid-media-agent org add-link https://example.com/brief\nuv run paid-media-agent org add-file ./brief.md",
-                action=StepAction(kind="command", label="Copy command"),
-            ),
-        ),
+        tagline="Markdown maintained in your project",
+        description="Give the agent your conversion definitions, targets, and campaign conventions.",
+        steps=(),
     )
 
     direct = Route(

@@ -19,8 +19,8 @@ body:
       label: Area
       options: [reads and analysis, reports, governed writes, platforms and adapters, setup console, Slack, MDA and deployment, docs]
   - type: checkboxes
-    id: parity
+    id: context
     attributes:
       label: Context
       options:
-        - label: I checked docs/audits/parity-audit-2026-09-03.md for the ranked open gaps.
+        - label: I checked the README and existing issues for current capabilities and requests.

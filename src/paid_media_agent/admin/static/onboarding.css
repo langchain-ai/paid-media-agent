@@ -1,4 +1,3 @@
-/* Composes AI SDR CORE tokens with LangChain's light heading treatment on welcome. */
 .status-line:empty { display: none; }
 h1[tabindex="-1"]:focus { outline: none; }
 button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

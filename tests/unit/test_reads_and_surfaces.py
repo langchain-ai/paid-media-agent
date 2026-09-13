@@ -8,16 +8,12 @@ import pytest
 
 from paid_media_agent.config import AccountRegistry
 from paid_media_agent.domain.analysis import PeriodComparison
-from paid_media_agent.domain.presentation import ProposalView, ReceiptView
-from paid_media_agent.domain.proposals import ProposalRecord, ProposalState, WriteReceipt
 from paid_media_agent.reports.bridge import ArtifactBridge, BridgeError
 from paid_media_agent.reports.render import ReportRenderer, build_report_payload, reconcile_report
 from paid_media_agent.surfaces.api.app import resolve_caller
 from paid_media_agent.surfaces.slack.blocks import (
     ACTION_APPROVE,
-    render_proposal,
-    render_receipt,
-    render_report,
+    approval_message,
 )
 from paid_media_agent.tools.artifacts import ArtifactStore
 from paid_media_agent.tools.catalog import StaticCatalogProvider
@@ -25,7 +21,6 @@ from paid_media_agent.tools.compare_periods import ComparePeriodsArgs, run_compa
 from paid_media_agent.tools.fixtures import FixtureReadProvider, FixtureState, build_fixture_catalog
 from paid_media_agent.tools.reads import ReadDenied, ReadDispatcher, model_facing_schema
 from paid_media_agent.tools.reports import RenderReportArgs, run_render_report
-from tests.unit.test_proposals_and_security import _changeset
 
 
 @pytest.fixture
@@ -140,17 +135,6 @@ async def test_report_reconciles_and_shows_missing_platforms(
         update={"platform_sections": (tampered_section, *payload.platform_sections[1:])}
     )
     assert reconcile_report(tampered, comparison)
-    slack = render_report(
-        json.loads(json.dumps(rendered["report"]))
-        and __import__(
-            "paid_media_agent.domain.presentation", fromlist=["ReportSummary"]
-        ).ReportSummary.model_validate(rendered["report"])
-    )
-    assert slack.text and all(
-        len(b.get("text", {}).get("text", "")) <= 3000
-        for b in slack.blocks
-        if b["type"] == "section"
-    )
 
 
 def test_renderer_escapes_model_text(tmp_path: Path) -> None:
@@ -193,6 +177,9 @@ def test_bridge_rejects_outside_paths_and_types(tmp_path: Path) -> None:
     bridge = ArtifactBridge(out)
     (out / "ok.html").write_text("<p>x</p>")
     assert bridge.validate(out / "ok.html").media_type == "text/html"
+    (out / "alias.html").symlink_to(out / "ok.html")
+    with pytest.raises(BridgeError, match="symlinked"):
+        bridge.validate(out / "alias.html")
     (tmp_path / "secret.html").write_text("x")
     with pytest.raises(BridgeError):
         bridge.validate(tmp_path / "secret.html")
@@ -203,33 +190,14 @@ def test_bridge_rejects_outside_paths_and_types(tmp_path: Path) -> None:
         bridge.validate(out / "bin.exe")
 
 
-def test_slack_blocks_escape_and_use_opaque_values() -> None:
-    record = ProposalRecord(
-        changeset=_changeset(reason="<script>&"),
-        state=ProposalState.AWAITING_APPROVAL,
-        routing_id="route-abc",
-    )
-    view = ProposalView.from_record(record)
-    message = render_proposal(view, can_act=True)
-    assert message.text
-    dumped = json.dumps(list(message.blocks))
-    assert "<script>" not in dumped and "&lt;script&gt;" in dumped
-    actions = next(b for b in message.blocks if b["type"] == "actions")
+def test_approval_actions_use_only_opaque_routing_values() -> None:
+    message = approval_message("Review the proposed change.", "route-abc")
+    assert message.text == "Review the proposed change."
+    actions = message.blocks[0]
+    assert actions["type"] == "actions"
     approve = next(e for e in actions["elements"] if e["action_id"] == ACTION_APPROVE)
-    assert approve["value"] == "route-abc" and "daily_budget" not in approve["value"]
-    receipt = WriteReceipt(
-        proposal_id=view.proposal_id,
-        revision=1,
-        status="unknown",
-        mutation_attempted=True,
-        provider_operation_ref=None,
-        verified_state=(),
-        checked_at=datetime.now(UTC),
-        catalog_revision="r",
-        reason="timeout",
-    )
-    unknown = render_receipt(ReceiptView.from_receipt(receipt))
-    assert "Do not retry" in json.dumps(list(unknown.blocks))
+    assert approve["value"] == "route-abc"
+    assert {element["value"] for element in actions["elements"]} == {"route-abc"}
 
 
 def test_api_bearer_lookup_is_exact() -> None:

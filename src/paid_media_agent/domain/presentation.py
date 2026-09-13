@@ -1,4 +1,4 @@
-"""Versioned presentation objects shared by Slack, the API, and the UI."""
+"""Versioned presentation objects shared by Slack and the API."""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class ReceiptView(BaseModel):
 
 
 class ReportSummary(BaseModel):
-    """Compact report presentation used by Slack, the UI, and the model's final answer."""
+    """Compact report presentation returned by the report tool."""
 
     model_config = ConfigDict(frozen=True)
 

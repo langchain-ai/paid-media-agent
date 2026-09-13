@@ -38,7 +38,7 @@ class ModelConfig(BaseModel):
         base_url: str | None = None,
         tool_selector_model: str | None = None,
     ) -> ModelConfig:
-        """Parse `provider:model`. A bare `provider/model` is the older gateway form."""
+        """Parse a provider:model specification."""
         raw = spec.strip()
         if raw and ":" not in raw and "/" in raw:
             raw = f"langsmith:{raw}"
@@ -146,11 +146,6 @@ class Settings(BaseSettings):
     pipeboard_google_analytics_mcp_url: str = "https://google-analytics.mcp.pipeboard.co/"
     pipeboard_linkedin_ads_mcp_url: str = "https://linkedin-ads.mcp.pipeboard.co/"
 
-    # Legacy direct LinkedIn credentials remain usable without a Pipeboard connection.
-    linkedin_client_id: str | None = None
-    linkedin_client_secret: SecretStr | None = None
-    linkedin_access_token: SecretStr | None = None
-    linkedin_refresh_token: SecretStr | None = None
     # X and OpenAI Ads use direct adapters. Unset means the platform is absent.
     x_ads_consumer_key: SecretStr | None = None
     x_ads_consumer_secret: SecretStr | None = None
@@ -170,7 +165,7 @@ class Settings(BaseSettings):
     paid_media_approval_ttl_seconds: int = Field(default=900, ge=60, le=86400)
     paid_media_allow_self_approval: bool = False
 
-    # Self-hosted path: the rich Slack adapter, Postgres persistence, and the API boundary.
+    # Self-hosted path: the Slack adapter, Postgres persistence, and the API boundary.
     slack_bot_token: SecretStr | None = None
     slack_app_token: SecretStr | None = None
     slack_signing_secret: SecretStr | None = None
@@ -186,7 +181,6 @@ class Settings(BaseSettings):
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
         "paid_media_live_write_catalog_revision",
-        "linkedin_client_id",
         mode="before",
     )
     @classmethod
@@ -197,9 +191,6 @@ class Settings(BaseSettings):
 
     @field_validator(
         "pipeboard_api_token",
-        "linkedin_client_secret",
-        "linkedin_access_token",
-        "linkedin_refresh_token",
         "x_ads_consumer_key",
         "x_ads_consumer_secret",
         "x_ads_access_token",
@@ -253,8 +244,6 @@ class Settings(BaseSettings):
     def direct_platforms(self) -> tuple[Platform, ...]:
         """Direct-adapter platforms with complete credentials."""
         platforms: list[Platform] = []
-        if self.linkedin_access_token is not None and self.pipeboard_api_token is None:
-            platforms.append(Platform.LINKEDIN_ADS)
         if None not in (
             self.x_ads_consumer_key,
             self.x_ads_consumer_secret,

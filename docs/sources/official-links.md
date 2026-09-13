@@ -1,7 +1,7 @@
 # Official engineering sources
 
-Refresh these links before changing an external contract. Record material changes in `log.md` and the
-owning architecture page.
+Check the relevant primary source before changing an external contract. Update the owning
+architecture page when the supported behavior changes.
 
 ## Deep Agents and MDA
 
@@ -15,10 +15,8 @@ owning architecture page.
 - [MDA Slack channel](https://docs.langchain.com/langsmith/python/managed-deep-agents-channels-slack)
 - [MDA deployment](https://docs.langchain.com/langsmith/python/managed-deep-agents-deploy)
 
-Current documented boundary: MDA is a public beta on LangSmith Cloud in the US region. A project has
-one required root `agent.py`; instructions, skills, tools, middleware, connectors, sandbox, identity,
-channels, schedules, and evals are project files. The managed Slack channel supports one Slack channel
-and approve/reject HITL decisions. Recheck these limits at implementation and release time.
+Check the deployment and Slack documentation for current availability, regions, and channel limits.
+Installed SDK behavior and the project preflight determine whether this checkout can deploy.
 
 ## Models and tool disclosure
 
@@ -60,13 +58,3 @@ catalog establishes the exact tools and annotations available to a configured us
 Socket Mode removes the need for a public event URL but is not eligible for the public Slack
 Marketplace. Signed HTTP events are the hosted alternative. Block Kit content must include an
 accessible top-level message.
-
-## Fable 5.1 execution prompt
-
-- [Claude Fable 5.1](https://www.anthropic.com/claude/fable)
-- [Prompting Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1)
-- [Claude prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)
-
-The implementation prompt applies current guidance on clear scope, full-task completion, concise
-progress, parallel independent tool calls, targeted edits, bounded extras, and explicit verification.
-

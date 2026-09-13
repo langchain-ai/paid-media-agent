@@ -1,23 +1,34 @@
-"""Governed writes through the real graph: happy path and every rejection the spec names."""
+"""Approval, mutation, and readback contracts through the real graph."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from queue import Queue
+from threading import Barrier
 
+import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from paid_media_agent.config import Settings
-from paid_media_agent.domain.proposals import ProposalState
-from paid_media_agent.tools.catalog import RawTool, build_authorized_catalog
+from paid_media_agent.domain.common import JsonValue
+from paid_media_agent.domain.proposals import (
+    ApprovalClaim,
+    ProposalRecord,
+    ProposalState,
+    WriteReceipt,
+)
+from paid_media_agent.tools.catalog import CatalogEntry, RawTool, build_authorized_catalog
 from paid_media_agent.tools.fixtures import (
     FIXTURE_LOCAL_POLICY,
     FakeWriteProvider,
     FixtureState,
     fixture_raw_tools,
 )
+from paid_media_agent.tools.providers import ProviderResult
 from paid_media_agent.tools.writes import ApprovalPolicy, WriteDenied
 from tests.contract.helpers import (
     build_runtime,
@@ -113,13 +124,15 @@ async def test_tampered_persisted_proposal_is_rejected(
     service = runtime.components.proposal_service
     record = service.proposals.list_for_thread("t-1")[0]
     service.approve(record.changeset.proposal_id, approver_ref="reviewer-1")
+    record = service.proposals.list_for_thread("t-1")[0]
     tampered_args = {**record.changeset.canonical_args, "daily_budget": 9999}
-    service.proposals.save(
+    assert service.proposals.save(
         record.model_copy(
             update={
                 "changeset": record.changeset.model_copy(update={"canonical_args": tampered_args})
             }
-        )
+        ),
+        expected=record,
     )
     final = await resume(runtime, cfg)
     receipt = _last_tool(final)["receipt"]
@@ -168,8 +181,11 @@ async def test_expired_claim_is_rejected(settings: Settings, project_root: Path)
 
 
 async def test_replayed_claim_cannot_execute_twice(settings: Settings, project_root: Path) -> None:
-    provider = FakeWriteProvider(FixtureState())
-    runtime, _ = build_runtime(settings, project_root, WRITE_STEPS, write_provider=provider)
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    runtime, _ = build_runtime(
+        settings, project_root, WRITE_STEPS, fixture_state=state, write_provider=provider
+    )
     cfg = config()
     await run_until_interrupt(runtime, cfg)
     service = runtime.components.proposal_service
@@ -178,13 +194,65 @@ async def test_replayed_claim_cannot_execute_twice(settings: Settings, project_r
     await resume(runtime, cfg)
     assert len(provider.mutation_calls) == 1
     assert runtime.profile.approvals.mark_used(claim.claim_id) is False
-    try:
-        await runtime.components.write_executor.execute(record.changeset.proposal_id)
-    except WriteDenied:
-        pass
-    receipt = runtime.profile.receipts.get(record.changeset.proposal_id)
-    assert receipt is not None and receipt.status in ("verified", "rejected")
+    original_receipt = runtime.profile.receipts.get(record.changeset.proposal_id)
+    assert original_receipt is not None and original_receipt.status == "verified"
+    replay = await runtime.components.write_executor.execute(record.changeset.proposal_id)
+    assert replay is original_receipt
+    assert runtime.profile.receipts.get(record.changeset.proposal_id) is original_receipt
     assert len(provider.mutation_calls) == 1, "a replay must never produce a second mutation"
+
+
+async def test_concurrent_claims_and_stale_edits_cannot_overwrite_execution(
+    settings: Settings, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    runtime, _ = build_runtime(
+        settings, project_root, WRITE_STEPS, fixture_state=state, write_provider=provider
+    )
+    await run_until_interrupt(runtime, config())
+    service = runtime.components.proposal_service
+    proposal_id = service.proposals.list_for_thread("t-1")[0].changeset.proposal_id
+    claims: Queue[ApprovalClaim] = Queue()
+    for _ in range(2):
+        claims.put(service.approve(proposal_id, approver_ref="reviewer-1"))
+    stale = service.get(proposal_id)
+    assert stale is not None
+
+    save = service.proposals.save
+    ready = Barrier(2, timeout=5)
+
+    def save_together(record: ProposalRecord, *, expected: ProposalRecord | None = None) -> bool:
+        if record.state is ProposalState.EXECUTING:
+            ready.wait()
+        return save(record, expected=expected)
+
+    monkeypatch.setattr(service.proposals, "save", save_together)
+    monkeypatch.setattr(runtime.profile.approvals, "latest_unused", lambda *_: claims.get_nowait())
+    executor = runtime.components.write_executor
+    results = await asyncio.gather(
+        *(asyncio.to_thread(lambda: asyncio.run(executor.execute(proposal_id))) for _ in range(2)),
+        return_exceptions=True,
+    )
+    receipts = [result for result in results if isinstance(result, WriteReceipt)]
+    conflicts = [result for result in results if isinstance(result, WriteDenied)]
+    assert len(receipts) == len(conflicts) == 1, results
+    assert receipts[0].status == "verified"
+    assert conflicts[0].reason == "proposal_changed"
+    assert len(provider.mutation_calls) == 1
+    winner = service.proposals.get(proposal_id)
+    assert winner is not None and winner.state is ProposalState.VERIFIED
+    assert runtime.profile.receipts.get(proposal_id) == receipts[0]
+
+    monkeypatch.setattr(service, "_require", lambda _: stale)
+    with pytest.raises(WriteDenied, match="proposal_changed"):
+        service.revise(proposal_id, editor_ref="reviewer-1", changes={"daily_budget": 100})
+    with pytest.raises(WriteDenied, match="proposal_changed"):
+        service.reject(proposal_id, actor_ref="reviewer-1")
+    assert not service.proposals.save(stale)
+    assert not service.proposals.save(stale, expected=stale)
+    assert service.proposals.get(proposal_id) == winner
+    assert runtime.profile.receipts.get(proposal_id) == receipts[0]
 
 
 async def test_foreign_user_and_self_approval_are_refused(
@@ -307,6 +375,41 @@ async def test_unprovable_readback_is_unknown(settings: Settings, project_root: 
     assert len(provider.mutation_calls) == 1
 
 
+async def test_readback_timeout_is_unknown_without_retrying_mutation(
+    settings: Settings, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    runtime, _ = build_runtime(
+        settings, project_root, WRITE_STEPS, fixture_state=state, write_provider=provider
+    )
+    cfg = config()
+    await run_until_interrupt(runtime, cfg)
+    service = runtime.components.proposal_service
+    record = service.proposals.list_for_thread("t-1")[0]
+    service.approve(record.changeset.proposal_id, approver_ref="reviewer-1")
+    original_read = runtime.profile.read_provider.call_read
+    cancelled = False
+
+    async def delayed_read(entry: CatalogEntry, arguments: dict[str, JsonValue]) -> ProviderResult:
+        nonlocal cancelled
+        try:
+            await asyncio.sleep(0.05)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
+        return await original_read(entry, arguments)
+
+    monkeypatch.setattr(runtime.profile.read_provider, "call_read", delayed_read)
+    monkeypatch.setattr(runtime.components.write_executor, "_readback_seconds", 0.01)
+
+    receipt = _last_tool(await resume(runtime, cfg))["receipt"]
+
+    assert receipt["status"] == "unknown"
+    assert receipt["readback_attempts"] == 1 and cancelled
+    assert len(provider.mutation_calls) == 1
+
+
 async def test_process_recovery_resumes_from_checkpoint_with_new_graph(
     settings: Settings, project_root: Path
 ) -> None:
@@ -373,3 +476,42 @@ async def test_reject_decision_leaves_provider_untouched(
     assert tool_message.status == "error" and "rejected" in tool_message.content
     assert service.get(record.changeset.proposal_id).state is ProposalState.REJECTED  # type: ignore[union-attr]
     assert provider.mutation_calls == []
+
+
+async def test_mda_uses_verified_identity_instead_of_configurable_caller(
+    settings: Settings, project_root: Path
+) -> None:
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    from managed_deepagents._managed_tools import with_managed_runtime
+
+    from paid_media_agent.runtime.local import compile_graph
+    from paid_media_agent.tools.write_tools import _caller_from_runtime
+
+    state = FixtureState()
+    provider = FakeWriteProvider(state)
+    runtime, _ = build_runtime(
+        settings, project_root, WRITE_STEPS, fixture_state=state, write_provider=provider
+    )
+    components = replace(
+        runtime.components, tools=tuple(with_managed_runtime(t) for t in runtime.components.tools)
+    )
+    runtime = replace(
+        runtime,
+        components=components,
+        graph=compile_graph(components, project_root=project_root, checkpointer=InMemorySaver()),
+    )
+    cfg = config(caller="untrusted-caller")
+    cfg["configurable"]["langgraph_auth_user"] = {
+        "identity": "reviewer-1",
+        "mda_user_id": "reviewer-1",
+    }
+    await run_until_interrupt(runtime, cfg)
+    record = runtime.components.proposal_service.proposals.list_for_thread("t-1")[0]
+    assert record.changeset.requester_ref == "reviewer-1"
+    final = await resume(runtime, cfg)
+    assert _last_tool(final)["receipt"]["status"] == "verified"
+    assert len(provider.mutation_calls) == 1
+    missing_identity = SimpleNamespace(identity=None, config=cfg)
+    assert _caller_from_runtime(missing_identity) == ("t-1", "anonymous")

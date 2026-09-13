@@ -30,8 +30,6 @@ from paid_media_agent.tools.write_policy import (
 from paid_media_agent.tools.writes import ApprovalPolicy, ApprovalSigner, WriteGate
 
 ProfileName = Literal["local", "mda", "self_hosted"]
-RunMode = Literal["conversation"]
-"""Reserved for a future read-only mode; every current entry point is a conversation."""
 
 
 @dataclass(frozen=True)
@@ -52,7 +50,6 @@ class RuntimeProfile:
     proposals: ProposalRepository
     approvals: ApprovalRepository
     receipts: ReceiptRepository
-    run_mode: RunMode = "conversation"
     skills_root: Path | None = None
     extra_secrets: tuple[str, ...] = field(default_factory=tuple)
     write_policy_issues: tuple[PolicyIssue, ...] = field(default_factory=tuple)
@@ -136,7 +133,6 @@ def fixture_profile(
     proposals: ProposalRepository | None = None,
     approvals: ApprovalRepository | None = None,
     receipts: ReceiptRepository | None = None,
-    run_mode: RunMode = "conversation",
 ) -> RuntimeProfile:
     """Fixture-backed profile. The write provider is always the in-memory fake."""
     state = fixture_state or FixtureState(settings.paid_media_fixture_anchor)
@@ -157,6 +153,5 @@ def fixture_profile(
         proposals=proposals or InMemoryProposalRepository(),
         approvals=approvals or InMemoryApprovalRepository(),
         receipts=receipts or InMemoryReceiptRepository(),
-        run_mode=run_mode,
         skills_root=project_root,
     )

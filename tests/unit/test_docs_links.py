@@ -53,7 +53,6 @@ def test_documented_commands_exist(project_root: Path) -> None:
         "test",
         "config",
         "accounts",
-        "org",
         "catalog",
         "policy",
         "writes",

@@ -1,72 +1,46 @@
-# Surfaces and presentation
+# Conversation surfaces
 
-## Presentation objects
-
-Domain services produce versioned presentation models such as `AnalysisSummary`, `ReportSummary`,
-`ProposalView`, and `ReceiptView`. Every surface renders these objects. None parses raw model tool
-arguments or provider responses.
+The shared `AgentRunner` drives caller-owned graph threads. The API and self-hosted Slack use
+the same proposal service, approval policy, and persisted state. MDA supplies its own Agent
+Server and Slack channel around the shared agent definition.
 
 ## Slack
 
-Managed Deep Agents' native channel (`channels/slack.py`) is the deployed surface: mentions, direct
-messages, threads, and an approve/reject card on `execute_change`. MDA renders that card; its
-content is not customizable today, so the agent writes the proposal summary in chat right before
-it calls `execute_change`, and the card sits under it.
+MDA owns the managed Slack connection and message rendering through `channels/slack.py`.
+The agent summarizes a proposed action before `execute_change` interrupts for approval.
 
-The self-hosted path runs the rich adapter: `surfaces/slack/blocks.py` renders Block Kit review
-cards (proposal with Approve, Edit, Reject; receipts; reports; answers folded to mrkdwn) and
-`surfaces/slack/service.py` is the transport-neutral event and action service (dedupe and replay
-protection, caller-to-thread mapping, mention and DM policy, approver lookup, proposal actions).
-`socket_mode.py` and `http.py` are the two transports; signed HTTP verifies the Slack signature
-and a five-minute replay window before parsing. `surfaces/api/app.py` is the FastAPI boundary
-(health, thread messages, proposal read, approve, edit, reject, artifacts) behind constant-time
-bearer lookup, and `surfaces/ui/views.py` maps a run outcome to `OutcomeView`.
+Self-hosting uses one async Bolt app for Socket Mode and signed HTTP. Bolt verifies requests
+and acknowledges events before starting the run. `SlackDelivery` sends assistant Markdown and
+generic tool progress through Slack's native streaming API. The session is `processing` while
+the agent works, `suspended` when approval is required, and `active` after completion or failure.
+Tool progress includes the name and status, never arguments or raw results. No tool-specific
+cards or paid-media report layouts are embedded in the Slack adapter.
 
-Every message has accessible top-level text. Model prose is escaped, length-bounded, and never used
-as an action id or routing value.
+The only custom Block Kit is a generic Approve/Reject action row. Button values are opaque
+routing IDs. The host reloads the proposal and verifies reviewer identity, revision, and payload
+before executing. Edits invalidate previous approval. Receipts remain ordinary agent messages.
 
-## Schedules
+HTTP events are processed in the server process after acknowledgment. Keep that process running;
+this starter does not include a durable background queue or cross-process cancellation service.
 
-`schedules/` start the same agent on a cron with a prompt that asks for the weekly or monthly
-report. A change the agent might propose still waits for a human approval.
+## Self-hosted API
 
-## Chat style
+`POST /threads/{thread_id}/messages` returns a completed response with text, proposal, receipt,
+and available actions. It is a small application API, not an implementation of the LangGraph
+Agent Server protocol. Bearer tokens map to caller identities; threads belong to their creator.
 
-The agent writes for chat: no markdown, short lines, a colon-terminated label for a section. The
-rule lives in `instructions.md` and `workspace/skills/paid-media-wiki/answer-style.md`; `to_mrkdwn` in the
-Block Kit renderer folds any leftover markdown for Slack.
+Proposal routes support read, approve, edit, and reject. Report downloads use
+`GET /threads/{thread_id}/artifacts/{name}`. The caller must own the thread, and the file must
+appear in a persisted `render_report` result from that thread. Paths, file types, and sizes are
+validated before delivery. Reports are generated as HTML/PDF files; the Slack adapter does not
+automatically upload them.
 
-## Setup console
+## Setup and schedules
 
-The console under `admin/` is a local operator surface for configuration, account discovery,
-connection tests, and fixed process control. It is plain HTML/CSS/JavaScript and calls the same
-host actions as the CLI. Welcome → Model → Accounts → Deployment is the complete setup flow.
-MDA is the recommended paid deployment; self-hosting stays available. No chat client or separate
-frontend server is required. Deployment shows one primary MDA card with the current model,
-accounts, and LangSmith access; self-hosting and local tools sit under Other ways to run.
-Welcome and model setup have no sample-analysis shortcut; sample account mode and the CLI
-demo remain available.
+The setup console configures model access, connected accounts, and deployment. It does not host
+agent chat or collect business knowledge. Coding agents and humans edit business context and
+runtime skills in `workspace/`; see [business context](../customization.md).
 
-The model picker and `models --provider` command share `admin/model_catalog.py`: fixed official
-endpoints, provider-specific credentials, bounded pagination, and safe errors. Catalog reads use
-the runtime's effective credentials or an unsaved draft key without persisting the draft.
-Connection checks invalidate when those effective credentials change. Availability is independent of the runtime's
-verified tool-selection registry. Custom IDs remain available when a provider has no list API.
-
-The console binds to localhost with a per-run token, or same-origin enforcement for an IDE pane.
-Deployment starts only after an explicit click and a successful project preflight. MDA's Slack
-authorization continuation accepts only Enter at a recognized prompt. A local check does not
-verify deployment permissions. The agent itself runs in Slack, Studio, CLI, or the existing API;
-self-hosted API/Postgres provides durable state.
-
-Process polling updates controls in place, preserving keyboard focus and expanded output.
-Account selections belong to individual discovered rows; provider IDs can overlap across platforms.
-
-## Implementation notes (2026-09-08)
-
-- `surfaces/runner.py` is the application service a transport uses: send, resume, approve, reject,
-  edit, and receipt lookup, with per-caller thread ownership.
-- `tools/write_tools.py::execute_change` takes the proposal id and the revision the model
-  presented; on resume it records the reviewer's decision as a revision-bound approval claim, with
-  the identity taken from `caller_ref`, then `x-mda-user-id`, then the LangGraph auth user. Only
-  identities in `PAID_MEDIA_APPROVER_IDS` are accepted, and a refusal names the identity it saw.
+MDA reads the schedule definitions in `schedules/`. Self-hosted users can schedule the CLI report
+command with their existing scheduler. Both paths use the same reporting tools and approval
+boundary. See [self-hosting](../self-hosting.md).

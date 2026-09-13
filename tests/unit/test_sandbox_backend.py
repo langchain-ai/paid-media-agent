@@ -107,8 +107,8 @@ def test_probe_reports_a_missing_pdf_renderer(tmp_path: Path) -> None:
 
 
 def test_snapshot_reference_prefers_immutable_ids() -> None:
-    assert snapshot_reference("4b6f76ed-4626-48d1-bdd1-d974623c438c") == {
-        "snapshot_id": "4b6f76ed-4626-48d1-bdd1-d974623c438c"
+    assert snapshot_reference("00000000-0000-4000-8000-000000000001") == {
+        "snapshot_id": "00000000-0000-4000-8000-000000000001"
     }
     assert snapshot_reference("paid-media-agent-sandbox") == {
         "snapshot_name": "paid-media-agent-sandbox"
@@ -121,7 +121,7 @@ def test_publish_packages_the_shared_recipe_without_project_secrets(
 ) -> None:
     import langsmith.sandbox
 
-    snapshot_id = "4b6f76ed-4626-48d1-bdd1-d974623c438c"
+    snapshot_id = "00000000-0000-4000-8000-000000000001"
     directory = tmp_path / "sandbox"
     directory.mkdir()
     for name in ("Dockerfile", "setup.sh"):

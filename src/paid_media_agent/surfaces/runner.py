@@ -1,11 +1,14 @@
-"""One application service shared by Slack, the API, and the UI. No surface-only powers."""
+"""Run caller-owned conversations and resolve host-approved actions."""
 
 from __future__ import annotations
 
+import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
@@ -14,6 +17,8 @@ from paid_media_agent.domain.common import JsonValue
 from paid_media_agent.domain.presentation import ProposalView, ReceiptView
 from paid_media_agent.domain.proposals import ProposalState
 from paid_media_agent.persistence.interfaces import ReceiptRepository, ThreadOwnershipStore
+from paid_media_agent.tools.artifacts import ArtifactError, ArtifactStore
+from paid_media_agent.tools.reports import RENDER_REPORT_TOOL
 from paid_media_agent.tools.writes import ProposalService, WriteDenied
 
 
@@ -24,6 +29,18 @@ class RunOutcome:
     interrupted: bool
     proposal: ProposalView | None
     receipt: ReceiptView | None
+
+
+@dataclass(frozen=True)
+class RunEvent:
+    kind: Literal["start", "text", "tool"]
+    text: str = ""
+    id: str = ""
+    name: str = ""
+    status: Literal["in_progress", "complete", "error"] = "in_progress"
+
+
+EventHandler = Callable[[RunEvent], Awaitable[None]]
 
 
 class ThreadAccessDenied(Exception):
@@ -75,6 +92,36 @@ class AgentRunner:
         records = self._service.proposals.list_for_thread(thread_id)
         return ProposalView.from_record(records[-1]) if records else None
 
+    async def report_files(
+        self, *, thread_id: str, caller_ref: str, artifacts: ArtifactStore
+    ) -> set[str]:
+        if self._threads.owner(thread_id) != caller_ref:
+            raise ThreadAccessDenied("thread belongs to another caller")
+        config = RunnableConfig(configurable={"thread_id": thread_id, "caller_ref": caller_ref})
+        snapshot = await self._graph.aget_state(config)
+        files: set[str] = set()
+        for message in snapshot.values.get("messages", []):
+            if not isinstance(message, ToolMessage) or message.name != RENDER_REPORT_TOOL:
+                continue
+            if message.status == "error" or not isinstance(message.content, str):
+                continue
+            try:
+                result = json.loads(message.content)
+                if isinstance(result, dict) and result.get("offloaded"):
+                    record = artifacts.read(result["artifact_id"])
+                    if record.metadata.tool_name != RENDER_REPORT_TOOL or not isinstance(
+                        record.payload, dict
+                    ):
+                        continue
+                    result = json.loads(str(record.payload.get("content", "")))
+            except (ValueError, KeyError, TypeError, ArtifactError):
+                continue
+            if isinstance(result, dict):
+                for file in result.get("files", []):
+                    if isinstance(file, dict) and isinstance(file.get("path"), str):
+                        files.add(file["path"])
+        return files
+
     async def _outcome(
         self, thread_id: str, state: dict[str, Any], config: RunnableConfig
     ) -> RunOutcome:
@@ -100,15 +147,79 @@ class AgentRunner:
             receipt=receipt,
         )
 
-    async def send(self, *, thread_id: str, caller_ref: str, text: str) -> RunOutcome:
+    async def _run(
+        self, inputs: Any, config: RunnableConfig, on_event: EventHandler | None
+    ) -> dict[str, Any]:
+        if on_event is None:
+            return await self._graph.ainvoke(inputs, config=config)
+        await on_event(RunEvent("start"))
+        started: set[str] = set()
+        completed: set[str] = set()
+        async for chunk in self._graph.astream(
+            inputs, config=config, stream_mode=["messages", "updates"]
+        ):
+            if not isinstance(chunk, tuple) or len(chunk) != 2:
+                continue
+            mode, data = chunk
+            if mode == "messages":
+                message, metadata = data
+                if isinstance(message, AIMessage) and metadata.get("langgraph_node") == "model":
+                    content = message.content
+                    text = (
+                        content
+                        if isinstance(content, str)
+                        else "".join(
+                            block.get("text", "")
+                            for block in content
+                            if isinstance(block, dict) and block.get("type") == "text"
+                        )
+                    )
+                    if text:
+                        await on_event(RunEvent("text", text=text, id=message.id or ""))
+            elif mode == "updates" and isinstance(data, dict):
+                for update in data.values():
+                    if not isinstance(update, dict):
+                        continue
+                    messages = update.get("messages", [])
+                    if not isinstance(messages, list):
+                        messages = [messages]
+                    for message in messages:
+                        if isinstance(message, AIMessage):
+                            for call in message.tool_calls:
+                                call_id = call.get("id") or ""
+                                if call_id and call_id not in started:
+                                    started.add(call_id)
+                                    await on_event(RunEvent("tool", id=call_id, name=call["name"]))
+                        elif (
+                            isinstance(message, ToolMessage)
+                            and message.tool_call_id not in completed
+                        ):
+                            completed.add(message.tool_call_id)
+                            await on_event(
+                                RunEvent(
+                                    "tool",
+                                    id=message.tool_call_id,
+                                    name=message.name or "Tool",
+                                    status="error" if message.status == "error" else "complete",
+                                )
+                            )
+        return (await self._graph.aget_state(config)).values
+
+    async def send(
+        self, *, thread_id: str, caller_ref: str, text: str, on_event: EventHandler | None = None
+    ) -> RunOutcome:
         config = self._config(thread_id, caller_ref)
-        state = await self._graph.ainvoke(
-            {"messages": [{"role": "user", "content": text}]}, config=config
-        )
+        state = await self._run({"messages": [{"role": "user", "content": text}]}, config, on_event)
         return await self._outcome(thread_id, state, config)
 
     async def resume(
-        self, *, thread_id: str, caller_ref: str, decision: str, message: str = ""
+        self,
+        *,
+        thread_id: str,
+        caller_ref: str,
+        decision: str,
+        message: str = "",
+        on_event: EventHandler | None = None,
     ) -> RunOutcome:
         config = self._config(thread_id, caller_ref)
         snapshot = await self._graph.aget_state(config)
@@ -117,7 +228,7 @@ class AgentRunner:
         payload: dict[str, JsonValue] = {"type": decision}
         if decision == "reject" and message:
             payload["message"] = message
-        state = await self._graph.ainvoke(Command(resume={"decisions": [payload]}), config=config)
+        state = await self._run(Command(resume={"decisions": [payload]}), config, on_event)
         return await self._outcome(thread_id, state, config)
 
     def proposal_by_routing_id(self, routing_id: str) -> ProposalView | None:
@@ -128,7 +239,9 @@ class AgentRunner:
         record = self._service.get(proposal_id)
         return ProposalView.from_record(record) if record else None
 
-    async def approve(self, *, proposal_id: UUID, approver_ref: str) -> RunOutcome:
+    async def approve(
+        self, *, proposal_id: UUID, approver_ref: str, on_event: EventHandler | None = None
+    ) -> RunOutcome:
         """Host creates the claim, then the graph resumes and the executor verifies it."""
         record = self._service.get(proposal_id)
         if record is None:
@@ -138,9 +251,17 @@ class AgentRunner:
             thread_id=record.changeset.thread_id,
             caller_ref=record.changeset.requester_ref,
             decision="approve",
+            on_event=on_event,
         )
 
-    async def reject(self, *, proposal_id: UUID, actor_ref: str, message: str = "") -> RunOutcome:
+    async def reject(
+        self,
+        *,
+        proposal_id: UUID,
+        actor_ref: str,
+        message: str = "",
+        on_event: EventHandler | None = None,
+    ) -> RunOutcome:
         record = self._service.get(proposal_id)
         if record is None:
             raise WriteDenied("unknown_proposal")
@@ -150,6 +271,7 @@ class AgentRunner:
             caller_ref=record.changeset.requester_ref,
             decision="reject",
             message=message or "rejected by reviewer",
+            on_event=on_event,
         )
 
     def edit(

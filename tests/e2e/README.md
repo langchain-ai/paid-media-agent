@@ -12,7 +12,9 @@ Run against a **throwaway project copy**, with provider keys and tracing disable
 ```bash
 mkdir -p /tmp/pma-console/workspace
 mkdir -p /tmp/pma-console/config
-cp -R instructions.md .env.example agent.py identity.py pyproject.toml uv.lock skills channels schedules sandbox /tmp/pma-console/
+cp -R instructions.md .env.example agent.py identity.py pyproject.toml uv.lock channels schedules sandbox /tmp/pma-console/
+cp -R workspace/skills /tmp/pma-console/workspace/
+ln -s workspace/skills /tmp/pma-console/skills
 cp config/*.example.toml /tmp/pma-console/config/
 # Do not copy .env or config/accounts.toml. Use a fresh /tmp/pma-console directory.
 uv run paid-media-agent --help

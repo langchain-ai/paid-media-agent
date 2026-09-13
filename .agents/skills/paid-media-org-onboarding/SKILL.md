@@ -1,27 +1,33 @@
 ---
 name: paid-media-org-onboarding
-description: Help a user configure business context in the local checkout using the paid-media-agent CLI before deployment.
+description: Set up or update a company's paid-media context and runtime skills in the local workspace. Use before deployment or when business goals, measurement, or campaign conventions change.
 ---
 
-# Local business-context setup
+# Business context
 
-Use this skill in a coding agent to collect and save the organization's context before its first
-analysis. Work through the local CLI; the deployed agent has a separate tool-based interview.
+Read [the customization guide](../../../docs/customization.md) and any existing
+`workspace/skills/company-context/` before editing.
 
-1. Run `uv run paid-media-agent org show --json` and read existing answers first.
-2. Read briefs, public links, or text files the user shares. Ask only for missing details, at most
-   two questions per turn. Cover what they sell and to whom, conversion definitions, targets,
-   budget and currency, markets and timezone, seasonality, campaign naming, and approvers.
-3. Save answers with `uv run paid-media-agent org set field="answer"`. Quote shell arguments
-   safely. Use `org add-link URL` and `org add-file PATH` to import sources. Never overwrite
-   unrelated answers or invent a target. Empty fields can stay empty.
-4. Confirm what was saved and offer a first analysis. Stop interviewing when the user asks.
+1. Use briefs, plans, and files the user provides. Keep original sources under
+   `workspace/sources/`; preserve their contents and record the source and date.
+2. Ask only for missing facts needed for the first analysis, at most two questions per turn:
+   what they sell and to whom, conversion definitions, CPA or ROAS targets, budget and currency,
+   markets and timezone, attribution windows, campaign naming, and planned launches.
+   Leave unknowns explicit. Never invent targets or overwrite unrelated context.
+3. Create or update `workspace/skills/company-context/SKILL.md` directly. Keep the entry short;
+   link to topic pages beside it for detail. Record source links and dates for material facts.
+   These Markdown files are authoritative. There is no generated profile or runtime interview.
+4. Put repeatable paid-media workflows in `workspace/skills/<skill-name>/SKILL.md`, with a
+   specific name, a description stating when to use it, and only the steps the runtime needs.
+   Keep coding-agent setup and repository maintenance in `.agents/skills/`.
+5. Review the resulting context with the user. Explain that runtime skills are deployed to
+   the agent. Run the documented checks before deployment.
 
-The CLI writes `docs/org/profile.json`, renders the context pages, and keeps imported briefs in
-`docs/org/sources/`. These files stay out of Git. Update them locally before deployment; hosted
-changes do not sync back to the checkout.
+Manual editing follows the same folder contract.
 
-Never ask for API keys or provider account IDs in chat. Those go through the setup console or
-`config set`. Do not run the interactive `org interview` on the user's behalf; it is the manual
-terminal path. The deployed interview lives in
-[the runtime skill](../../../workspace/skills/paid-media-org-onboarding/SKILL.md).
+Keep credentials, provider account IDs, and access policy out of context. Configure them through
+`.env`, `config/accounts.toml`, and the host's permission settings. Optional warehouses and dbt
+are described in the guide; do not claim a connection exists until a read-only check succeeds.
+
+Before MDA deployment, review the project files that will upload. Git-ignored raw source files
+can still enter the source archive; keep sensitive originals outside the deploy directory.

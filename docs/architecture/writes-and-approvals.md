@@ -25,8 +25,16 @@ Before execution, trusted code verifies:
 7. tool is admitted by write policy;
 8. global incident kill switch permits execution.
 
-The executor then records the attempt, calls the provider once, and performs bounded readback. A
-timeout after the call creates an unknown state until read-only reconciliation proves the result.
+The executor atomically moves the proposal from awaiting approval to executing. Only the worker
+that saves this transition may consume the claim and call the provider. It makes one mutation
+attempt and performs bounded readback. A timeout after the call creates an unknown state until
+read-only reconciliation proves the result.
+
+Proposal updates compare the complete previously read record before saving. A concurrent approval,
+edit, or rejection returns `proposal_changed` instead of overwriting newer state. Repeated execution
+returns the existing receipt; it never replaces a verified result with a refusal. If a process
+stops during execution, inspect the provider through read-only tools before creating a new proposal.
+The agent does not automatically retry an interrupted mutation.
 
 ## Rejection tests
 
@@ -34,7 +42,7 @@ Tests must prove denial for edited payloads, expired claims, replayed actions, f
 accounts, missing signatures, stale schemas, unknown tools, direct mutation calls, and runtime/profile
 attempts to bypass the dispatcher.
 
-## Implementation notes (2026-09-01)
+## Proposal and execution services
 
 - `propose_change` builds the `ChangeSet` from the current catalog entry and the reviewed
   `WritePolicy` (`WriteOperation` names the readback tool, target argument, editable fields, and
@@ -42,7 +50,8 @@ attempts to bypass the dispatcher.
 - `execute_change` is the only tool under `interrupt_on` (`approve`/`reject`). Resuming the graph
   grants nothing by itself: the executor loads the persisted proposal and the latest unused
   `ApprovalClaim` for that revision, verifies the HMAC signature, digest, scope, requester, and
-  expiry, checks the current catalog entry and schema, then consumes the claim exactly once.
+  expiry, checks the current catalog entry and schema, then claims the proposal and consumes the
+  approval exactly once. Multiple valid approval claims cannot create multiple execution attempts.
 - Only `ProposalService.approve` creates claims. Surfaces call it with an opaque routing id or
   proposal id; Slack button values carry no payload.
 - Readback runs through the authorized read path with bounded attempts and wall time. A timeout
@@ -58,9 +67,9 @@ attempts to bypass the dispatcher.
   `validate_against(catalog)` keeps only admitted rows whose tool is a MUTATION entry with the
   listed target, editable, validate-only, and idempotency arguments in its current schema and whose
   readback tool is an authorized READ. Everything else becomes a `PolicyIssue` that `doctor` prints.
-- The ChangeSet digest now binds `schema_hash` (the mutation tool's schema at proposal time) and
+- The ChangeSet digest binds `schema_hash` (the mutation tool's schema at proposal time) and
   `policy_digest` (the admitting policy row). Execution rejects `stale_catalog` when the schema
-  changed and `stale_policy` when the row changed, in addition to the earlier digest checks.
+  changed and `stale_policy` when the row changed, alongside the proposal digest checks.
 - `classify_risk` derives reviewer facts from the operation, schema, and actual change:
   `status_flip`, `starts_delivery`, `budget_delta`, `budget_increase`, `publishes_live`,
   `access_change`, `destructive_change`, `sensitive_data_transfer`, `standing_automation`,

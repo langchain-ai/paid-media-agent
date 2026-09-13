@@ -171,3 +171,26 @@ def test_cross_platform_total_requires_compatible_complete_sources() -> None:
     summary = summarize(unavailable, "art_summary")
     assert summary.cross_platform_total is None and summary.unavailable_sources == ("reddit_ads",)
     assert json.loads(summary.model_dump_json())["platforms"][0]["spend_current"] == "14.00 USD"
+
+
+def test_normalization_preserves_zero_clicks() -> None:
+    rows, _ = normalize_rows(
+        platform=Platform.GOOGLE_ADS,
+        account_ref="example",
+        currency="USD",
+        timezone="UTC",
+        rows=[
+            {
+                "date": "2026-08-01",
+                "campaign_id": "c1",
+                "spend": "10",
+                "impressions": 100,
+                "clicks": 0,
+                "link_clicks": 5,
+            }
+        ],
+        entity_type=EntityType.CAMPAIGN,
+        data_complete_through=None,
+    )
+    assert rows[0].clicks == 0
+    assert aggregate(rows).ctr == Decimal(0)
