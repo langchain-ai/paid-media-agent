@@ -9,6 +9,32 @@ uv sync --all-extras --dev
 uv run paid-media-agent demo
 ```
 
+## Optional named local URL
+
+[Portless](https://github.com/vercel-labs/portless) gives the setup console a stable URL and
+assigns its port automatically. Portless requires Node.js 24+. It is optional; the regular Python
+setup command needs no Node.js.
+
+```bash
+npm install -g portless
+portless paid-media uv run paid-media-agent setup
+```
+
+The console opens at `https://paid-media.localhost` with its usual per-run token. Portless handles
+the local proxy and HTTPS certificate; its first run may ask for certificate trust and administrator
+access. The console stays bound to loopback and accepts only the exact `.localhost` hostname
+Portless provides. Custom domains, LAN mode, and public tunnels are not supported for this console.
+
+To use plain HTTP on an unprivileged port instead:
+
+```bash
+PORTLESS_HTTPS=0 PORTLESS_PORT=1355 portless paid-media uv run paid-media-agent setup
+```
+
+This opens `http://paid-media.localhost:1355`. Use `--no-open --no-token` after `setup` when a
+coding agent opens the console in its browser pane. Default onboarding remains
+`uv run paid-media-agent setup` at `http://127.0.0.1:8765`.
+
 ## Before opening a pull request
 
 ```bash

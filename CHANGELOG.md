@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added (local development)
+
+- Optional Portless support gives the setup console a named `.localhost` URL. Default setup
+  remains Python-only; token and same-origin checks stay in place behind the local proxy.
+
 ### Changed (onboarding and deployment)
 
 - Simplified setup to Welcome, Model, Accounts, and Deployment, using the existing CORE styles.
