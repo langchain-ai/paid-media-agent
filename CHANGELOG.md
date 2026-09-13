@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed (repository name)
+
+- The open-source repository is now `langchain-ai/paid-media-agent`. Updated clone instructions,
+  package metadata, and the security-report link to use its new name.
+
 ### Added (local development)
 
 - Optional Portless support gives the setup console a named `.localhost` URL. Default setup

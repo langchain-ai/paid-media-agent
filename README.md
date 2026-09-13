@@ -48,8 +48,8 @@ against the source data.
 Requires **Python 3.11+** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/langchain-ai/open-paid-media-agent.git
-cd open-paid-media-agent
+git clone https://github.com/langchain-ai/paid-media-agent.git
+cd paid-media-agent
 uv sync --all-extras
 uv run paid-media-agent setup
 ```
