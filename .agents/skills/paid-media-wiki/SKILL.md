@@ -6,8 +6,9 @@ description: The paid-media business wiki the other skills route to. General doc
 # Paid-media business context
 
 This wiki gives the agent enough general business context to analyze paid media without pretending
-every company has the same goals, attribution model, sales cycle, or risk tolerance. Pages live
-next to this file at `/skills/paid-media-wiki/<page>.md`.
+every company has the same goals, attribution model, sales cycle, or risk tolerance. Edit it in
+`.agents/skills/paid-media-wiki/` in the checkout. At runtime, pages live next to this file at
+`/skills/paid-media-wiki/<page>.md`.
 
 ## Read order
 
@@ -45,4 +46,3 @@ they take precedence wherever the two differ.
   incrementality.
 - A remembered capability, metric, or field is not runtime evidence. Discover the live schema.
 - Missing data stays missing. It is never silently converted to zero.
-

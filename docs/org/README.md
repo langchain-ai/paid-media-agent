@@ -8,7 +8,7 @@ Fill it two ways, both producing the same files:
 
 - the local coding agent: ask it to "learn about my business". It reads existing answers and
   briefs, asks only for missing details, and saves through the `org` CLI using
-  `skills/paid-media-org-onboarding/SKILL.md`.
+  `.agents/skills/paid-media-org-onboarding/SKILL.md`.
 - manually, from the project folder: run `uv run paid-media-agent org interview`. Answer
   the eight terminal prompts; Enter keeps an existing answer or skips an empty field.
   Use `uv run paid-media-agent org set business="..."` for an individual update,

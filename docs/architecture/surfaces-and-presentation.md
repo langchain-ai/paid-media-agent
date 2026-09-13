@@ -33,7 +33,7 @@ report. A change the agent might propose still waits for a human approval.
 ## Chat style
 
 The agent writes for chat: no markdown, short lines, a colon-terminated label for a section. The
-rule lives in `instructions.md` and `skills/paid-media-wiki/answer-style.md`; `to_mrkdwn` in the
+rule lives in `instructions.md` and `.agents/skills/paid-media-wiki/answer-style.md`; `to_mrkdwn` in the
 Block Kit renderer folds any leftover markdown for Slack.
 
 ## Setup console

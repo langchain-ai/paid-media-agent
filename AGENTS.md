@@ -7,8 +7,8 @@ business wiki, reusable runtime judgment in skills, implementation detail in the
 
 1. [README.md](README.md), then run `uv run paid-media-agent demo --with-proposal`
 2. [docs/architecture/README.md](docs/architecture/README.md)
-3. [skills/paid-media-wiki/SKILL.md](skills/paid-media-wiki/SKILL.md), the business wiki
-4. `instructions.md` (the agent's system prompt) and the skill under `skills/` for the behavior you change
+3. [.agents/skills/paid-media-wiki/SKILL.md](.agents/skills/paid-media-wiki/SKILL.md), the business wiki
+4. `instructions.md` (the agent's system prompt) and the skill under `.agents/skills/` for the behavior you change
 5. The owning module and its tests
 6. [OPERATIONS.md](OPERATIONS.md) before running, releasing, or changing dependencies
 7. [SPEC.md](SPEC.md) when a product or safety question is not answered above
@@ -51,11 +51,13 @@ requires a verified human approval before every mutation, and runs either on Man
 
 - `agent.py`, `identity.py`, `channels/`, `schedules/`, `sandbox/`: Managed Deep Agents project
   files; the platform requires them at the repository root.
-- `instructions.md`, `skills/`: what the model reads at run time. MDA syncs both into the
-  deployment, so the business wiki is the skill `skills/paid-media-wiki/`. `docs/org/` (ignored
+- `instructions.md`, `.agents/skills/`: the prompt and canonical skills. `.claude/skills` links
+  to the same skills for Claude Code. The root `skills/` link preserves MDA's sync path and the
+  runtime's `/skills` paths; edit `.agents/skills/`, not a separate copy. The business wiki is
+  `.agents/skills/paid-media-wiki/`; `docs/business-context` links to it. `docs/org/` (ignored
   by git) is the organization's own context, written by onboarding and returned to the model by
   the `get_org_context` tool, never by the filesystem.
-- `src/paid_media_agent/org.py`, `tools/org.py`, `skills/paid-media-org-onboarding/`: the
+- `src/paid_media_agent/org.py`, `tools/org.py`, `.agents/skills/paid-media-org-onboarding/`: the
   onboarding interview, its host tools, and the pages it renders.
 - `src/paid_media_agent/assembly.py`: shared agent components and policy.
 - `src/paid_media_agent/config.py`: typed settings, `ModelConfig`, account aliases, `project_root`.

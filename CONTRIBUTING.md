@@ -9,6 +9,12 @@ uv sync --all-extras --dev
 uv run paid-media-agent demo
 ```
 
+## Shared skills
+
+Edit skills in [.agents/skills/](.agents/skills/). Claude Code discovers the same files through
+`.claude/skills`. The root `skills/` link keeps the local runtime and MDA deployment paths working;
+`docs/business-context` links to the business wiki. Keep these as relative symlinks, not copies.
+
 ## Optional named local URL
 
 [Portless](https://github.com/vercel-labs/portless) gives the setup console a stable URL and

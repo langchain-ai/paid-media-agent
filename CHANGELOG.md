@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed (shared skills)
+
+- Skills now live in `.agents/skills/`, linked from `.claude/skills` and the runtime's `skills/`
+  path. Removed `.cursor` and replaced the duplicate business wiki with a link to the same source.
+
 ### Changed (repository name)
 
 - The open-source repository is now `langchain-ai/paid-media-agent`. Updated clone instructions,
@@ -40,9 +45,8 @@
 
 - `paid-media-agent setup --no-token` serves the console at a plain URL for hosts whose browser
   pane cannot carry the per-run token; it accepts same-origin calls only. `.claude/launch.json`
-  (`setup`) opens it in Claude Code desktop's Browser pane, `.cursor/rules/onboarding.mdc` steers
-  Cursor's built-in browser, and `AGENTS.md` carries the host-neutral instruction (Codex app
-  included).
+  (`setup`) opens it in Claude Code desktop's Browser pane, and `AGENTS.md` carries the shared
+  instruction for Cursor and the Codex app.
 
 ### Changed (two deployment paths, MDA recommended)
 
