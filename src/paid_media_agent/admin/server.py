@@ -13,6 +13,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -27,7 +28,7 @@ from paid_media_agent.deployment import DeploymentSettings
 from paid_media_agent.domain.common import JsonValue
 
 STATIC_DIR = Path(__file__).parent / "static"
-ALLOWED_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
+ALLOWED_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
@@ -130,6 +131,32 @@ class ConsoleState:
                 self.checks.pop(name)
 
 
+def _portless_url() -> str | None:
+    """Accept only the explicit local origin injected by an optional Portless process."""
+    value = os.environ.get("PORTLESS_URL")
+    if not value:
+        return None
+    message = "PORTLESS_URL must be an http(s) .localhost origin without credentials or a path"
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+        hostname = parsed.hostname or ""
+        if (
+            parsed.scheme not in ("http", "https")
+            or not hostname.endswith(".localhost")
+            or hostname == ".localhost"
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in ("", "/")
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(message)
+    except ValueError:
+        raise ValueError(message) from None
+    return f"{parsed.scheme}://{hostname}" + (f":{port}" if port is not None else "")
+
+
 def _same_origin(request: Request) -> bool:
     """True when the browser says the call came from this console's own page.
 
@@ -163,10 +190,11 @@ def create_console_app(
         title="Paid Media Agent setup console", docs_url=None, redoc_url=None, openapi_url=None
     )
     app.state.console = state
+    portless_url = _portless_url()
+    allowed_hosts = ALLOWED_HOSTS | ({urlsplit(portless_url).hostname} if portless_url else set())
 
     def _authorized(request: Request) -> ConsoleState:
-        host = (request.headers.get("host") or "").split(":")[0]
-        if host not in ALLOWED_HOSTS:
+        if request.url.hostname not in allowed_hosts:
             raise HTTPException(status_code=403, detail="console is local only")
         if not require_token:
             if not _same_origin(request):
@@ -190,15 +218,13 @@ def create_console_app(
 
     @app.get("/")
     def index(request: Request) -> Response:
-        host = (request.headers.get("host") or "").split(":")[0]
-        if host not in ALLOWED_HOSTS:
+        if request.url.hostname not in allowed_hosts:
             raise HTTPException(status_code=403, detail="console is local only")
         return FileResponse(STATIC_DIR / "index.html", media_type="text/html")
 
     @app.get("/static/{name}")
     def static(name: str, request: Request) -> Response:
-        host = (request.headers.get("host") or "").split(":")[0]
-        if host not in ALLOWED_HOSTS:
+        if request.url.hostname not in allowed_hosts:
             raise HTTPException(status_code=403, detail="console is local only")
         path = (STATIC_DIR / name).resolve()
         if path.parent != STATIC_DIR.resolve() or not path.is_file():
@@ -450,7 +476,8 @@ def run_console(
 
     token = secrets.token_urlsafe(32)
     app = create_console_app(root, token=token, require_token=require_token)
-    url = f"http://127.0.0.1:{port}/" + (f"#token={token}" if require_token else "")
+    origin = _portless_url() or f"http://127.0.0.1:{port}"
+    url = f"{origin}/" + (f"#token={token}" if require_token else "")
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
     server = uvicorn.Server(config)
     app.state.console.shutdown = lambda: os.kill(os.getpid(), signal.SIGINT)
