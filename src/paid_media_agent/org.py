@@ -1,6 +1,6 @@
 """The organization's own context: a short profile and sources the agent reads before analysis.
 
-It lives in `docs/org/` (ignored by git, mounted at `/docs/org` in every runtime). Two entry
+It lives in the host project's `docs/org/` (ignored by git), exposed through host tools. Two entry
 points write it, the coding agent through the onboarding skill and `paid-media-agent org`,
 and both render the same pages from one profile, so the model never sees a schema.
 """

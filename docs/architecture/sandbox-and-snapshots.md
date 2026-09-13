@@ -32,13 +32,15 @@ type, size, and ownership before moving bytes anywhere.
 
 ## Implementation notes (2026-09-08)
 
-- `sandbox/Dockerfile` is the optional reproducible image. `paid-media-agent sandbox publish`
-  builds it through the LangSmith SDK (no local Docker) and generates `sandbox/__init__.py`, the
-  literal `define_sandbox(snapshot_id=...)` declaration MDA evaluates statically; `sandbox use`
-  declares an existing snapshot. Snapshots built from a Dockerfile resolve by id.
-- Without `sandbox/__init__.py` MDA uses its default image, enough for reads, analysis, governed
-  writes, and HTML reports. PDF rendering in the deployment needs the native libraries in the
-  image the host tools run in, which is an open question for the platform.
+- `sandbox/__init__.py` declares the Python 3.13 base. MDA automatically bakes `sandbox/setup.sh`
+  on deploy/dev, reuses its recipe snapshot, and rebuilds when the script or base changes. The
+  recipe installs and verifies Jinja2, WeasyPrint 70 with native libraries, ripgrep, and jq.
+  Existing threads keep their sandbox. Preflight requires the declaration and recipe.
+- `sandbox/Dockerfile` runs the same recipe for optional standalone publishing. `sandbox publish`
+  sends only those two files through the LangSmith SDK and saves the resulting id in `.env`
+  and the declaration. `sandbox use` declares an existing snapshot as the bake base.
+- Sandbox libraries do not install packages in the separate Agent Server. PDF reports still need
+  native libraries in the host image where report tools run. Self-hosted Docker includes them.
 - `runtime/sandbox.py` holds only the probe: open a short-lived sandbox, upload the skills, check
   the workspace, render a PDF, verify no key-like environment values, delete it. The per-process
   sandbox backend that mirrored host artifacts into a sandbox lives on the `self-hosted` branch.

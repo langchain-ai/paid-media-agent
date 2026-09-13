@@ -30,10 +30,18 @@ curl -s localhost:8080/health
 bearer. Compose sets `DATABASE_URL` for the API container and reads everything else from your
 `.env`. The image copies no env file.
 
+Compose mounts `docs/org/` from the checkout into the API container. Business context saved
+by your coding agent or `uv run paid-media-agent org interview` is available immediately and
+survives container replacement. If you run the image without Compose, mount that folder at
+`/app/docs/org` yourself.
+
 ## Slack
 
 1. Create a Slack app from `config/slack-manifest.example.yaml` and install it to the workspace.
-2. Store the tokens: `uv run paid-media-agent config set SLACK_BOT_TOKEN=xoxb-... SLACK_APP_TOKEN=xapp-...`
+2. In **OAuth & Permissions**, install the app to your workspace and copy the **Bot User OAuth
+   Token** (`xoxb-`). In **Basic Information → App-Level Tokens → Generate Token and Scopes**,
+   add `connections:write` and copy the app-level token (`xapp-`). Enable **Socket Mode**.
+   Store the tokens: `uv run paid-media-agent config set SLACK_BOT_TOKEN=xoxb-... SLACK_APP_TOKEN=xapp-...`
    (Socket Mode, no public URL). For a hosted deployment set `SLACK_TRANSPORT=http` and
    `SLACK_SIGNING_SECRET`, and point the app's request URL at `/slack/events` on your API.
 3. Name the approvers: `PAID_MEDIA_APPROVER_IDS=slack:<team_id>:<user_id>,...`. The requester

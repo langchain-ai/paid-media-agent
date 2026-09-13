@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Changed (onboarding and deployment)
+
+- Simplified setup to Welcome, Model, Accounts, and Deployment, using the existing CORE styles.
+  Provider catalogs populate model pickers, account connections stay grouped by provider, and
+  managed deployment runs preflight with inline Slack authorization continuation. Self-hosting
+  has a separate guided path.
+- Added shared validation for Slack appearance, response triggers, and report timing. MDA builds
+  the report sandbox recipe automatically; Docker and standalone snapshots use the same recipe.
+  Organization context is collected through the coding agent or CLI.
+
 ### Changed (platform coverage and sample data)
 
 - Load all eight Pipeboard catalogs concurrently, route LinkedIn through Pipeboard, and keep

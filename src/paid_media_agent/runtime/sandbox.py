@@ -1,9 +1,10 @@
 """Snapshot tooling for the sandbox Managed Deep Agents gives every thread.
 
 MDA provisions and mounts the sandbox itself, one per durable thread, from the declaration in
-`sandbox/__init__.py`. This module only helps produce and prove that declaration: build the
-snapshot from `sandbox/Dockerfile` (`sandbox publish`), point at an existing one (`sandbox use`),
-and open a throwaway sandbox to probe it (`sandbox test`). The model never gets a shell.
+`sandbox/__init__.py` and the automatic deploy-time bake of `sandbox/setup.sh`. This module
+supports the optional standalone snapshot probe (`sandbox test`); `sandbox publish` builds the
+same recipe through `sandbox/Dockerfile`, and `sandbox use` changes the bake base. The model
+never gets a shell.
 """
 
 from __future__ import annotations

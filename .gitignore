@@ -23,7 +23,9 @@ artifacts/
 # Host-owned local configuration (examples stay tracked)
 config/accounts.toml
 config/write-policy.toml
+channels/slack-icon.png
 workspace/logs/
+workspace/sessions/
 !workspace/*/.gitkeep
 workspace/KILL_SWITCH
 supabase/

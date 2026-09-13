@@ -9,6 +9,20 @@ Use this skill when `get_org_context` returns mostly "Not provided", when the us
 to set up, onboard, or "tell you about the business", or when an analysis needs a fact only the
 organization knows (a target, the conversion that counts, a naming convention).
 
+## Local coding-agent setup
+
+When working in the checkout, run `uv run paid-media-agent org show --json` first. Read the
+briefs, public links, or text files the user shares, then ask only for missing information.
+Follow the interview below, using `uv run paid-media-agent org set field="answer"` to save
+each answer. Quote shell arguments safely. Use `org add-link URL` and `org add-file PATH`
+to import sources. Do not run the interactive `org interview` on the user's behalf; it is
+the manual terminal path.
+
+Both paths write `docs/org/profile.json`, regenerate `goals.md` and `conventions.md`, and
+keep imported briefs in `docs/org/sources/`. These files stay out of Git. Update context
+locally before deployment; MDA edits do not sync back to the checkout. In the deployed
+agent, use the host tools below instead of assuming access to the local CLI or repository.
+
 ## How to run the interview
 
 1. Call `get_org_context` first. Ask only about empty fields.

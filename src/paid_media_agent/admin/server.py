@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import hmac
+import json
 import os
 import secrets
 import signal
@@ -14,11 +16,14 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from paid_media_agent.admin import actions
+from paid_media_agent.admin.model_presets import model_key_env
 from paid_media_agent.admin.processes import ProcessError, ProcessManager
 from paid_media_agent.admin.routes import build_routes
+from paid_media_agent.admin.slack_icon import MAX_ICON_BYTES, icon_data_url, icon_path, save_icon
+from paid_media_agent.deployment import DeploymentSettings
 from paid_media_agent.domain.common import JsonValue
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -57,6 +62,11 @@ class ConfigUpdate(BaseModel):
     updates: dict[str, str] = Field(default_factory=dict)
 
 
+class ModelCatalogRequest(BaseModel):
+    provider: str = Field(min_length=1, max_length=40)
+    api_key: SecretStr = Field(default_factory=lambda: SecretStr(""))
+
+
 class GenerateRequest(BaseModel):
     key: str
 
@@ -83,7 +93,41 @@ class ConsoleState:
         self.root = root
         self.token = token
         self.processes = processes
+        self.checks: dict[str, JsonValue] = {}
+        self.check_stamps: dict[str, str] = {}
         self.shutdown: Callable[[], None] | None = None
+
+    def stamp(self, name: str) -> str:
+        settings = actions.load_settings(self.root)
+        prefixes: tuple[str, ...] = (
+            ("paid_media_model", "paid_media_tool_selector_model")
+            if name == "model_test"
+            else ("pipeboard_", "linkedin_", "x_ads_", "openai_ads_")
+        )
+        if name == "mda_check":
+            prefixes += ("paid_media_model", "paid_media_sandbox_")
+        values = {
+            key: value.get_secret_value() if isinstance(value, SecretStr) else value
+            for key, value in settings.model_dump().items()
+            if key.startswith(prefixes)
+        }
+        if name in ("model_test", "mda_check"):
+            try:
+                key_name = model_key_env(settings)
+            except ValueError:
+                key_name = None
+            values["model_key"] = os.environ.get(key_name, "") if key_name else ""
+        if name == "mda_check":
+            values["deployment_key"] = os.environ.get("LANGSMITH_API_KEY", "")
+            values["customization"] = DeploymentSettings(
+                _env_file=str(self.root / ".env")
+            ).model_dump(mode="json")
+        return hashlib.sha256(json.dumps(values, sort_keys=True, default=str).encode()).hexdigest()
+
+    def refresh_checks(self) -> None:
+        for name in list(self.checks):
+            if self.check_stamps.get(name) != self.stamp(name):
+                self.checks.pop(name)
 
 
 def _same_origin(request: Request) -> bool:
@@ -171,15 +215,25 @@ def create_console_app(
     @app.get("/api/status")
     def get_status(console: ConsoleState = Depends(_authorized)) -> dict[str, JsonValue]:
         result = actions.status(console.root)
+        console.refresh_checks()
         return {
             "result": result.model_dump(mode="json"),
             "routes": [r.model_dump(mode="json") for r in build_routes(result.detail)],
             "processes": [p.model_dump(mode="json") for p in console.processes.views()],
+            "connection_checks": console.checks,
         }
 
     @app.get("/api/config")
     def get_config(console: ConsoleState = Depends(_authorized)) -> dict[str, JsonValue]:
         return actions.config_view(console.root).model_dump(mode="json")
+
+    @app.post("/api/models")
+    def get_models(
+        body: ModelCatalogRequest, console: ConsoleState = Depends(_authorized)
+    ) -> dict[str, JsonValue]:
+        return actions.models_list(
+            console.root, body.provider, api_key=body.api_key.get_secret_value()
+        ).model_dump(mode="json")
 
     @app.post("/api/config")
     def post_config(
@@ -192,6 +246,40 @@ def create_console_app(
         body: GenerateRequest, console: ConsoleState = Depends(_authorized)
     ) -> dict[str, JsonValue]:
         return actions.generate_secret(console.root, body.key).model_dump(mode="json")
+
+    @app.get("/api/slack/icon")
+    def get_slack_icon(console: ConsoleState = Depends(_authorized)) -> dict[str, str]:
+        try:
+            return {"data_url": icon_data_url(console.root)}
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="No custom Slack icon") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/slack/icon")
+    async def post_slack_icon(
+        request: Request, console: ConsoleState = Depends(_authorized)
+    ) -> dict[str, bool]:
+        data = bytearray()
+        async for chunk in request.stream():
+            data.extend(chunk)
+            if len(data) > MAX_ICON_BYTES:
+                raise HTTPException(status_code=413, detail="Choose a PNG no larger than 1 MB")
+        try:
+            save_icon(console.root, bytes(data))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        console.checks.pop("mda_check", None)
+        return {"ok": True}
+
+    @app.delete("/api/slack/icon")
+    def delete_slack_icon(console: ConsoleState = Depends(_authorized)) -> dict[str, bool]:
+        try:
+            icon_path(console.root).unlink(missing_ok=True)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        console.checks.pop("mda_check", None)
+        return {"ok": True}
 
     @app.post("/api/actions/{name}")
     def post_action(
@@ -216,7 +304,19 @@ def create_console_app(
         handler = ACTIONS.get(name)
         if handler is None:
             raise HTTPException(status_code=404, detail="unknown action")
-        return handler(console.root, **(body or {})).model_dump(mode="json")
+        console.refresh_checks()
+        stamp = console.stamp(name)
+        result = handler(console.root, **(body or {})).model_dump(mode="json")
+        console.refresh_checks()
+        if name in (
+            "model_test",
+            "pipeboard_test",
+            "accounts_discover",
+            "mda_check",
+        ) and stamp == console.stamp(name):
+            console.check_stamps[name] = stamp
+            console.checks[name] = {"status": result["status"], "summary": result["summary"]}
+        return result
 
     @app.get("/api/org")
     def get_org(console: ConsoleState = Depends(_authorized)) -> dict[str, JsonValue]:
@@ -281,7 +381,14 @@ def create_console_app(
         name: str, body: ProcessStart | None = None, console: ConsoleState = Depends(_authorized)
     ) -> dict[str, JsonValue]:
         try:
-            view = console.processes.start(name, confirmed=bool(body and body.confirm))
+            confirmed = bool(body and body.confirm)
+            if name == "mda-deploy":
+                if not confirmed:
+                    raise ProcessError("mda-deploy requires explicit confirmation")
+                check = actions.mda_check(console.root)
+                if check.status != "ok":
+                    raise ProcessError(check.summary)
+            view = console.processes.start(name, confirmed=confirmed)
         except ProcessError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from None
         return view.model_dump(mode="json")
@@ -294,6 +401,15 @@ def create_console_app(
             return console.processes.stop(name).model_dump(mode="json")
         except ProcessError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.post("/api/processes/{name}/continue")
+    def continue_process(
+        name: str, console: ConsoleState = Depends(_authorized)
+    ) -> dict[str, JsonValue]:
+        try:
+            return console.processes.continue_authorization(name).model_dump(mode="json")
+        except ProcessError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
 
     @app.get("/api/processes/{name}/log")
     def process_log(

@@ -11,7 +11,7 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
     {
         "id": "langsmith",
         "label": "LangSmith Gateway",
-        "model": "anthropic/claude-sonnet-4-6",
+        "model": "langsmith:anthropic/claude-sonnet-4-6",
         "key": "LANGSMITH_API_KEY",
         "url": "https://smith.langchain.com/settings",
         "note": "One key, every provider, traced",
@@ -148,8 +148,14 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
 """Model provider cards for the wizard. Key names are allowlisted env names; nothing else is written.
 
 OpenAI-compatible presets use the `openai:` prefix with a base URL and their own key env var,
-which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Model ids are examples to edit.
+which `PAID_MEDIA_MODEL_API_KEY_ENV` hands to the client. Examples are configuration defaults; the model picker reads the provider API.
+Runtime tool-selection capabilities remain separate from model availability.
 """
+
+
+def model_preset_payloads() -> list[dict[str, JsonValue]]:
+    """Provider setup metadata. Available models come from each provider's live API."""
+    return [dict(preset) for preset in MODEL_PRESETS]
 
 
 PROVIDER_IMPORT_MODULES: dict[str, str] = {

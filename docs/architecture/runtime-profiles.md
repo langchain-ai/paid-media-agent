@@ -21,7 +21,7 @@ callers compile it:
   claims, receipts, dedupe, thread ownership, and checkpoints in Postgres when `DATABASE_URL` is
   set and in memory otherwise.
 - `runtime/local.py::build_configured_runtime` compiles them with an in-memory checkpointer for
-  `paid-media-agent ask`, `report`, and the console's "Try it".
+  `paid-media-agent ask` and `report`.
 
 `build_local_runtime` is the fixture-only variant that takes an injected model: the demo and the
 test suite.

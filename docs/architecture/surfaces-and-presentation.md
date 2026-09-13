@@ -38,11 +38,29 @@ Block Kit renderer folds any leftover markdown for Slack.
 
 ## Setup console
 
-The console under `admin/` is an operator surface, not an agent surface. It calls host actions
-(doctor, config, discovery, tests, process control) that the CLI exposes with `--json`. It binds to
-localhost, requires the per-run token, writes only local files, and starts fixed-template
-processes (`mda dev`, `mda deploy`, `serve`, `slack`). Deployment secrets stay in the deployment
-platform.
+The console under `admin/` is a local operator surface for configuration, account discovery,
+connection tests, and fixed process control. It is plain HTML/CSS/JavaScript and calls the same
+host actions as the CLI. Welcome → Model → Accounts → Deployment is the complete setup flow.
+MDA is the recommended paid deployment; self-hosting stays available. No chat client or separate
+frontend server is required. Deployment shows one primary MDA card with the current model,
+accounts, and LangSmith access; self-hosting and local tools sit under Other ways to run.
+Welcome and model setup have no sample-analysis shortcut; sample account mode and the CLI
+demo remain available.
+
+The model picker and `models --provider` command share `admin/model_catalog.py`: fixed official
+endpoints, provider-specific credentials, bounded pagination, and safe errors. Catalog reads use
+the runtime's effective credentials or an unsaved draft key without persisting the draft.
+Connection checks invalidate when those effective credentials change. Availability is independent of the runtime's
+verified tool-selection registry. Custom IDs remain available when a provider has no list API.
+
+The console binds to localhost with a per-run token, or same-origin enforcement for an IDE pane.
+Deployment starts only after an explicit click and a successful project preflight. MDA's Slack
+authorization continuation accepts only Enter at a recognized prompt. A local check does not
+verify deployment permissions. The agent itself runs in Slack, Studio, CLI, or the existing API;
+self-hosted API/Postgres provides durable state.
+
+Process polling updates controls in place, preserving keyboard focus and expanded output.
+Account selections belong to individual discovered rows; provider IDs can overlap across platforms.
 
 ## Implementation notes (2026-09-08)
 

@@ -25,17 +25,19 @@ trace exports.
 
 Every `paid-media-agent` command exports the allowlisted values of the project `.env` into its own
 process first, so provider SDKs that read their key from the environment work without a manual
-`export`. Values already set in your shell win over the file. Every command has `--json` where a
+`export`. Nonblank saved values take precedence over the shell. Blank entries preserve shell values unless
+the console previously exported that key, in which case clearing it removes the export. Every command has `--json` where a
 machine reads it, and the setup console runs the same actions.
 
 | Command | What it does |
 |---|---|
+| `uv run paid-media-agent models --provider langsmith --json` | List current models from the selected provider's official API using its configured key; no prompt or configuration write |
 | `uv run paid-media-agent setup [--port] [--no-open] [--no-token]` | Local onboarding console over the actions below; `--no-token` for a coding agent's browser pane; the port defaults to `$PORT`, then 8765 |
 | `uv run paid-media-agent demo [--with-proposal]` | Fixture run through the real graph, optionally with a governed write |
 | `uv run paid-media-agent doctor [--snapshot]` | Configuration, packages, catalog, approvals, PDF, and sandbox checks; `--snapshot` runs the sandbox contract |
 | `uv run paid-media-agent config show\|set KEY=VALUE\|generate KEY` | Read or change `.env` without printing secrets; generate the approval signing key and API tokens |
 | `uv run paid-media-agent test model\|pipeboard\|slack\|db\|all` | Connection tests that never print secret values (`all` adds Slack and Postgres on the self-hosted path) |
-| `uv run paid-media-agent accounts discover\|list\|add\|remove` | Host-side account discovery and alias mapping (six platforms) |
+| `uv run paid-media-agent accounts discover\|list\|add\|remove` | Host-side account discovery and alias mapping (eight Pipeboard platforms plus two direct connections) |
 | `uv run paid-media-agent org show\|interview\|set field=value\|add-link URL\|add-file PATH` | Your organization's context (goals, conversions, targets, naming, approvers, shared docs) in `docs/org` |
 | `uv run paid-media-agent catalog show [--live]` | The authorized tool catalog: reads, admitted mutations, denied tools |
 | `uv run paid-media-agent policy validate [--live]` | Validate the write policy against the fixture or live catalog |
@@ -51,8 +53,9 @@ machine reads it, and the setup console runs the same actions.
 Optional native dependency: PDF reports use WeasyPrint (`reports` extra), which needs Pango and
 Cairo system libraries (`brew install pango` on macOS, `libpango-1.0-0 libcairo2` on Debian).
 Without them reports render as HTML only and `doctor` reports `report_pdf` as a warning. The
-Docker image includes them; the managed build does not, so bake them into the sandbox snapshot
-(below) when PDFs matter there. `serve` needs the `self-host` extra and `PAID_MEDIA_API_TOKENS`
+Docker image includes them. The MDA sandbox recipe includes them too, but that does not install
+them in the separate Agent Server where report tools currently render. `serve` needs the
+`self-host` extra and `PAID_MEDIA_API_TOKENS`
 (`token:caller,...`); the bearer a client sends is the part before `:caller`.
 
 ## Deploying with Managed Deep Agents
@@ -64,19 +67,63 @@ deployment secrets, registers the schedules, and provisions the Slack app declar
 the workspace, approve, then return to the terminal and press Enter so the CLI can verify the
 grant and finish provisioning. Approve the link while signed into the LangSmith organization that
 owns the deployment; the grant is recorded there, and the CLI prints the link again if it landed
-elsewhere. Run the deploy from an interactive terminal for that step; a non-interactive run stops
-at "Slack channel setup requires authorization" every time.
+elsewhere. In the setup console, select **Continue deployment** after authorization; the console
+sends Enter to the waiting process. A non-interactive invocation without this continuation stops
+at "Slack channel setup requires authorization".
 
 After provisioning the agent sends you a Slack direct message. Reply to it to start a run, or
 mention the app in a channel it has been invited to; replies in the same thread continue the
 conversation. A proposed change arrives as a card with Approve and Reject. Approval is recorded
 against the identity MDA presents for the person who clicked, and only identities listed in
 `PAID_MEDIA_APPROVER_IDS` count; a refused approval names the identity it saw, so paste that into
-the list (console step Deploy, or `config set`) and redeploy. Edits are not available from the
+the list (Advanced → Managed Deep Agents, or `config set`) and redeploy. Edits are not available from the
 managed card; ask the agent for a revised proposal instead.
 
 The deployment costs money while it exists. `uv run mda delete` removes it, its sandboxes, and
 its snapshots.
+
+### Customize the managed agent
+
+Deployment uses a single column. **Agent settings** is a separate card below the LangSmith setup,
+with message triggers and weekly/monthly report timing visible. **Slack appearance** expands to show
+the name, description, icon, background, and preview. Settings save with **Deploy agent**, with no
+separate save step. The deployment action sits
+at the bottom, after the setup, agent settings, and optional local development controls.
+Weekday and monthly-date dropdowns retain native keyboard interaction and use the CORE popup styling
+in browsers that support customizable selects. UI transitions are brief; keyboard input and reduced
+motion skip them.
+New LangSmith users can open account creation, plans, and API-key settings in a new browser tab
+without losing their setup draft. A saved API key does not prove MDA access or an active plan. Branding and timing apply on the next MDA deployment.
+The Slack display name does not rename the deployment. Self-hosted Slack appearance is configured
+in your own Slack app settings.
+
+The same non-secret settings are available to coding agents through `config show` and `config set`:
+
+```bash
+uv run paid-media-agent config set PAID_MEDIA_SLACK_NAME="Campaign Analyst"
+uv run paid-media-agent config set PAID_MEDIA_REPORT_TIME=09:30 PAID_MEDIA_REPORT_TIMEZONE=America/Los_Angeles PAID_MEDIA_WEEKLY_REPORT_DAY=0 PAID_MEDIA_MONTHLY_REPORT_DAY=1
+```
+
+| Setting | Default / constraint |
+| --- | --- |
+| `PAID_MEDIA_SLACK_NAME` | Paid Media Agent; 1–35 letters, numbers, spaces, underscores, dashes or periods; no leading/trailing space or dash |
+| `PAID_MEDIA_SLACK_DESCRIPTION` | At most 139 characters |
+| `PAID_MEDIA_SLACK_BACKGROUND_COLOR` | Empty, or `#RRGGBB` |
+| `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES` | `false`; mentions and DMs start runs, replies continue active threads |
+| `PAID_MEDIA_SLACK_ALLOW_BOT_TRIGGERS` | `false`; enabling can cause repeated bot-to-bot runs |
+| `PAID_MEDIA_REPORT_TIME` / `PAID_MEDIA_REPORT_TIMEZONE` | `13:00` / `UTC`; time to the minute and an IANA timezone |
+| `PAID_MEDIA_WEEKLY_REPORT_DAY` / `PAID_MEDIA_MONTHLY_REPORT_DAY` | `0` (Monday, through 6 Sunday) / `1` (through 28) |
+
+The console validates a still 512 × 512 PNG up to 1 MB and saves it as `channels/slack-icon.png`.
+That local file stays out of Git but is included in MDA builds. Without it, MDA generates an icon.
+A coding agent can place a valid PNG at that path; remove it to return to the generated icon.
+
+MDA requires static schedule declarations. Saving report timing through setup or `config set`
+updates `.env` and only the `cron`/`timezone` literals in `schedules/weekly_report.py` and
+`schedules/monthly_report.py`. Existing report prompts and reporting windows are preserved.
+If you edit report timing directly in `.env`, run `config set` with those values to synchronize
+the declarations; the project preflight flags a mismatch. Report delivery destinations remain
+part of the authored schedule. Approval and live-write gates are unchanged.
 
 ### What the hosted agent can and cannot read
 
@@ -122,6 +169,8 @@ and `PAID_MEDIA_APPROVAL_SIGNING_KEY` with `config generate`, then `paid-media-a
 `config/slack-manifest.example.yaml`; Socket Mode needs no public URL. Approvers are
 `slack:<team_id>:<user_id>` refs or API caller names. The walkthrough is
 [docs/self-hosting.md](docs/self-hosting.md); the console's "Self-host" step runs the same actions.
+The console groups storage and API credentials first, optional Slack second, and the Docker command
+last. Existing-database settings and running the API directly are expandable alternatives.
 
 ## Live checks
 
@@ -196,14 +245,37 @@ functions as the CLI subcommands (`admin/actions.py`), so agents can script the 
 and exposes the kill switch. It is not a hosted admin panel: do not expose the port, and prefer
 deployment secrets over `.env` in production.
 
-The wizard is three decisions, then optional deploy: Model, Accounts, Ask. Each screen
-asks one thing. CLI equivalents and extra fields sit behind a disclosure. "Accounts" can be
-skipped to keep the fixture catalog. Organization context is not a console step; the coding
-agent fills it locally in chat (or `paid-media-agent org interview`). "Ask" runs one question
-locally through the same profile a deployment runs. After that, "Where it lives" offers Managed
-Deep Agents (recommended) or self-hosting, or you can stay local. "Deploy" collects the LangSmith
-key and approver identities, runs preflight, and starts `mda dev` or `mda deploy`. "Self-host"
-collects Slack tokens first; database, API token, and process controls stay behind a disclosure.
+The first-run flow is **Welcome → Model → Accounts → Deployment**. The welcome leads directly
+to model setup, which tests one short request and advances only
+on success. Connection checks expire when their settings change. Saved configuration alone is
+not a successful connection check.
+
+Choose sample data or connect and discover real accounts. `PAID_MEDIA_DATA_MODE=sample` forces
+fixture tools and sample aliases across the CLI and deployed profiles even when live credentials
+are saved. `live` requires credentials and does not add fixture platforms; `auto` selects based
+on credentials. A real model may charge for sample questions. The CLI demo uses a scripted
+model and disables tracing. Organization context belongs in `paid-media-agent org interview` or
+the coding agent's chat, not a setup form.
+
+Deployment recommends **Managed Deep Agents**, with paid hosting clearly labeled. Supply a
+LangSmith key if one is not already saved. **Deploy agent** saves the runtime
+choice, runs a local project check, and starts the fixed `mda deploy .` command. No separate
+check or Studio visit is required. A failed check prevents the deploy process from starting.
+The project check does not verify cloud deployment permission; MDA checks that when deploying.
+
+If MDA prints a Slack authorization prompt, finish the linked authorization and select
+**Continue deployment**. The server sends only Enter to the recognized waiting process. Status,
+errors, retries, and output stay on the deployment screen. An active process is not evidence of a
+healthy deployment. After successful completion, open the agent's Slack message or LangSmith.
+Managed Deep Agents and Self-host are visible choices with expandable details. Studio is under **Develop locally**; the CLI also works without deployment.
+Self-hosting starts with Docker/API and Postgres, with Slack optional.
+
+The console is plain HTML, CSS, and JavaScript served by Python. It contains no conversation
+client, frontend build, or streaming service. Use Slack, Studio, or the existing API for the agent.
+Advanced groups connections and hosting in separate expandable cards, using the same design
+tokens as Setup. Commands sit below the controls. Approval configuration and write-gate controls
+remain in the CLI and live-write runbook; the console does not expose them. Runtime approval
+enforcement is unchanged. Advanced deployment returns to Setup to review settings before upload.
 
 ## Local run with LangSmith Studio
 
@@ -214,9 +286,12 @@ LangSmith key; it does not need a Pipeboard token (without one the fixture accou
 ## Sandbox snapshot
 
 Managed Deep Agents gives every thread its own sandbox as the model's filesystem and syncs
-`skills/` into it. By default it uses the platform image, which is enough for reads, analysis,
-governed writes, and HTML reports. `sandbox/Dockerfile` is the optional reproducible image with
-WeasyPrint's native libraries and a pinned toolchain:
+`skills/` into it. The project ships a `sandbox/__init__.py` declaration and `sandbox/setup.sh`.
+`mda deploy` / `mda dev` automatically bake the recipe from Python 3.13 with ripgrep, jq, Jinja2,
+WeasyPrint 70, Pango, Cairo, and fonts. The recipe verifies PDF rendering before the bake succeeds.
+No separate sandbox setup is needed. MDA reuses the recipe snapshot until the script or base
+changes; existing thread sandboxes keep their files. The deployment preflight checks that the
+declaration and recipe exist. For optional standalone builds and probes:
 
 ```bash
 uv run paid-media-agent sandbox publish --name paid-media-agent-sandbox   # LangSmith builds sandbox/Dockerfile
@@ -224,8 +299,10 @@ uv run paid-media-agent sandbox test --json                              # open 
 ```
 
 `publish` (or `sandbox use <id>` for an existing snapshot) writes the snapshot id to `.env` and
-generates `sandbox/__init__.py`, the literal declaration MDA reads; `mda check` warns when the two
-disagree. Both the build and the probe need a LangSmith key with sandbox permissions; a key
+updates `sandbox/__init__.py`, the literal bake-base declaration MDA reads. The Dockerfile uses
+the same `setup.sh`, and the standalone build context contains only those two files. `sandbox test`
+requires an explicitly published snapshot; it does not resolve MDA's deployment-owned snapshot.
+Both automatic and standalone builds need a LangSmith key with sandbox permissions; a key
 without them fails with "No matching RBAC permission". If the gateway key is a different key,
 keep it in `LANGSMITH_GATEWAY_API_KEY` and set `PAID_MEDIA_MODEL_API_KEY_ENV=LANGSMITH_GATEWAY_API_KEY`.
 Snapshots built from a Dockerfile resolve by id, which is what `publish` stores. The model never
@@ -241,28 +318,28 @@ provider-native tool search; the portable selector is used instead.
 
 ## Direct platforms
 
-The setup console lists these under Advanced · Direct platforms (route `direct`): one form per
-platform, then the same account discovery as Pipeboard. `paid-media-agent accounts discover`
+The Accounts step uses one connection list. Pipeboard shows Google, Meta, TikTok, Pinterest, Snap,
+Reddit, LinkedIn, and Google Analytics together, with a link to connect them in Pipeboard and one token form.
+X and OpenAI Ads have their own rows and open their credential forms under
+Advanced · Direct connections (route `direct`), followed by the same
+account discovery as Pipeboard. `paid-media-agent accounts discover`
 lists direct accounts next to Pipeboard ones once their credentials are in `.env`.
 
-LinkedIn Ads, X Ads, and OpenAI Ads are not Pipeboard connectors. Set their credentials in `.env`
+X Ads and OpenAI Ads use direct connectors. Set their credentials in `.env`
 (see `.env.example`); the runtime adds their read tools to the catalog on startup and
-`paid-media-agent accounts discover` lists their accounts next to Pipeboard's. Token refresh for
-LinkedIn happens in-process from `LINKEDIN_REFRESH_TOKEN`; X requests are signed with OAuth 1.0a.
+`paid-media-agent accounts discover` lists their accounts next to Pipeboard's. X requests are signed with OAuth 1.0a.
+
+LinkedIn uses `https://linkedin-ads.mcp.pipeboard.co/`. Existing direct LinkedIn credentials remain
+usable from the CLI when no Pipeboard token is configured; with a Pipeboard token, its MCP owns
+LinkedIn discovery and reads so saved direct credentials cannot override it.
 
 ## Scheduled reports
+
+The console uses matching dropdowns for weekday, monthly day, and report time. Time offers
+quarter-hour intervals and retains an existing custom minute value. Use `config set` for other
+minute values; the saved time and timezone are shared by both report schedules.
 
 `paid-media-agent report --cadence weekly|monthly [--end YYYY-MM-DD] [--alias a]` runs the
 deterministic pipeline locally. In the deployment, `schedules/weekly_report.py` and
 `schedules/monthly_report.py` start the agent on a cron with a prompt that asks for the report;
 any change it might propose still waits for a human approval.
-
-## Pipeboard coverage and sample data
-
-Pipeboard connects Google, Meta, Reddit, TikTok, Pinterest, Snap, LinkedIn Ads, and Google
-Analytics. Catalogs and account listings load concurrently. X and OpenAI Ads remain direct
-connectors; direct LinkedIn is used only without a Pipeboard token.
-
-`PAID_MEDIA_DATA_MODE=sample` uses only synthetic tools and example aliases even when live
-credentials are saved. `live` requires a connected provider and adds no fixtures. `auto` keeps
-credential-based selection. The offline demo follows the fixture anchor and disables tracing.

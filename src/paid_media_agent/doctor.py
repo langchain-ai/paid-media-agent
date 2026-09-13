@@ -259,13 +259,18 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             "WeasyPrint ready" if pdf_ok else f"HTML only; {pdf_detail}",
         )
     )
+    sandbox_recipe = all(
+        (project_root / "sandbox" / name).is_file() for name in ("__init__.py", "setup.sh")
+    )
     checks.append(
         Check(
             "sandbox_snapshot",
-            "ok" if settings.paid_media_sandbox_snapshot else "warn",
-            f"declared: {settings.paid_media_sandbox_snapshot}"
+            "ok" if sandbox_recipe else "warn",
+            f"custom bake base: {settings.paid_media_sandbox_snapshot}"
             if settings.paid_media_sandbox_snapshot
-            else "none declared; MDA uses its default image (HTML reports only)",
+            else "recipe configured; MDA builds the snapshot on deploy"
+            if sandbox_recipe
+            else "sandbox declaration or setup.sh missing; restore the sandbox/ files",
         )
     )
     checks.append(

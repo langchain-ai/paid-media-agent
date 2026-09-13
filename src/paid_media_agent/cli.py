@@ -17,6 +17,7 @@ import click
 from paid_media_agent.admin import actions
 from paid_media_agent.config import Settings, project_root
 from paid_media_agent.domain.common import Platform
+from paid_media_agent.middleware.redaction import sanitize_exception
 from paid_media_agent.testing.demo_script import run_demo
 
 
@@ -99,7 +100,10 @@ def demo(with_proposal: bool, as_json: bool) -> None:
     """Run the fixture-backed demo through the real graph with no network or secrets."""
     settings = Settings(paid_media_model="scripted:demo", paid_media_allow_self_approval=True)
     _configure_logging(settings)
-    result = asyncio.run(run_demo(settings, with_proposal=with_proposal))
+    try:
+        result = asyncio.run(run_demo(settings, with_proposal=with_proposal))
+    except Exception as exc:
+        raise click.ClickException(f"demo failed: {sanitize_exception(exc)}") from None
     if as_json:
         click.echo(json.dumps(result, indent=2, default=str))
         return
@@ -380,6 +384,14 @@ def sandbox_use(name: str, as_json: bool) -> None:
 def sandbox_test(as_json: bool) -> None:
     """Open a sandbox from the snapshot, probe it, and delete it."""
     _emit(actions.sandbox_test(project_root()), as_json)
+
+
+@main.command("models")
+@click.option("--provider", required=True, help="Provider card ID, e.g. langsmith or anthropic.")
+@click.option("--json", "as_json", is_flag=True)
+def models(provider: str, as_json: bool) -> None:
+    """List models from the provider's official API using its configured key."""
+    _emit(actions.models_list(project_root(), provider), as_json)
 
 
 @main.group()
