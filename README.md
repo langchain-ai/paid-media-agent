@@ -1,127 +1,150 @@
 <div align="center">
-  <a href="https://github.com/langchain-ai/open-paid-media-agent">
-    <h1>Paid Media Agent</h1>
-  </a>
+  <p>
+    <a href="https://www.langchain.com/">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/langchain-oss-dark.svg">
+        <img src="docs/assets/langchain-oss-light.svg" alt="LangChain OSS" width="152">
+      </picture>
+    </a>
+  </p>
+  <h1>Paid Media Agent</h1>
+  <p>Cross-channel campaign analysis and reporting.<br>Built on <a href="https://github.com/langchain-ai/deepagents">Deep Agents</a>. Deploy with <a href="https://docs.langchain.com/langsmith/python/managed-deep-agents-overview">Managed Deep Agents</a>.</p>
+  <p>
+    <a href="#quick-start">Quick start</a> ·
+    <a href="#deployment">Deployment</a> ·
+    <a href="OPERATIONS.md">Documentation</a> ·
+    <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
 </div>
 
-<div align="center">
-  <h3>Ask questions across your ad accounts. Approve every change before it happens.</h3>
-</div>
+<a href="docs/screenshots/readme-overview-light.png">
+  <img src="docs/screenshots/readme-overview-light.png" alt="Paid Media Agent setup console layered with an illustrative Slack report showing spend, leads, cost per lead, and platform comparisons" width="100%">
+</a>
 
-<div align="center">
-  <a href="LICENSE" target="_blank"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
-  <a href="https://github.com/langchain-ai/deepagents" target="_blank"><img src="https://img.shields.io/badge/Built%20on-Deep%20Agents-blue" alt="Built on Deep Agents"></a>
-  <a href="https://github.com/langchain-ai/langgraph" target="_blank"><img src="https://img.shields.io/badge/Powered%20by-LangGraph-blue" alt="Powered by LangGraph"></a>
-  <a href="https://docs.langchain.com/langsmith/python/managed-deep-agents" target="_blank"><img src="https://img.shields.io/badge/Deploys%20with-Managed%20Deep%20Agents-blue" alt="Deploys with Managed Deep Agents"></a>
-</div>
+<p align="center">
+  <sub><a href="docs/screenshots/setup-preview-light.png">Setup console</a> · <a href="docs/screenshots/report-illustration.png">Report illustration</a> with example figures. Presentation varies by runtime.</sub>
+</p>
 
-<br>
+An open-source agent that reads your ad accounts, compares campaign performance, and produces
+answers and reports. Use it in Slack or the terminal, with your choice of model and hosting.
 
-Paid media is hard to run across platforms. Each one reports in its own schema, so spend and
-conversions do not add up across channels. Every change happens in a vendor console with no
-record of who decided it or why.
-
-Paid Media Agent is a [Deep Agent](https://docs.langchain.com/oss/python/deepagents/overview) for
-that job. It reads Google, Meta, Reddit, LinkedIn, X, and OpenAI Ads, computes the numbers in
-code, and turns every change into a proposal a person approves. Deploy it to Slack in one
-command, or self-host it.
-
-> [!NOTE]
-> Under active development. Live provider writes stay behind release gates until a separately
-> authorized canary; everything else runs today.
-
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/setup-welcome-dark.png">
-    <img src="docs/screenshots/setup-welcome.png" alt="The setup console" width="860">
-  </picture>
-</div>
-
-## Quick start
-
-No ad account or model key needed for the first two commands. Python 3.11+ and [uv](https://docs.astral.sh/uv/).
-
-```bash
-uv sync --all-extras --dev
-uv run paid-media-agent demo --with-proposal   # synthetic accounts through the real agent, with one approved change
-uv run paid-media-agent setup                  # the setup console
-```
-
-The demo compares two weeks against the prior two, proposes a budget change, approves it,
-executes it against a fake provider, reads the value back, and prints the receipt.
+Built from the tools, skills, and reporting patterns behind LangChain's Paid Media Agent.
 
 ## What it does
 
-| | The model | Code |
-|---|---|---|
-| **Analyze** | Picks the window and the accounts, explains what moved | Compares periods in `Decimal`; keeps missing metrics missing; no cross-platform total when sources disagree |
-| **Change** | Proposes a typed change with a reason and a reversal plan | Stores the proposal, requires a signed single-use approval, makes one mutation attempt, reads back, returns a receipt: verified, failed, or unknown |
-| **Report** | Writes the summary | Renders HTML and PDF where every number reconciles to a source artifact; runs weekly and monthly on a schedule |
+- **Compare performance:** spend, conversions, cost per lead, and budget pacing.
+- **Investigate changes:** identify the campaigns behind a shift and flag missing data.
+- **Produce reports:** weekly or monthly summaries, campaign tables, and recommendations.
+  Download HTML, or PDF when the rendering libraries are installed.
 
-The model decides, the code calculates.
+The model decides what to investigate. Code calculates the metrics and checks report figures
+against the source data.
 
-## Where it runs
+**Ad account changes are off by default.** Live changes require approval and
+[additional release checks](docs/operations/live-write-runbook.md). The project is under active development.
 
-| | Managed Deep Agents, recommended | Self-host |
-|---|---|---|
-| Deploy | `uv run mda deploy .` | `docker compose up` |
-| Provides | Slack, schedules, threads, a sandbox per thread, identity | Your API, Postgres, and a Slack app you own |
-| Setup | One LangSmith key | A Slack app, a database URL, API tokens |
-| Locally | `uv run mda dev` | `uv run paid-media-agent serve` and `slack` |
-| Guide | [Operations](OPERATIONS.md#deploying-with-managed-deep-agents) | [Self-hosting](docs/self-hosting.md) |
+## Quick start
 
-Same agent either way. A surface changes how a result looks, not what the agent may do.
+Requires **Python 3.11+** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv run paid-media-agent ask "How did spend move week over week?"
+git clone https://github.com/langchain-ai/open-paid-media-agent.git
+cd open-paid-media-agent
+uv sync --all-extras
+uv run paid-media-agent setup
+```
+
+The setup console opens in your browser at [localhost:8765](http://localhost:8765):
+
+1. **Model:** choose a provider and add its API key.
+2. **Accounts:** connect your platforms and select accounts, or start with sample data.
+3. **Deployment:** choose Managed Deep Agents or self-hosting.
+
+Using a coding agent? Point it to [AGENTS.md](AGENTS.md) and the
+[onboarding skill](skills/paid-media-onboarding/SKILL.md). The CLI supports the same setup
+actions with JSON output. No frontend build is required.
+
+<details>
+<summary>Try the offline demo without keys or ad accounts</summary>
+
+```bash
+uv run paid-media-agent demo --with-proposal
+```
+
+Runs a scripted analysis and simulated budget change against synthetic accounts. No model key
+or live account access is needed.
+
+</details>
+
+Once your model and data are configured, try:
+
+```bash
+uv run paid-media-agent ask "Which campaigns had the largest increase in cost per lead last week?"
 uv run paid-media-agent report --cadence weekly
 ```
 
-## What code guarantees
+## Accounts and business context
 
-- **Deny by default.** Provider tools enter through a catalog built in host code. No read-only annotation or reviewed policy row, no tool.
-- **Host-owned identity.** The model sees account aliases, never provider ids or credentials. Approvers are an allowlist the host checks.
-- **One attempt.** A live write needs the kill switch clear, the flag on, the catalog revision pinned, and the tool on the canary list. Uncertain outcomes are reported as unknown, never retried.
-- **Nothing phones home.** The agent talks only to the providers you configure.
+| Connection | Platforms |
+| --- | --- |
+| [Pipeboard MCP](https://pipeboard.co/integrations) | Google Ads, Meta Ads, TikTok Ads, Pinterest Ads, Snap Ads, Reddit Ads, LinkedIn Ads, Google Analytics |
+| [Direct adapters](OPERATIONS.md#direct-platforms) | X Ads, OpenAI Ads |
 
-## Platforms
+Connect any subset. Tools and metrics depend on platform permissions and API access.
+Direct adapters are read-only.
 
-| Platform | Path | Reads | Writes |
-|---|---|---|---|
-| Google, Meta, Reddit | [Pipeboard](https://pipeboard.co) MCP | live catalog, classified by MCP annotations | admitted rows only |
-| LinkedIn | direct adapter | accounts, campaigns, creatives | none in v1 |
-| X | direct adapter | accounts, campaigns, line items | none in v1 |
-| OpenAI Ads | direct adapter | account, campaigns, ad groups | none in v1 |
+Add your goals, conversion definitions, and campaign briefs before the first real analysis.
+Use the [business-context skill](skills/paid-media-org-onboarding/SKILL.md) with your coding agent,
+or the terminal interview:
 
-## Onboarding
-
-The console asks for what the code cannot know: which model, which accounts, who may approve.
-Organization context (what you sell, which conversion counts) is filled by the coding agent in
-chat, or `paid-media-agent org interview`. Answers live in `docs/org/`, out of git.
-
-Claude Code desktop opens the console in its Browser pane from `.claude/launch.json`. Cursor and
-the Codex app open it in their built-in browser (`uv run paid-media-agent setup --no-open --no-token`).
-
-## How it is built
-
-```mermaid
-flowchart TD
-    S["Slack · API · schedule · CLI"] --> A["Shared agent assembly (agent.py)"]
-    A --> K["Skills · business wiki · organization context · middleware"]
-    K --> C["Authorized catalog: Pipeboard MCP + direct adapters + deterministic tools"]
-    C --> W["Proposal → signed approval → one mutation → readback → receipt"]
+```bash
+uv run paid-media-agent org interview
 ```
 
-Deep Agents runs the loop. Middleware picks a small tool set per turn, checks every call against
-the catalog, offloads large results to files, and redacts secrets. Skills say how to work. The
-wiki holds paid-media doctrine. Both should work at another company. Your organization context
-should not, so it stays out of git.
+Settings live in `.env`, account mappings in `config/accounts.toml`, and business context in
+`docs/org/`. All are Git-ignored.
 
-## Documentation
+## Deployment
 
-- [Architecture](docs/architecture/README.md) · [Operations](OPERATIONS.md) · [Self-hosting](docs/self-hosting.md) · [Business wiki](skills/paid-media-wiki/SKILL.md)
-- [AGENTS.md](AGENTS.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Principles](docs/open-source-principles.md)
+Both paths run the same agent core. After configuring the project:
 
-## License
+| | Managed Deep Agents · recommended | Self-hosted |
+| --- | --- | --- |
+| Start | **Deploy agent** in setup, or `uv run mda deploy .` | `docker compose up -d --build` on your Docker host |
+| Hosting | Managed by LangSmith | You operate the API and Postgres |
+| Slack | Managed app with workspace authorization | Your app, using a separate Socket Mode process or signed HTTP |
+| Reports | Managed weekly and monthly schedules | Run the report command with your scheduler |
+| Guide | [Managed deployment](OPERATIONS.md#deploying-with-managed-deep-agents) | [Self-hosting](docs/self-hosting.md) |
 
-Apache 2.0.
+**Managed Deep Agents** needs a LangSmith organization with MDA access and an API key with
+deployment permissions. Authorize Slack when prompted. The sandbox builds automatically and
+reuses its snapshot until the recipe changes. [Hosting is paid](https://www.langchain.com/pricing).
+
+**Self-hosting** needs Docker and generated API credentials. Compose starts the API and Postgres;
+the guide covers Slack setup. The image includes PDF libraries. You operate the infrastructure.
+
+Model and connector charges apply to either path. For local development, use `uv run mda dev`
+to inspect runs in LangSmith Studio.
+
+## Build on it
+
+Skills describe how to analyze paid media. Your business context defines goals and conversions.
+Tools supply current account data, with only relevant tools loaded from the catalog.
+
+One shared agent assembly serves both deployment paths. Edit its instructions, add skills, or
+extend its tools without maintaining a separate agent for each interface.
+
+| Change or explore | Start here |
+| --- | --- |
+| Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [skills/](skills/) |
+| Tools and runtime | [src/paid_media_agent/](src/paid_media_agent/) · [Architecture](docs/architecture/README.md) |
+| Managed channels and schedules | [channels/](channels/) · [schedules/](schedules/) · [sandbox/](sandbox/) |
+| Configuration and troubleshooting | [Operations](OPERATIONS.md) |
+| Development and tests | [Contributing](CONTRIBUTING.md) · [Agent instructions](AGENTS.md) |
+
+Use synthetic data for development. Run `make check` before submitting a change; see
+[Contributing](CONTRIBUTING.md) for the development dependencies and checks.
+
+---
+
+[Apache 2.0](LICENSE) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md)

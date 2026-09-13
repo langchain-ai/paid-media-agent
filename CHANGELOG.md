@@ -26,13 +26,10 @@
 
 ### Changed (README)
 
-- The README is a short landing page written as operator prose: the operating problem first,
-  then what code guarantees; tagline, badges, the console as the hero image (light and dark), a
-  three-command quick start, what the model does versus what code does, the two
-  deployment paths side by side, the trust properties, platforms, onboarding, and a diagram.
-  Details moved to OPERATIONS.md and the docs it links. The header follows the LangChain
-  open-source pattern (centered title and tagline, flat shields.io badges: license, Built on
-  Deep Agents, Powered by LangGraph, Deploys with Managed Deep Agents).
+- Reworked the README around campaign analysis, a short setup guide, and both deployment paths.
+  Added an official LangChain OSS lockup for light and dark themes and a light composition of the
+  setup console with an illustrative report. Managed Deep Agents appears in the headline and
+  deployment guide. Detailed operator instructions remain in Operations.
 
 ### Added (onboarding inside coding agents)
 
