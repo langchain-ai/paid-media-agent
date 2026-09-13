@@ -1,4 +1,4 @@
-"""Direct read adapters for platforms Pipeboard does not cover: LinkedIn Ads, X Ads, OpenAI Ads.
+"""Direct read adapters for X and OpenAI Ads, plus legacy standalone LinkedIn connections.
 
 Each adapter contributes `RawTool` entries that go through the same deny-by-default catalog as
 Pipeboard tools, and a `ReadProvider` that executes them host-side. Mutations are never defined

@@ -2,15 +2,19 @@
 
 ## Catalog lifecycle
 
-1. Load Pipeboard tools host-side from configured MCP endpoints.
+1. Load every tool from the eight configured Pipeboard MCP endpoints concurrently, with a
+   20-second timeout per endpoint. A failed connector does not discard the others.
 2. Normalize schemas and annotations into immutable catalog entries.
 3. Apply local platform, mutation, delete, raw-mutate, and account policy.
 4. Hash the authorized catalog revision.
 5. Expose only a context-efficient selectable surface.
 6. Re-resolve and validate the exact current entry immediately before invocation.
 
-Cache catalogs for bounded periods, not forever. Refresh after authentication changes, schema errors,
-or an unknown-tool result. A cached catalog is a performance aid, not authority after expiry.
+A loader retains the catalog in memory for its agent assembly; it does not refetch on each search
+or model turn. Rebuild the runtime after credentials change, or explicitly refresh the loader.
+Setup actions load a fresh live catalog even when the runtime is currently using sample data.
+Account discovery calls independent listing tools concurrently and recognizes ad accounts, TikTok
+advertisers, and GA4 properties. Fixture coverage remains Google, Meta, and Reddit.
 
 ## Selection paths
 
@@ -25,6 +29,8 @@ enough.
 ## Results
 
 Tool results return typed, bounded summaries. Large rows are written under `workspace/analysis/`.
+GA4 and newly connected platforms without verified spend-unit mappings keep their native payloads
+as `provider_result` artifacts. They are not coerced into normalized spend comparisons.
 Every offloaded artifact records:
 
 - source platform and account alias;

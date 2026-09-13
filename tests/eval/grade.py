@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS
+from paid_media_agent.domain.common import FIXTURE_PLATFORMS
 from paid_media_agent.tools.fixtures import load_fixture_dataset, shift_dataset
 
 SHIPPED_ANCHOR = date(2026, 8, 28)
@@ -37,7 +37,7 @@ AUGUST = _shift((date(2026, 8, 1), date(2026, 8, 31)))
 def window_totals(platform: str, window: tuple[date, date]) -> dict[str, str | None]:
     """Spend, conversions, and CPA for one platform over one window, from the fixture rows."""
     dataset = shift_dataset(
-        load_fixture_dataset(next(p for p in PIPEBOARD_PLATFORMS if p.value == platform)), OFFSET
+        load_fixture_dataset(next(p for p in FIXTURE_PLATFORMS if p.value == platform)), OFFSET
     )
     rows = [
         r for r in dataset["daily"] if window[0] <= date.fromisoformat(str(r["date"])) <= window[1]
@@ -57,7 +57,7 @@ def expected_figures(question_id: str) -> list[str]:
     if question_id == "q01_wow_spend":
         return [
             window_totals(p.value, w)["spend"]
-            for p in PIPEBOARD_PLATFORMS
+            for p in FIXTURE_PLATFORMS
             for w in (LAST_WEEK, PRIOR_WEEK)
         ]
     if question_id == "q02_cpa_movers":
@@ -65,7 +65,7 @@ def expected_figures(question_id: str) -> list[str]:
         # the seven days ending on the last complete day; the check below accepts either pair.
         return []
     if question_id == "q05_cross_total":
-        return [window_totals(p.value, AUGUST)["spend"] for p in PIPEBOARD_PLATFORMS]
+        return [window_totals(p.value, AUGUST)["spend"] for p in FIXTURE_PLATFORMS]
     return []
 
 

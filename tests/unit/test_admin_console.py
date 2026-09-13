@@ -137,14 +137,18 @@ def test_invalid_model_spec_is_reported_not_raised(
 ) -> None:
     """A slash instead of a colon in PAID_MEDIA_MODEL used to blank the console with a 500."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
+    write_env(workspace, {"PAID_MEDIA_MODEL": "claude-sonnet-4-6"})
     result = actions.status(workspace)
-    assert result.detail["model"]["spec"] == "anthropic/claude-sonnet-4-6"
+    assert result.detail["model"]["spec"] == "claude-sonnet-4-6"
     assert "provider:model" in result.detail["model"]["error"]
     routes = {r.id: r for r in build_routes(result.detail)}
     assert {s.id: s.status for s in routes["local"].steps}["model"] == "todo"
     check = actions.mda_check(workspace)
     assert check.status == "warn" and "model_package" in check.summary
+    write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
+    gateway = actions.status(workspace)
+    assert gateway.detail["model"]["spec"] == "langsmith:anthropic/claude-sonnet-4-6"
+    assert not gateway.detail["model"]["error"]
 
 
 def test_fixture_discovery_and_alias_mapping_switch_the_active_file(
@@ -197,7 +201,6 @@ def test_live_discovery_parses_listing_tools(workspace: Path) -> None:
             annotations={"readOnlyHint": True},
         ),
     ]
-    catalog = build_authorized_catalog(raw, source="pipeboard")
 
     async def google(**kwargs: object) -> str:
         return '{"customers": [{"customer_id": "111-222", "descriptive_name": "Acme Search", "currency_code": "USD", "time_zone": "America/Chicago"}]}'
@@ -219,6 +222,50 @@ def test_live_discovery_parses_listing_tools(workspace: Path) -> None:
             coroutine=meta,
         ),
     }
+    # New Pipeboard platforms use advertiser ids, nested ad accounts, and GA4 properties.
+    additional = [
+        (
+            "tiktok_ads",
+            "list_tiktok_advertisers",
+            '{"advertisers": [{"advertiser_id": "tt-1", "advertiser_name": "Short video"}]}',
+        ),
+        (
+            "pinterest_ads",
+            "list_pinterest_ad_accounts",
+            '{"accounts": [{"ad_account_id": "pin-1", "name": "Pins"}]}',
+        ),
+        (
+            "snap_ads",
+            "list_snap_ad_accounts",
+            '{"id": "org-1", "name": "Organization", "adaccounts": [{"adaccount": {"id": "snap-1", "name": "Snap"}}]}',
+        ),
+        (
+            "google_analytics",
+            "list_properties",
+            '{"id": "parent-account", "name": "Analytics account", "propertySummaries": [{"property": "properties/123", "displayName": "Website"}]}',
+        ),
+    ]
+    for platform, name, payload in additional:
+        raw.append(
+            RawTool(
+                platform=platform,
+                name=name,
+                description="List connected accounts",
+                input_schema={"type": "object", "properties": {}},
+                annotations={"readOnlyHint": True},
+            )
+        )
+
+        async def listing(response: str = payload) -> str:
+            return response
+
+        tools[f"{platform}__{name}"] = StructuredTool(
+            name=name,
+            description="List",
+            args_schema={"type": "object", "properties": {}},
+            coroutine=listing,
+        )
+    catalog = build_authorized_catalog(raw, source="pipeboard")
 
     class Loader:
         def langchain_tool(self, name: str) -> StructuredTool | None:
@@ -234,6 +281,9 @@ def test_live_discovery_parses_listing_tools(workspace: Path) -> None:
         and rows["111-222"]["timezone"] == "America/Chicago"
     )
     assert rows["act_999"]["currency"] == "EUR" and rows["act_999"]["platform"] == "meta_ads"
+    assert {"tt-1", "pin-1", "snap-1", "123"} <= rows.keys()
+    assert rows["123"]["name"] == "Website"
+    assert "parent-account" not in rows and "org-1" not in rows
 
 
 def test_policy_validate_and_kill_switch(workspace: Path) -> None:
@@ -416,3 +466,22 @@ def test_ask_reports_model_failures_as_failures(workspace: Path) -> None:
     )
     result = actions.ask_question(workspace, "hello", model=broken)
     assert result.status == "fail" and "Model call failed" in result.summary
+
+
+async def test_connecting_from_sample_mode_loads_real_catalogs(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paid_media_agent.config import Settings
+    from paid_media_agent.runtime.catalog import LoadedCatalog
+    from paid_media_agent.tools.catalog import StaticCatalogProvider
+    from paid_media_agent.tools.fixtures import build_fixture_catalog
+
+    async def load_live(config: Settings, *, project_root: Path) -> LoadedCatalog:
+        assert config.paid_media_data_mode == "live"
+        catalog = build_fixture_catalog()
+        return LoadedCatalog(catalog, StaticCatalogProvider(catalog), None, None)
+
+    monkeypatch.setattr("paid_media_agent.runtime.catalog.load_catalog", load_live)
+    sample = Settings(_env_file=None, paid_media_data_mode="sample")
+    await actions._load_live(sample, workspace)
+    assert sample.paid_media_data_mode == "sample", "connecting must not switch the runtime mode"

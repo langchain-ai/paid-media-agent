@@ -23,6 +23,8 @@ _SPEND_KEYS: dict[Platform, tuple[tuple[str, Decimal], ...]] = {
     Platform.X_ADS: (("spend_micros", Decimal(1_000_000)), ("spend", Decimal(1))),
     Platform.OPENAI_ADS: (("spend", Decimal(1)),),
 }
+PERFORMANCE_PLATFORMS = frozenset(_SPEND_KEYS)
+"""Platforms with verified mappings into the cross-platform spend model."""
 _CONVERSION_KEYS = ("conversions", "purchases", "results")
 _VALUE_KEYS = ("conversion_value", "conversions_value", "value", "purchase_value", "action_values")
 _GRAIN_ID_KEYS: dict[EntityType, tuple[str, ...]] = {
@@ -90,7 +92,9 @@ def normalize_rows(
     data_complete_through: date | None,
 ) -> tuple[list[PerformanceRow], tuple[str, ...]]:
     """Return normalized rows and the metric fields that were missing in every source row."""
-    spend_keys = _SPEND_KEYS[platform]
+    spend_keys = _SPEND_KEYS.get(platform)
+    if spend_keys is None:
+        raise NormalizationError("platform metrics have no verified spend-unit mapping")
     normalized: list[PerformanceRow] = []
     seen_metric: dict[str, bool] = {
         "impressions": False,

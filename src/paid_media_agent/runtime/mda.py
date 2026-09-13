@@ -62,6 +62,8 @@ def configured_profile(
         approval_policy=approval_policy_from_settings(settings),
     )
     overrides: dict[str, Any] = {"write_policy": write_policy, "write_policy_issues": issues}
+    if loaded.read_provider is not None:
+        overrides["read_provider"] = loaded.read_provider
     if loaded.live:
         # Live catalog: live reads and the gated live write adapter. The fake is never used here.
         overrides.update(

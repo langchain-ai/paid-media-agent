@@ -73,7 +73,11 @@ class RuntimeProfile:
 
 
 def load_accounts(settings: Settings, project_root: Path) -> AccountRegistry:
-    path = settings.paid_media_account_config_path
+    path = (
+        Path("config/accounts.example.toml")
+        if settings.paid_media_data_mode == "sample"
+        else settings.paid_media_account_config_path
+    )
     if not path.is_absolute():
         path = project_root / path
     if not path.exists():

@@ -11,8 +11,9 @@ The normalized model supports comparison without erasing each platform's operati
 | Video and display | awareness, education, retargeting | viewability, completed views, reach, frequency, assisted outcomes, creative sequencing |
 | Chat-surface ads (OpenAI Ads) | intent capture inside assistant conversations | new placement semantics, sparse benchmarks, reported conversions only |
 
-Source paths differ: Google, Meta, and Reddit arrive through Pipeboard MCP; LinkedIn, X, and OpenAI
-Ads arrive through direct adapters. LinkedIn reports `externalWebsiteConversions` (click and view
+Source paths differ: Google, Meta, TikTok, Pinterest, Snap, Reddit, LinkedIn, and Google Analytics arrive
+through Pipeboard MCP; X and OpenAI Ads arrive through direct adapters. GA4 property
+metrics describe site or app activity, not the ad platform attribution of those outcomes. LinkedIn reports `externalWebsiteConversions` (click and view
 attributed), X reports `conversion_purchases` from its web conversion metric group, and OpenAI Ads
 reports its own `conversions`. None of these are comparable to each other or to Pipeboard platforms
 without an explicit attribution note.

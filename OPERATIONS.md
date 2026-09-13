@@ -256,3 +256,13 @@ LinkedIn happens in-process from `LINKEDIN_REFRESH_TOKEN`; X requests are signed
 deterministic pipeline locally. In the deployment, `schedules/weekly_report.py` and
 `schedules/monthly_report.py` start the agent on a cron with a prompt that asks for the report;
 any change it might propose still waits for a human approval.
+
+## Pipeboard coverage and sample data
+
+Pipeboard connects Google, Meta, Reddit, TikTok, Pinterest, Snap, LinkedIn Ads, and Google
+Analytics. Catalogs and account listings load concurrently. X and OpenAI Ads remain direct
+connectors; direct LinkedIn is used only without a Pipeboard token.
+
+`PAID_MEDIA_DATA_MODE=sample` uses only synthetic tools and example aliases even when live
+credentials are saved. `live` requires a connected provider and adds no fixtures. `auto` keeps
+credential-based selection. The offline demo follows the fixture anchor and disables tracing.

@@ -39,8 +39,9 @@ class LoadedCatalog:
 async def load_catalog(settings: Settings, *, project_root: Path | None = None) -> LoadedCatalog:
     """Live Pipeboard catalog when a token is configured, otherwise the fixture catalog.
 
-    Direct adapters (LinkedIn, X, OpenAI Ads) join the same catalog whenever their credentials
-    are configured. The reviewed write-policy file decides which live mutations are admitted.
+    X and OpenAI Ads join the same catalog when configured. Legacy direct LinkedIn works only
+    without Pipeboard, so the two providers never compete for the same platform.
+    The reviewed write-policy file decides which live mutations are admitted.
     """
     from paid_media_agent.tools.direct import (
         CompositeReadProvider,
@@ -48,10 +49,20 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
         direct_read_providers,
     )
 
+    if settings.paid_media_data_mode == "sample":
+        catalog = build_fixture_catalog()
+        return LoadedCatalog(
+            catalog=catalog,
+            provider=StaticCatalogProvider(catalog),
+            read_provider=None,
+            write_provider=None,
+        )
     direct_tools = direct_raw_tools(settings)
     direct_providers = direct_read_providers(settings)
     if settings.pipeboard_api_token is None:
         if not direct_tools:
+            if settings.paid_media_data_mode == "live":
+                raise ValueError("Connect an ad platform before opening a live session.")
             catalog = build_fixture_catalog()
             return LoadedCatalog(
                 catalog=catalog,
@@ -59,11 +70,14 @@ async def load_catalog(settings: Settings, *, project_root: Path | None = None) 
                 read_provider=None,
                 write_provider=None,
             )
-        # Fixture catalog for the Pipeboard platforms plus live direct platforms.
+        # Explicit live sessions never mix synthetic platforms into the results.
         catalog = build_authorized_catalog(
-            [*fixture_raw_tools(), *direct_tools],
+            [
+                *(fixture_raw_tools() if settings.paid_media_data_mode == "auto" else []),
+                *direct_tools,
+            ],
             policy=FIXTURE_LOCAL_POLICY,
-            source="fixture+direct",
+            source="fixture+direct" if settings.paid_media_data_mode == "auto" else "direct",
         )
         return LoadedCatalog(
             catalog=catalog,

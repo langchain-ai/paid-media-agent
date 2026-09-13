@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (platform coverage and sample data)
+
+- Load all eight Pipeboard catalogs concurrently, route LinkedIn through Pipeboard, and keep
+  unsupported metric shapes out of cross-platform totals. Explicit sample mode uses only fixture
+  accounts; live mode never adds synthetic platforms. The offline demo follows its fixture date
+  and runs without tracing or live-provider calls.
+
 ### Changed (README)
 
 - The README is a short landing page written as operator prose: the operating problem first,

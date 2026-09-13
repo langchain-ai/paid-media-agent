@@ -104,7 +104,15 @@ DEFAULT_LOCAL_POLICY = LocalPolicy(
             platform=Platform.META_ADS, account_arg_names=("account_id", "ad_account_id")
         ),
         PlatformPolicy(platform=Platform.REDDIT_ADS, account_arg_names=("account_id",)),
-        PlatformPolicy(platform=Platform.LINKEDIN_ADS, account_arg_names=("account_id",)),
+        PlatformPolicy(platform=Platform.TIKTOK_ADS, account_arg_names=("advertiser_id",)),
+        PlatformPolicy(platform=Platform.PINTEREST_ADS, account_arg_names=("ad_account_id",)),
+        PlatformPolicy(platform=Platform.SNAP_ADS, account_arg_names=("ad_account_id",)),
+        PlatformPolicy(
+            platform=Platform.GOOGLE_ANALYTICS, account_arg_names=("property_id", "property")
+        ),
+        PlatformPolicy(
+            platform=Platform.LINKEDIN_ADS, account_arg_names=("account_id", "ad_account_id")
+        ),
         PlatformPolicy(platform=Platform.X_ADS, account_arg_names=("account_id",)),
         PlatformPolicy(platform=Platform.OPENAI_ADS, account_arg_names=("account_id",)),
     ),

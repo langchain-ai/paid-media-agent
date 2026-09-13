@@ -38,8 +38,11 @@ class ModelConfig(BaseModel):
         base_url: str | None = None,
         tool_selector_model: str | None = None,
     ) -> ModelConfig:
-        """Parse `provider:model`. A bare model name is rejected to keep provider explicit."""
-        provider, sep, model = spec.partition(":")
+        """Parse `provider:model`. A bare `provider/model` is the older gateway form."""
+        raw = spec.strip()
+        if raw and ":" not in raw and "/" in raw:
+            raw = f"langsmith:{raw}"
+        provider, sep, model = raw.partition(":")
         if not sep or not provider.strip() or not model.strip():
             raise ValueError("PAID_MEDIA_MODEL must look like 'provider:model'")
         return cls(
@@ -118,8 +121,10 @@ class Settings(BaseSettings):
     """Model calls per run before the agent stops and reports; bounds runaway tool loops."""
     paid_media_runtime: RuntimeName = "local"
     """The deployment path chosen in the console; the command you run selects the runtime."""
+    paid_media_data_mode: Literal["auto", "sample", "live"] = "auto"
+    """Sample always uses fixtures. Live requires credentials. Auto preserves CLI defaults."""
     paid_media_sandbox_snapshot: str | None = None
-    """Snapshot built from sandbox/Dockerfile and declared to MDA. Empty means the platform image."""
+    """Optional custom bake base. By default MDA builds sandbox/setup.sh during deployment."""
     paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
     """Idle seconds before MDA deletes a thread's sandbox; written into sandbox/__init__.py."""
     paid_media_log_level: str = "INFO"
@@ -135,12 +140,18 @@ class Settings(BaseSettings):
     pipeboard_google_ads_mcp_url: str = "https://google-ads.mcp.pipeboard.co/"
     pipeboard_meta_ads_mcp_url: str = "https://meta-ads.mcp.pipeboard.co/"
     pipeboard_reddit_ads_mcp_url: str = "https://reddit-ads.mcp.pipeboard.co/"
+    pipeboard_tiktok_ads_mcp_url: str = "https://tiktok-ads.mcp.pipeboard.co/"
+    pipeboard_pinterest_ads_mcp_url: str = "https://pinterest-ads.mcp.pipeboard.co/"
+    pipeboard_snap_ads_mcp_url: str = "https://snap-ads.mcp.pipeboard.co/"
+    pipeboard_google_analytics_mcp_url: str = "https://google-analytics.mcp.pipeboard.co/"
+    pipeboard_linkedin_ads_mcp_url: str = "https://linkedin-ads.mcp.pipeboard.co/"
 
-    # Direct adapters for platforms Pipeboard does not cover. Unset means the platform is absent.
+    # Legacy direct LinkedIn credentials remain usable without a Pipeboard connection.
     linkedin_client_id: str | None = None
     linkedin_client_secret: SecretStr | None = None
     linkedin_access_token: SecretStr | None = None
     linkedin_refresh_token: SecretStr | None = None
+    # X and OpenAI Ads use direct adapters. Unset means the platform is absent.
     x_ads_consumer_key: SecretStr | None = None
     x_ads_consumer_secret: SecretStr | None = None
     x_ads_access_token: SecretStr | None = None
@@ -170,6 +181,7 @@ class Settings(BaseSettings):
     paid_media_api_port: int = Field(default=8080, ge=1, le=65535)
 
     @field_validator(
+        "paid_media_fixture_anchor",
         "paid_media_model_base_url",
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
@@ -231,12 +243,17 @@ class Settings(BaseSettings):
             Platform.GOOGLE_ADS: self.pipeboard_google_ads_mcp_url,
             Platform.META_ADS: self.pipeboard_meta_ads_mcp_url,
             Platform.REDDIT_ADS: self.pipeboard_reddit_ads_mcp_url,
+            Platform.TIKTOK_ADS: self.pipeboard_tiktok_ads_mcp_url,
+            Platform.PINTEREST_ADS: self.pipeboard_pinterest_ads_mcp_url,
+            Platform.SNAP_ADS: self.pipeboard_snap_ads_mcp_url,
+            Platform.GOOGLE_ANALYTICS: self.pipeboard_google_analytics_mcp_url,
+            Platform.LINKEDIN_ADS: self.pipeboard_linkedin_ads_mcp_url,
         }
 
     def direct_platforms(self) -> tuple[Platform, ...]:
         """Direct-adapter platforms with complete credentials."""
         platforms: list[Platform] = []
-        if self.linkedin_access_token is not None:
+        if self.linkedin_access_token is not None and self.pipeboard_api_token is None:
             platforms.append(Platform.LINKEDIN_ADS)
         if None not in (
             self.x_ads_consumer_key,

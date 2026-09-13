@@ -11,7 +11,7 @@ from decimal import Decimal
 from importlib import resources
 from typing import Literal
 
-from paid_media_agent.domain.common import PIPEBOARD_PLATFORMS, JsonValue, Platform
+from paid_media_agent.domain.common import FIXTURE_PLATFORMS, JsonValue, Platform
 from paid_media_agent.tools.catalog import (
     DEFAULT_LOCAL_POLICY,
     AuthorizedToolCatalog,
@@ -62,7 +62,7 @@ def _schema(
 def fixture_raw_tools() -> list[RawTool]:
     """A Pipeboard-shaped catalog including tools that policy must deny."""
     tools: list[RawTool] = []
-    for platform in PIPEBOARD_PLATFORMS:
+    for platform in FIXTURE_PLATFORMS:
         account_arg = _ACCOUNT_ARG[platform]
         endpoint = f"fixture://{platform.value}"
         date_props: dict[str, JsonValue] = {
@@ -240,7 +240,7 @@ class FixtureState:
     """
 
     def __init__(self, anchor: date | None = None) -> None:
-        loaded = {platform: load_fixture_dataset(platform) for platform in PIPEBOARD_PLATFORMS}
+        loaded = {platform: load_fixture_dataset(platform) for platform in FIXTURE_PLATFORMS}
         offset = fixture_anchor(anchor) - shipped_anchor(loaded)
         self.datasets: dict[Platform, dict[str, JsonValue]] = {
             platform: shift_dataset(copy.deepcopy(dataset), offset)

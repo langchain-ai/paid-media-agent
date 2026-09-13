@@ -47,7 +47,7 @@ def test_raw_mutate_and_delete_are_denied_even_when_admitted() -> None:
 
 def test_unknown_platform_and_malformed_schema_fail_closed() -> None:
     decision, platform, _ = classify(
-        _raw("list", {"readOnlyHint": True}, platform="tiktok_ads"), DEFAULT_LOCAL_POLICY
+        _raw("list", {"readOnlyHint": True}, platform="unknown_platform"), DEFAULT_LOCAL_POLICY
     )
     assert decision.tool_class is ToolClass.DENIED and platform is None
     decision, _, _ = classify(
