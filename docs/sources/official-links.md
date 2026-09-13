@@ -39,6 +39,12 @@ current contracts.
 - [Pipeboard MCP product](https://pipeboard.co/products/mcps)
 - [Pipeboard Google integration and permissions](https://pipeboard.co/google-mcp)
 - [Pipeboard API tokens](https://pipeboard.co/api-tokens)
+- [Pipeboard connections](https://pipeboard.co/connections)
+- [TikTok Ads MCP](https://pipeboard.co/guides/tiktok-ads-mcp)
+- [Pinterest Ads MCP](https://pipeboard.co/guides/pinterest-ads-mcp)
+- [Snap Ads MCP](https://pipeboard.co/guides/snap-ads-mcp)
+- [Google Analytics MCP](https://pipeboard.co/guides/google-analytics-mcp)
+- [LinkedIn Ads MCP](https://pipeboard.co/guides/linkedin-ads-mcp)
 
 Pipeboard's public pages establish its MCP and OAuth product surface. Only the authenticated live
 catalog establishes the exact tools and annotations available to a configured user.

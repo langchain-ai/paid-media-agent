@@ -31,6 +31,7 @@ def workspace(tmp_path: Path, project_root: Path) -> Path:
     shutil.copytree(project_root / "skills", tmp_path / "skills")
     shutil.copytree(project_root / "config", tmp_path / "config")
     shutil.copytree(project_root / "channels", tmp_path / "channels")
+    shutil.copytree(project_root / "sandbox", tmp_path / "sandbox")
     (tmp_path / "workspace").mkdir()
     return tmp_path
 
@@ -108,9 +109,14 @@ def test_status_and_routes_reflect_configuration(
         "mda",
         "slack",
         "self_hosted",
-        "writes",
     ]
-    assert {s.id for s in routes["mda"].steps} >= {"mda_approvers", "mda_check", "mda_deploy"}
+    assert {s.id for s in routes["mda"].steps} >= {"mda_check", "mda_deploy"}
+    assert all(
+        "approvers" not in step.id and step.action.kind not in {"policy", "kill_switch"}
+        for route in routes.values()
+        for step in route.steps
+        if step.action
+    )
     assert {s.id for s in routes["self_hosted"].steps} >= {"sh_docker", "sh_db", "sh_serve"}
     statuses = {s.id: s.status for s in routes["pipeboard"].steps}
     assert statuses["pb_token"] == "todo" and statuses["pb_test"] == "blocked"
@@ -286,6 +292,51 @@ def test_live_discovery_parses_listing_tools(workspace: Path) -> None:
     assert "parent-account" not in rows and "org-1" not in rows
 
 
+def test_pipeboard_connection_accepts_a_subset_of_platforms(workspace: Path) -> None:
+    from paid_media_agent.tools.catalog import RawTool, build_authorized_catalog
+
+    write_env(workspace, {"PIPEBOARD_API_TOKEN": "test-token"})
+    catalog = build_authorized_catalog(
+        [
+            RawTool(
+                platform="tiktok_ads",
+                name="get_tiktok_campaigns",
+                description="Campaigns",
+                input_schema={
+                    "type": "object",
+                    "properties": {"advertiser_id": {"type": "string"}},
+                },
+                annotations={"readOnlyHint": True},
+            )
+        ],
+        source="pipeboard",
+    )
+    result = actions.pipeboard_test(
+        workspace, loader=lambda _s, _r: actions.LiveCatalog(catalog=catalog, loader=None)
+    )
+    assert result.status == "ok"
+    assert "no tools loaded" in result.summary
+
+
+async def test_connecting_from_sample_mode_loads_real_catalogs(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paid_media_agent.config import Settings
+    from paid_media_agent.runtime.catalog import LoadedCatalog
+    from paid_media_agent.tools.catalog import StaticCatalogProvider
+    from paid_media_agent.tools.fixtures import build_fixture_catalog
+
+    async def load_live(config: Settings, *, project_root: Path) -> LoadedCatalog:
+        assert config.paid_media_data_mode == "live"
+        catalog = build_fixture_catalog()
+        return LoadedCatalog(catalog, StaticCatalogProvider(catalog), None, None)
+
+    monkeypatch.setattr("paid_media_agent.runtime.catalog.load_catalog", load_live)
+    sample = Settings(_env_file=None, paid_media_data_mode="sample")
+    await actions._load_live(sample, workspace)
+    assert sample.paid_media_data_mode == "sample", "connecting must not switch the runtime mode"
+
+
 def test_policy_validate_and_kill_switch(workspace: Path) -> None:
     result = actions.policy_validate(workspace)
     assert result.ok and len(result.detail["admitted"]) == 6
@@ -385,6 +436,39 @@ def test_process_manager_uses_fixed_templates(
     manager.stop_all()
 
 
+def test_deployment_continues_only_at_its_authorization_prompt(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MDA's Enter prompt has a real continuation, with no arbitrary process input."""
+    import time
+
+    monkeypatch.setitem(
+        PROCESS_TEMPLATES,
+        "mda-deploy",
+        (
+            sys.executable,
+            "-c",
+            "print('Press Enter once authorization is complete', flush=True); input(); print('continued', flush=True)",
+        ),
+    )
+    manager = ProcessManager(workspace)
+    try:
+        with pytest.raises(ProcessError):
+            manager.continue_authorization("mda-deploy")
+        manager.start("mda-deploy", confirmed=True)
+        for _ in range(100):
+            if manager.view("mda-deploy").state == "waiting_for_authorization":
+                break
+            time.sleep(0.01)
+        assert manager.view("mda-deploy").state == "waiting_for_authorization"
+        manager.continue_authorization("mda-deploy")
+        manager._procs["mda-deploy"].wait(timeout=5)
+        assert manager.view("mda-deploy").state == "completed"
+        assert "continued" in manager.tail("mda-deploy")
+    finally:
+        manager.stop_all()
+
+
 def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
     written = write_env(
@@ -414,6 +498,10 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
     )
     assert presets["anthropic"]["recommended"] is False and presets["custom"]["key"] == ""
     assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
+    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-sonnet-4-6"
+    assert all("models" not in preset for preset in presets.values()), (
+        "Availability comes from provider APIs, not the capability registry."
+    )
 
     seen: dict[str, str] = {}
 
@@ -466,22 +554,3 @@ def test_ask_reports_model_failures_as_failures(workspace: Path) -> None:
     )
     result = actions.ask_question(workspace, "hello", model=broken)
     assert result.status == "fail" and "Model call failed" in result.summary
-
-
-async def test_connecting_from_sample_mode_loads_real_catalogs(
-    workspace: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from paid_media_agent.config import Settings
-    from paid_media_agent.runtime.catalog import LoadedCatalog
-    from paid_media_agent.tools.catalog import StaticCatalogProvider
-    from paid_media_agent.tools.fixtures import build_fixture_catalog
-
-    async def load_live(config: Settings, *, project_root: Path) -> LoadedCatalog:
-        assert config.paid_media_data_mode == "live"
-        catalog = build_fixture_catalog()
-        return LoadedCatalog(catalog, StaticCatalogProvider(catalog), None, None)
-
-    monkeypatch.setattr("paid_media_agent.runtime.catalog.load_catalog", load_live)
-    sample = Settings(_env_file=None, paid_media_data_mode="sample")
-    await actions._load_live(sample, workspace)
-    assert sample.paid_media_data_mode == "sample", "connecting must not switch the runtime mode"

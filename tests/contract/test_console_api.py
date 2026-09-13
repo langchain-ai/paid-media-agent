@@ -38,6 +38,18 @@ def test_page_and_static_assets_are_served_with_csp(client: TestClient) -> None:
     assert "default-src 'self'" in page.headers["content-security-policy"]
     assert client.get("/static/app.js").status_code == 200
     assert client.get("/static/app.css").status_code == 200
+    for name in (
+        "logo-docker.svg",
+        "logo-google.svg",
+        "logo-meta.svg",
+        "logo-linkedin.svg",
+        "logo-reddit.svg",
+        "logo-x.svg",
+        "logo-bigquery.svg",
+    ):
+        mark = client.get(f"/static/{name}")
+        assert mark.status_code == 200, name
+        assert mark.headers["content-type"].startswith("image/svg+xml")
     assert client.get("/static/../pyproject.toml").status_code in (404, 400)
 
 
@@ -47,6 +59,43 @@ def test_api_requires_token_and_local_host(client: TestClient) -> None:
     foreign = client.get("/api/status", headers={"X-Admin-Token": TOKEN, "Host": "evil.example"})
     assert foreign.status_code == 403
     assert client.get("/", headers={"Host": "evil.example"}).status_code == 403
+    assert client.post("/api/models", json={"provider": "langsmith"}).status_code == 401
+
+
+def test_model_catalog_endpoint_uses_a_draft_key_without_saving(
+    client: TestClient, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paid_media_agent.admin import actions
+
+    def catalog(root: Path, provider: str, *, api_key: str = "") -> actions.ActionResult:
+        assert root == workspace and provider == "langsmith" and api_key == "draft-key"
+        return actions.ActionResult(
+            action="models_list",
+            ok=True,
+            status="ok",
+            summary="Loaded",
+            detail={
+                "models": [
+                    {
+                        "id": "langsmith:provider/new-model",
+                        "name": "New model",
+                        "provider": "provider",
+                    }
+                ]
+            },
+        )
+
+    before = (workspace / ".env").read_bytes() if (workspace / ".env").exists() else None
+    monkeypatch.setattr(actions, "models_list", catalog)
+    response = client.post(
+        "/api/models",
+        headers={"X-Admin-Token": TOKEN},
+        json={"provider": "langsmith", "api_key": "draft-key"},
+    )
+    assert response.status_code == 200 and response.json()["ok"]
+    assert "draft-key" not in response.text
+    after = (workspace / ".env").read_bytes() if (workspace / ".env").exists() else None
+    assert after == before
 
 
 def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path) -> None:
@@ -61,7 +110,6 @@ def test_status_routes_and_config_round_trip(client: TestClient, workspace: Path
         "mda",
         "slack",
         "self_hosted",
-        "writes",
     ]
     assert {p["name"] for p in data["processes"]} == {"mda-dev", "mda-deploy", "serve", "slack"}
     posted = client.post(
@@ -149,6 +197,50 @@ def test_process_endpoints_guard_deploy(client: TestClient) -> None:
     assert log["name"] == "mda-dev" and log["running"] is False
 
 
+def test_deploy_click_checks_project_and_blocks_failed_preflight(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One explicit deploy runs preflight; a failed preflight never starts the child."""
+    import sys
+
+    from paid_media_agent.admin import actions
+    from paid_media_agent.admin.processes import PROCESS_TEMPLATES
+
+    headers = {"X-Admin-Token": TOKEN}
+    checks = []
+    ready = False
+
+    def preflight(root: Path) -> actions.ActionResult:
+        checks.append(root)
+        return actions.ActionResult(
+            action="mda_check",
+            ok=ready,
+            status="ok" if ready else "warn",
+            summary="ready" if ready else "blocked by langsmith_key_set",
+        )
+
+    monkeypatch.setattr(actions, "mda_check", preflight)
+    monkeypatch.setitem(
+        PROCESS_TEMPLATES, "mda-deploy", (sys.executable, "-c", "print('test deployment')")
+    )
+    manager = client.app.state.console.processes
+    endpoint = "/api/processes/mda-deploy/start"
+    assert client.post(endpoint, headers=headers, json={}).status_code == 409
+    assert not checks
+    blocked = client.post(endpoint, headers=headers, json={"confirm": True})
+    assert blocked.status_code == 409 and "langsmith_key_set" in blocked.json()["detail"]
+    assert manager.view("mda-deploy").state == "stopped"
+    ready = True
+    try:
+        started = client.post(endpoint, headers=headers, json={"confirm": True})
+        assert started.status_code == 200 and len(checks) == 2
+        manager._procs["mda-deploy"].wait(timeout=5)
+        assert manager.view("mda-deploy").state == "completed"
+        assert "test deployment" in manager.tail("mda-deploy")
+    finally:
+        manager.stop_all()
+
+
 def test_token_less_mode_accepts_same_origin_only(workspace: Path) -> None:
     """A coding agent's browser pane can only open a plain URL, so the token is replaced by a
     same-origin rule: other sites cannot drive the console even though it runs on localhost."""
@@ -161,3 +253,97 @@ def test_token_less_mode_accepts_same_origin_only(workspace: Path) -> None:
     assert client.get("/api/config", headers=cross).status_code == 403
     assert client.get("/api/config", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
     assert client.get("/api/status", headers={"Host": "evil.example"}).status_code == 403
+
+
+def test_connection_checks_expire_when_the_connection_changes(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Saved is not verified; a different key invalidates verification, data mode does not."""
+    from paid_media_agent.admin import actions
+
+    headers = {"X-Admin-Token": TOKEN}
+    monkeypatch.delenv("PAID_MEDIA_FIXTURE_ANCHOR", raising=False)
+    monkeypatch.setattr(
+        actions,
+        "model_test",
+        lambda _root: actions.ActionResult(
+            action="model_test", ok=True, status="ok", summary="tested"
+        ),
+    )
+    client.post("/api/actions/model_test", headers=headers, json={})
+    client.post(
+        "/api/config", headers=headers, json={"updates": {"PAID_MEDIA_DATA_MODE": "sample"}}
+    )
+    assert (
+        client.get("/api/status", headers=headers).json()["connection_checks"]["model_test"][
+            "status"
+        ]
+        == "ok"
+    )
+    client.post(
+        "/api/config", headers=headers, json={"updates": {"ANTHROPIC_API_KEY": "unused-new-key"}}
+    )
+    assert (
+        "model_test" not in client.get("/api/status", headers=headers).json()["connection_checks"]
+    )
+
+
+def test_model_check_expires_when_shell_key_changes_behind_blank_env_entry(
+    client: TestClient, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Check stamps must use the effective key, including the shell fallback."""
+    from paid_media_agent.admin import actions, envfile
+
+    monkeypatch.setattr(envfile, "_EXPORTED_BY_CONSOLE", set())
+    envfile.write_env(
+        workspace, {"PAID_MEDIA_MODEL": "anthropic:claude-sonnet-4-6", "ANTHROPIC_API_KEY": ""}
+    )
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "first-shell-test-key")
+    monkeypatch.setattr(
+        actions,
+        "model_test",
+        lambda _root: actions.ActionResult(
+            action="model_test", ok=True, status="ok", summary="tested"
+        ),
+    )
+    headers = {"X-Admin-Token": TOKEN}
+    client.post("/api/actions/model_test", headers=headers, json={})
+    assert "model_test" in client.get("/api/status", headers=headers).json()["connection_checks"]
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "second-shell-test-key")
+    assert (
+        "model_test" not in client.get("/api/status", headers=headers).json()["connection_checks"]
+    )
+
+
+def test_slack_icon_roundtrip_and_invalid_replacement(client: TestClient, workspace: Path) -> None:
+    import base64
+    import io
+
+    from PIL import Image
+
+    headers = {"X-Admin-Token": TOKEN, "Content-Type": "image/png"}
+    buffer = io.BytesIO()
+    Image.new("RGB", (512, 512), "#123456").save(buffer, format="PNG")
+    png = buffer.getvalue()
+    assert client.post("/api/slack/icon", content=png).status_code == 401
+    response = client.post("/api/slack/icon", content=png, headers=headers)
+    assert response.status_code == 200
+    path = workspace / "channels/slack-icon.png"
+    assert path.read_bytes() == png
+    saved = client.get("/api/slack/icon", headers=headers).json()["data_url"]
+    assert base64.b64decode(saved.split(",", 1)[1]) == png
+    small = io.BytesIO()
+    Image.new("RGB", (32, 32)).save(small, format="PNG")
+    for invalid in (b"not an image", small.getvalue(), png[:50]):
+        assert client.post("/api/slack/icon", content=invalid, headers=headers).status_code == 400
+        assert path.read_bytes() == png
+    assert (
+        client.post(
+            "/api/slack/icon", content=b"x" * (1024 * 1024 + 1), headers=headers
+        ).status_code
+        == 413
+    )
+    assert path.read_bytes() == png
+    assert client.delete("/api/slack/icon", headers=headers).status_code == 200
+    assert not path.exists()
+    assert client.get("/api/slack/icon", headers=headers).status_code == 404

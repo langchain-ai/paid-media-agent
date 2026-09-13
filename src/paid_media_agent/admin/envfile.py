@@ -9,6 +9,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
+from paid_media_agent.deployment import DeploymentSettings
+
 _LINE_RE = re.compile(r"^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=\s*(.*)$")
 
 
@@ -78,6 +80,13 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="Scoped Pipeboard API token",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_DATA_MODE",
+        group="runtime",
+        secret=False,
+        description="auto, sample (fixtures only), or live (requires credentials)",
+        example="sample",
+    ),
+    EnvKeySpec(
         name="PIPEBOARD_GOOGLE_ADS_MCP_URL",
         group="pipeboard",
         secret=False,
@@ -94,13 +103,6 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         group="pipeboard",
         secret=False,
         description="Reddit Ads MCP endpoint",
-    ),
-    EnvKeySpec(
-        name="PAID_MEDIA_DATA_MODE",
-        group="runtime",
-        secret=False,
-        description="auto, sample (fixtures only), or live (requires credentials)",
-        example="sample",
     ),
     EnvKeySpec(
         name="PIPEBOARD_TIKTOK_ADS_MCP_URL",
@@ -364,6 +366,18 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="Snapshot built from sandbox/Dockerfile and declared to MDA",
         example="paid-media-agent-sandbox",
     ),
+)
+ENV_KEYS += tuple(
+    EnvKeySpec(
+        name=f"PAID_MEDIA_{name.upper()}",
+        group="mda",
+        secret=False,
+        description=field.description or name,
+        example=str(field.default).lower()
+        if isinstance(field.default, bool)
+        else str(field.default),
+    )
+    for name, field in DeploymentSettings.model_fields.items()
 )
 ENV_KEY_BY_NAME: dict[str, EnvKeySpec] = {spec.name: spec for spec in ENV_KEYS}
 _CUSTOM_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,40}_API_KEY$")

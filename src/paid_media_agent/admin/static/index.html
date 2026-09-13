@@ -3,74 +3,98 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Paid Media Agent · Setup</title>
+  <title>Paid Media Agent</title>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/onboarding.css">
 </head>
 <body>
-  <header class="chrome">
-    <button class="btn btn-ghost btn-compact" id="view-toggle" type="button">Advanced</button>
-    <button class="btn btn-ghost btn-compact" id="theme-toggle" type="button" aria-label="Toggle theme">Dark</button>
+  <header class="page-header" data-slot="onboarding-header">
+    <div class="onboard-logo">
+      <span class="onboard-logo-mark" id="brand-mark" aria-hidden="true"></span>
+      <span class="onboard-logo-name">Paid Media<span class="onboard-logo-rest"> Agent</span></span>
+    </div>
+    <div class="page-header-actions">
+      <button class="btn btn-ghost btn-compact" id="wizard-back" type="button" hidden aria-label="Back to previous step">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="header-cluster">
+        <button class="btn btn-ghost btn-compact" id="view-toggle" type="button">
+          <svg class="header-icon" data-for="advanced" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5h10M3 11h10M6.5 3.25v3.5M9.5 9.25v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <svg class="header-icon" data-for="setup" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 8h8M4 8l3-3M4 8l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="view-toggle-label">Advanced</span>
+        </button>
+        <button class="btn btn-ghost btn-compact" id="theme-toggle" type="button" aria-label="Toggle theme">
+          <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M12.2 10.1A5.25 5.25 0 0 1 6.1 3.4 5.4 5.4 0 1 0 12.2 10.1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.6"/><path d="M8 2.5v1.2M8 12.3v1.2M2.5 8h1.2M12.3 8h1.2M4.05 4.05l.85.85M11.1 11.1l.85.85M4.05 11.95l.85-.85M11.1 4.9l.85-.85" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span id="theme-toggle-label">Dark</span>
+        </button>
+      </div>
+    </div>
   </header>
-
-  <div class="onboard" id="wizard">
-    <aside class="step-rail">
-      <header class="rail-head">
-        <div class="brand">
-          <span class="mark-tile" id="brand-mark" aria-hidden="true"></span>
-          <div>
-            <p class="text-label" id="wizard-title">Setup</p>
-            <p class="text-help" id="wizard-desc">Model, accounts, one question. Deploy is optional.</p>
+  <div id="global-error" class="global-error" role="alert" hidden></div>
+  <main class="onboard" id="wizard" data-slot="onboarding">
+    <aside class="onboard-sidebar" data-slot="onboarding-sidebar">
+      <div class="onboard-sidebar-inner">
+        <div class="onboard-stepper-compact" id="progress-mobile" data-slot="stepper" data-orientation="horizontal"></div>
+        <div class="onboard-sidebar-spacer" aria-hidden="true"></div>
+        <div class="onboard-stepper-center">
+          <div data-slot="stepper" data-orientation="vertical">
+            <nav class="stepper-nav" id="progress" data-slot="stepper-nav" data-orientation="vertical" aria-label="Onboarding progress"></nav>
           </div>
         </div>
-        <button class="btn btn-ghost btn-compact" id="wizard-back" type="button" hidden>Back</button>
-      </header>
-      <div class="stepper-compact" id="progress-mobile"></div>
-      <nav class="stepper" id="progress" aria-label="Setup progress"></nav>
-      <p class="wizard-status" id="foot">127.0.0.1 only. Secrets stay in .env</p>
+        <div class="onboard-sidebar-spacer" aria-hidden="true"></div>
+      </div>
     </aside>
-    <section class="onboard-main">
-      <div class="onboard-frame">
-        <div class="onboard-panel">
+    <section class="onboard-stage">
+      <div class="frame" data-slot="frame" data-variant="ghost">
+        <div class="frame-panel" data-slot="frame-panel">
           <p class="sr-only" id="wizard-live" aria-live="polite"></p>
+          <p class="sr-only" id="foot" role="status"></p>
           <div id="screen"></div>
         </div>
       </div>
     </section>
-  </div>
+  </main>
 
   <div class="shell" id="advanced" hidden>
-    <aside class="rail" aria-label="Setup routes"><nav class="rail-nav" id="rail-nav"></nav></aside>
-    <div class="canvas" id="canvas">
+    <aside class="rail" aria-label="Advanced settings"><p class="rail-heading">Advanced</p><nav class="rail-nav" id="rail-nav" aria-label="Settings sections"></nav></aside>
+    <main class="canvas" id="canvas">
+      <div class="advanced-content">
       <div class="page-band">
         <div><h1 class="page-title" id="page-title">Loading</h1><p class="page-tagline" id="page-tagline"></p></div>
         <div class="page-actions" id="page-actions"></div>
       </div>
-      <p class="page-desc" id="page-desc"></p>
       <div id="banner" class="banner" hidden></div>
       <section class="steps" id="steps"></section>
       <section class="processes" id="processes"></section>
-    </div>
+      </div>
+    </main>
   </div>
 
   <template id="tpl-step">
     <article class="step" data-step="">
       <button class="step-head" type="button" aria-expanded="false">
-        <span class="step-status" data-status=""><span class="dot" aria-hidden="true"></span><span class="step-status-text"></span></span>
+        <span class="step-marker" aria-hidden="true"></span>
         <span class="step-main"><span class="step-title"></span><span class="step-desc"></span></span>
-        <span class="step-side"><span class="badge badge-quiet step-note" hidden></span><span class="chev" aria-hidden="true">›</span></span>
+        <span class="step-side"><span class="step-status" data-status=""></span><span class="chev" aria-hidden="true"></span></span>
       </button>
       <div class="step-body" hidden>
-        <div class="step-cli"><span class="caps">CLI</span><code class="mono"></code><button class="btn btn-ghost btn-compact copy" type="button">Copy</button></div>
         <div class="step-action"></div>
         <div class="step-result" hidden></div>
+        <details class="disclose step-command"><summary>Terminal command</summary><div class="disclose-body"><div class="step-cli"><code class="mono"></code><button class="btn btn-ghost btn-compact copy" type="button" aria-label="Copy terminal command">Copy</button></div></div></details>
       </div>
     </article>
   </template>
+  <div id="dialog-root" hidden></div>
   <script src="/static/logos.js"></script>
+  <script src="/static/hero.js"></script>
+  <script src="/static/model-picker.js"></script>
+  <script src="/static/customization.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

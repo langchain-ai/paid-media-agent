@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from paid_media_agent.admin.accounts_file import (
     WRITABLE_ACCOUNTS_FILE,
@@ -34,12 +34,14 @@ from paid_media_agent.admin.envfile import (
     read_env,
     write_env,
 )
+from paid_media_agent.admin.model_catalog import ModelCatalogError, list_models
 from paid_media_agent.admin.model_presets import (
-    MODEL_PRESETS,
     _module_available,
     model_key_env,
+    model_preset_payloads,
 )
 from paid_media_agent.config import AccountBinding, ModelConfig, Settings
+from paid_media_agent.deployment import SLACK_ICON_FILENAME, DeploymentSettings, schedule_sources
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import (
     FIXTURE_PLATFORMS,
@@ -156,7 +158,10 @@ def status(root: Path) -> ActionResult:
         "env": env,
         "org": org_summary(root),
         "runtime": settings.paid_media_runtime,
-        "model_presets": [dict(p) for p in MODEL_PRESETS],
+        "customization": DeploymentSettings(_env_file=str(root / ".env")).model_dump(mode="json"),
+        "slack_icon_set": (root / "channels" / SLACK_ICON_FILENAME).is_file(),
+        "data_mode": settings.paid_media_data_mode,
+        "model_presets": model_preset_payloads(),
         "model_key_env": key_env,
         "model_key_set": bool(key_env and env.get(key_env, False)),
         "model_base_url": settings.paid_media_model_base_url or "",
@@ -218,6 +223,7 @@ def status(root: Path) -> ActionResult:
             "slack_channel": (root / "channels" / "slack.py").exists(),
             "instructions": (root / "instructions.md").exists(),
             "sandbox_declared": (root / "sandbox" / "__init__.py").exists(),
+            "sandbox_recipe": (root / "sandbox" / "setup.sh").is_file(),
         },
         "tooling": {"uv": shutil.which("uv") is not None, "python": sys.version.split()[0]},
         "pdf": next((c.status == "ok" for c in checks if c.name == "report_pdf"), False),
@@ -250,8 +256,28 @@ def config_view(root: Path) -> ActionResult:
 
 def config_set(root: Path, updates: Mapping[str, str]) -> ActionResult:
     try:
+        deployment_updates = {
+            name: updates[f"PAID_MEDIA_{name.upper()}"].strip()
+            for name in DeploymentSettings.model_fields
+            if f"PAID_MEDIA_{name.upper()}" in updates
+        }
+        schedules: dict[Path, str] = {}
+        if deployment_updates:
+            apply_env_file(root)
+            existing = DeploymentSettings(_env_file=str(root / ".env")).model_dump()
+            configured = DeploymentSettings.model_validate(existing | deployment_updates)
+            if any("report" in key for key in deployment_updates):
+                schedules = schedule_sources(root, configured)
         written = write_env(root, updates)
-    except EnvFileError as exc:
+        for path, source in schedules.items():
+            path.write_text(source, encoding="utf-8")
+    except ValidationError as exc:
+        errors = "; ".join(
+            f"{error['loc'][0]}: {error['msg']}"
+            for error in exc.errors(include_input=False, include_url=False)
+        )
+        return _result("config_set", "fail", errors)
+    except (EnvFileError, ValueError, OSError, SyntaxError) as exc:
         return _result("config_set", "fail", str(exc))
     return _result(
         "config_set",
@@ -289,6 +315,15 @@ def generate_secret(root: Path, key: str) -> ActionResult:
 
 
 # ---------------------------------------------------------------- tests
+
+
+def models_list(root: Path, provider: str, *, api_key: str = "") -> ActionResult:
+    """Current provider models, shared by the browser picker and CLI."""
+    try:
+        detail = list_models(root, provider, api_key=api_key)
+    except ModelCatalogError as exc:
+        return _result("models_list", "warn", str(exc))
+    return _result("models_list", "ok", "Models loaded from the provider.", detail)
 
 
 def model_test(root: Path, *, invoke: Callable[[str], str] | None = None) -> ActionResult:
@@ -634,7 +669,13 @@ def accounts_add(
             timezone=timezone.strip(),
         )
         target = writable_accounts_path(root)
-        registry = add_account(target, binding, seed_from=active_accounts_path(settings, root))
+        source = active_accounts_path(settings, root)
+        # The first real account starts a real file; sample aliases must not join live reads.
+        if source.name == "accounts.example.toml" and not binding.provider_account_id.startswith(
+            "fixture-"
+        ):
+            source = target
+        registry = add_account(target, binding, seed_from=source)
     except (ValueError, AccountsFileError) as exc:
         return _result("accounts_add", "fail", sanitize_exception(exc))
     if active_accounts_path(settings, root) != target:
@@ -841,6 +882,18 @@ def mda_check(root: Path) -> ActionResult:
     settings = load_settings(root)
     env = read_env(root)
     model, model_error = model_or_invalid(settings)
+    schedule_check = "ok"
+    report_keys = [
+        f"PAID_MEDIA_{name.upper()}" for name in DeploymentSettings.model_fields if "report" in name
+    ]
+    if any(env.get(key) or _os_env(key) for key in report_keys):
+        try:
+            configured = DeploymentSettings(_env_file=str(root / ".env"))
+            sources = schedule_sources(root, configured)
+            if any(path.read_text(encoding="utf-8") != source for path, source in sources.items()):
+                schedule_check = "Report timing is out of sync. Save it with config set to update schedules/*.py."
+        except (ValueError, OSError, SyntaxError) as exc:
+            schedule_check = f"Report schedule configuration: {sanitize_exception(exc)}"
     items: dict[str, JsonValue] = {
         "cli_installed": importlib.util.find_spec("managed_deepagents") is not None,
         "langsmith_key_set": bool(env.get("LANGSMITH_API_KEY") or _os_env("LANGSMITH_API_KEY")),
@@ -850,11 +903,13 @@ def mda_check(root: Path) -> ActionResult:
         "slack_channel": (root / "channels" / "slack.py").exists(),
         "identity": (root / "identity.py").exists(),
         "sandbox_declared": (root / "sandbox" / "__init__.py").exists(),
+        "sandbox_recipe": (root / "sandbox" / "setup.sh").is_file(),
         "sandbox_snapshot": settings.paid_media_sandbox_snapshot or "",
         "model": model_error or model.spec,
         "model_package": not model_error and _module_available(model.provider),
         "provider_key_set": not model_error and _provider_key_set(settings, env),
         "import_smoke": _agent_import_smoke(root),
+        "report_schedules": schedule_check,
         "deploy_command": "uv run mda deploy .",
         "dev_command": "uv run mda dev",
     }
@@ -864,6 +919,8 @@ def mda_check(root: Path) -> ActionResult:
             "cli_installed",
             "langsmith_key_set",
             "agent_entry",
+            "sandbox_declared",
+            "sandbox_recipe",
             "model_package",
             "provider_key_set",
         )
@@ -874,10 +931,13 @@ def mda_check(root: Path) -> ActionResult:
         blocking.append("identity")
     if items["import_smoke"] != "ok":
         blocking.append("import_smoke")
-    if items["sandbox_snapshot"] and not items["sandbox_declared"]:
-        # `.env` names the snapshot for the CLI; MDA reads only the literal in sandbox/__init__.py.
-        blocking.append("sandbox_declared (run `paid-media-agent sandbox use <name>`)")
-    summary = "ready to deploy" if not blocking else f"blocked by {', '.join(blocking)}"
+    if schedule_check != "ok":
+        blocking.append("report_schedules")
+    summary = (
+        "project checks passed; deployment access is checked when deploying"
+        if not blocking
+        else f"blocked by {', '.join(blocking)}"
+    )
     return _result(
         "mda_check",
         "ok" if not blocking else "warn",
@@ -924,6 +984,7 @@ def demo_run(root: Path, *, with_proposal: bool = False) -> ActionResult:
         "answer": result["answer"],
         "audit": result["audit"],
         "catalog_revision": result["catalog_revision"],
+        "analysis": result["analysis"],
     }
     if with_proposal:
         detail["proposal"] = result.get("proposal")
@@ -1045,7 +1106,7 @@ def as_json(result: ActionResult) -> str:
 SANDBOX_DECLARATION = '''"""The sandbox Managed Deep Agents gives every thread. Generated by `paid-media-agent sandbox use`.
 
 MDA reads this file statically, so the snapshot must be a literal. `.env` carries the same value
-as `PAID_MEDIA_SANDBOX_SNAPSHOT` for `sandbox test`; `mda check` reports when the two disagree.
+as `PAID_MEDIA_SANDBOX_SNAPSHOT` for the standalone `sandbox test` probe.
 """
 
 from managed_deepagents import define_sandbox
@@ -1097,19 +1158,22 @@ def sandbox_publish(
     """Build sandbox/Dockerfile into a LangSmith snapshot, then `sandbox_use` it.
 
     LangSmith builds the image; no local Docker is involved. The build context holds only the
-    Dockerfile, never `.env`, skills, or wiki pages.
+    Dockerfile and dependency recipe, never `.env`, skills, or wiki pages.
     """
     import tempfile
 
     from langsmith.sandbox import SandboxClient
 
     dockerfile = root / "sandbox" / "Dockerfile"
-    if not dockerfile.exists():
-        return _result("sandbox_publish", "fail", "sandbox/Dockerfile is missing")
+    recipe = root / "sandbox" / "setup.sh"
+    for path in (dockerfile, recipe):
+        if not path.is_file():
+            return _result("sandbox_publish", "fail", f"sandbox/{path.name} is missing")
     client = SandboxClient(timeout=SNAPSHOT_HTTP_TIMEOUT)
     try:
         with tempfile.TemporaryDirectory() as context:
             shutil.copy(dockerfile, Path(context) / "Dockerfile")
+            shutil.copy(recipe, Path(context) / "setup.sh")
             snapshot = client.create_snapshot_from_dockerfile(
                 name,
                 Path(context) / "Dockerfile",
@@ -1148,6 +1212,13 @@ def sandbox_test(root: Path) -> ActionResult:
 
     settings = load_settings(root)
     command = "paid-media-agent sandbox test --json"
+    if not settings.paid_media_sandbox_snapshot:
+        return _result(
+            "sandbox_test",
+            "warn",
+            "MDA builds and checks the recipe during deployment. To probe a standalone snapshot, run `paid-media-agent sandbox publish --name paid-media-agent-sandbox` first.",
+            command=command,
+        )
     if not (_os_env("LANGSMITH_API_KEY") or read_env(root).get("LANGSMITH_API_KEY")):
         return _result("sandbox_test", "warn", "LANGSMITH_API_KEY is not set", command=command)
     try:

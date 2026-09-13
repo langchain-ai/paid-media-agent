@@ -72,7 +72,7 @@ requires a verified human approval before every mutation, and runs either on Man
 - `src/paid_media_agent/surfaces/`: shared runner, Slack (Block Kit renderers, the
   transport-neutral service, Socket Mode and signed HTTP transports), API, UI views.
 - `Dockerfile`, `docker-compose.yml`: the self-hosted API with Postgres.
-- `src/paid_media_agent/admin/`: the setup console and every host action behind `cli.py`.
+- `src/paid_media_agent/admin/`: setup and host actions behind `cli.py`.
 - `src/paid_media_agent/cli.py`, `doctor.py`: the command surface and its checks.
 - `src/paid_media_agent/testing/`: scripted and provider-shaped fake models for offline runs.
 - `tests/`: unit oracles, real-graph contracts, behavior checks, opt-in integration, and the
@@ -80,21 +80,20 @@ requires a verified human approval before every mutation, and runs either on Man
 
 ## Onboarding a user
 
-Run the fixture demo, then the setup console. Show the console where the user already is:
+Run the fixture demo, then start the lightweight setup console:
 
-- If your host has a browser pane (Claude Code desktop, Cursor, the Codex app), start
-  `uv run paid-media-agent setup --no-open --no-token --port 8765` in the background and open
-  `http://127.0.0.1:8765` in that pane. In Claude Code desktop the `setup` entry in
-  `.claude/launch.json` does both; in Cursor use the Navigate browser tool; in the Codex app use
-  the in-app browser. `--no-token` drops the per-run token because a pane can only open a plain
-  URL; the console then accepts same-origin calls only. On macOS a checkout under Desktop,
-  Documents, or Downloads needs the app to have that folder's access (System Settings, Privacy &
-  Security, Files and Folders) before a launch configuration can start; a server that dies at
-  `getcwd` with "Operation not permitted" is that. Until then, start the console yourself and open
-  the URL in the pane.
-- In a terminal, run `uv run paid-media-agent setup`. It opens the system browser with a per-run
-  token in the URL.
-- Without any browser, every console step prints the CLI command it runs; use those.
+```bash
+uv run paid-media-agent setup --no-open --no-token --port 8765
+```
+
+Open the printed localhost URL in the host's browser pane. Without a browser, the CLI and skills
+expose the same setup actions. No frontend build is needed. Preserve the CORE tokens and fonts
+in `admin/static/app.css` when editing the interface.
+
+The flow is Welcome → Model → Accounts → Deployment. MDA is the recommended paid hosting path;
+self-hosting remains available. The explicit Deploy action runs a project preflight and starts
+MDA. First-time Slack authorization resumes through Continue deployment. Do not deploy while
+testing the UI. Sample account mode uses synthetic data. The console has no sample-analysis dialog or chat client.
 
 Before the first real analysis, fill the organization context in this chat (skill
 `paid-media-org-onboarding`) or with `paid-media-agent org interview`. Do not collect it in the

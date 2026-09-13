@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from deepagents.backends.protocol import (
     ExecuteResponse,
     FileDownloadResponse,
     FileUploadResponse,
 )
 
+from paid_media_agent.admin import actions
+from paid_media_agent.admin.envfile import read_env
 from paid_media_agent.runtime.sandbox import (
     WORKSPACE,
     Sandbox,
@@ -106,3 +110,46 @@ def test_snapshot_reference_prefers_immutable_ids() -> None:
         "snapshot_name": "paid-media-agent-sandbox"
     }
     assert snapshot_reference(None) == {}
+
+
+def test_publish_packages_the_shared_recipe_without_project_secrets(
+    tmp_path: Path, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import langsmith.sandbox
+
+    snapshot_id = "4b6f76ed-4626-48d1-bdd1-d974623c438c"
+    directory = tmp_path / "sandbox"
+    directory.mkdir()
+    for name in ("Dockerfile", "setup.sh"):
+        (directory / name).write_bytes((project_root / "sandbox" / name).read_bytes())
+    (tmp_path / ".env").write_text("# private configuration\n")
+    (directory / "private.txt").write_text("not part of the build")
+
+    class Client:
+        def create_snapshot_from_dockerfile(self, name, dockerfile, **kwargs):
+            context = Path(kwargs["context"])
+            assert {path.name for path in context.iterdir()} == {"Dockerfile", "setup.sh"}
+            assert (context / "setup.sh").read_bytes() == (directory / "setup.sh").read_bytes()
+            return SimpleNamespace(id=snapshot_id)
+
+        def wait_for_snapshot(self, current_id, **kwargs):
+            assert current_id == snapshot_id
+            return SimpleNamespace(id=current_id, status="ready")
+
+    monkeypatch.setattr(langsmith.sandbox, "SandboxClient", lambda **_kwargs: Client())
+    result = actions.sandbox_publish(tmp_path, name="test-recipe")
+
+    assert result.ok
+    assert read_env(tmp_path)["PAID_MEDIA_SANDBOX_SNAPSHOT"] == snapshot_id
+    assert snapshot_id in (directory / "__init__.py").read_text()
+
+
+def test_publish_rejects_a_missing_recipe_before_starting_a_cloud_build(tmp_path: Path) -> None:
+    (tmp_path / "sandbox").mkdir()
+    (tmp_path / "sandbox" / "Dockerfile").write_text("FROM python:3.13-slim\n")
+
+    result = actions.sandbox_publish(tmp_path, name="missing-recipe")
+
+    assert result.status == "fail"
+    assert "setup.sh is missing" in result.summary
+    assert not (tmp_path / ".env").exists()
