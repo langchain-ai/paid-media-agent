@@ -28,14 +28,11 @@ Read when the question calls for it:
 - [Platform playbooks](platform-playbooks.md) for platform-specific grains and caveats.
 - [Answer style](answer-style.md) before writing the final answer.
 
-Use [hot.md](hot.md) for current public capability notes and [open-questions.md](open-questions.md)
-for unresolved doctrine. Append material changes to [log.md](log.md).
-
 ## The organization layer
 
-Generic doctrine lives here. The organization's own goals, conversions, targets, budget,
-naming, and approvers are written during onboarding and returned by the `get_org_context` tool;
-they take precedence wherever the two differ.
+General guidance lives here. If `/skills/company-context/SKILL.md` is present, read it for the
+organization's goals, conversions, targets, budget, and naming. Those facts take precedence over
+general guidance. Ask for missing facts needed for the current analysis; never invent them.
 
 ## Boundaries
 

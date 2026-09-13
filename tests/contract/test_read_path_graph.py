@@ -52,6 +52,49 @@ async def test_runtime_loads_only_runtime_skills_and_keeps_them_read_only(
     assert (tmp_path / "workspace" / "note.txt").read_text() == "analysis notes"
 
 
+async def test_manually_authored_company_context_uses_runtime_skills(
+    settings: Settings, project_root: Path, tmp_path: Path
+) -> None:
+    shutil.copy(project_root / "instructions.md", tmp_path / "instructions.md")
+    shutil.copytree(project_root / "workspace" / "skills", tmp_path / "workspace" / "skills")
+    (tmp_path / "skills").symlink_to("workspace/skills", target_is_directory=True)
+    context = tmp_path / "workspace" / "skills" / "company-context"
+    context.mkdir()
+    (context / "SKILL.md").write_text(
+        "---\nname: company-context\ndescription: Business goals for account analysis.\n---\n"
+        "# Company context\n\nRead [goals](goals.md) before analysis.\n"
+    )
+    (context / "goals.md").write_text("# Goals\n\nTarget CPA: 90 USD.\n")
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config/accounts.toml").write_text("Host-only account mappings.")
+    sources = tmp_path / "workspace" / "sources"
+    sources.mkdir()
+    (sources / "brief.md").write_text("Original private source, kept local.")
+    steps = [
+        lambda _m: tool_call_message(
+            "read_file", {"file_path": "/skills/company-context/goals.md"}
+        ),
+        lambda _m: tool_call_message("read_file", {"file_path": "/workspace/sources/brief.md"}),
+        lambda _m: tool_call_message("read_file", {"file_path": "/config/accounts.toml"}),
+        lambda _m: AIMessage(content="done"),
+    ]
+    runtime, _ = build_runtime(settings, tmp_path, steps)
+
+    state = await runtime.graph.ainvoke(
+        {"messages": [{"role": "user", "content": "Read our business goals."}]}, config=config()
+    )
+
+    checkpoint = await runtime.graph.aget_state(config())
+    assert "company-context" in {skill["name"] for skill in checkpoint.values["skills_metadata"]}
+    messages = [m for m in state["messages"] if isinstance(m, ToolMessage)]
+    assert "Target CPA: 90 USD" in str(messages[0].content)
+    assert "permission denied" in str(messages[1].content)
+    assert "permission denied" in str(messages[2].content)
+    assert not {"get_org_context", "update_org_profile", "add_org_source"} & {
+        tool.name for tool in runtime.components.tools
+    }
+
+
 async def test_fixture_demo_reconciles_and_cites_artifacts(
     settings: Settings, project_root: Path
 ) -> None:

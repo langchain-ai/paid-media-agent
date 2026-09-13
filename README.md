@@ -28,8 +28,6 @@
 An open-source agent that reads your ad accounts, compares campaign performance, and produces
 answers and reports. Use it in Slack or the terminal, with your choice of model and hosting.
 
-Built from the tools, skills, and reporting patterns behind LangChain's Paid Media Agent.
-
 ## What it does
 
 - **Compare performance:** spend, conversions, cost per lead, and budget pacing.
@@ -50,19 +48,19 @@ Requires **Python 3.11+** and [uv](https://docs.astral.sh/uv/).
 ```bash
 git clone https://github.com/langchain-ai/paid-media-agent.git
 cd paid-media-agent
-uv sync --all-extras
+uv sync
 uv run paid-media-agent setup
 ```
 
-The setup console opens in your browser at [localhost:8765](http://localhost:8765):
+Use your coding agent to set up the project:
 
-1. **Model:** choose a provider and add its API key.
-2. **Accounts:** connect your platforms and select accounts, or start with sample data.
-3. **Deployment:** choose Managed Deep Agents or self-hosting.
+> Read AGENTS.md and .agents/skills/paid-media-onboarding/SKILL.md. Help me connect a model,
+> connect my ad accounts, add my business context, and choose a deployment path.
 
-Using a coding agent? Point it to [AGENTS.md](AGENTS.md) and the
-[onboarding skill](.agents/skills/paid-media-onboarding/SKILL.md). The CLI supports the same setup
-actions with JSON output. No frontend build is required.
+The optional setup console opens at [localhost:8765](http://localhost:8765) for model keys,
+ad accounts, and deployment. The CLI exposes the same connection actions with JSON output.
+Business context is Markdown in your workspace, edited by your coding agent or by hand.
+No frontend build is required.
 
 <details>
 <summary>Try the offline demo without keys or ad accounts</summary>
@@ -94,15 +92,13 @@ Connect any subset. Tools and metrics depend on platform permissions and API acc
 Direct adapters are read-only.
 
 Add your goals, conversion definitions, and campaign briefs before the first real analysis.
-Use the [business-context skill](.agents/skills/paid-media-org-onboarding/SKILL.md) with your coding agent,
-or the terminal interview:
-
-```bash
-uv run paid-media-agent org interview
-```
+Your coding agent follows the [business-context skill](.agents/skills/paid-media-org-onboarding/SKILL.md)
+and writes `workspace/skills/company-context/`. You can also create that Markdown folder manually.
+See [Customization](docs/customization.md) for the template, runtime skills, memory, schedules,
+and optional BigQuery or dbt connections.
 
 Settings live in `.env`, account mappings in `config/accounts.toml`, and business context in
-`docs/org/`. All are Git-ignored.
+`workspace/skills/company-context/`. These local files are Git-ignored.
 
 ## Deployment
 
@@ -123,6 +119,9 @@ reuses its snapshot until the recipe changes. [Hosting is paid](https://www.lang
 **Self-hosting** needs Docker and generated API credentials. Compose starts the API and Postgres;
 the guide covers Slack setup. The image includes PDF libraries. You operate the infrastructure.
 
+Schedules post text to Slack after you configure a delivery channel. Report file downloads are
+available locally and through the self-hosted API; automatic PDF attachment delivery is not included.
+
 Model and connector charges apply to either path. For local development, use `uv run mda dev`
 to inspect runs in LangSmith Studio.
 
@@ -136,6 +135,7 @@ extend its tools without maintaining a separate agent for each interface.
 
 | Change or explore | Start here |
 | --- | --- |
+| Business context, memory, and optional data sources | [Customization](docs/customization.md) |
 | Agent instructions and paid-media knowledge | [instructions.md](instructions.md) · [workspace/skills/](workspace/skills/) |
 | Tools and runtime | [src/paid_media_agent/](src/paid_media_agent/) · [Architecture](docs/architecture/README.md) |
 | Managed channels and schedules | [channels/](channels/) · [schedules/](schedules/) · [sandbox/](sandbox/) |

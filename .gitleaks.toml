@@ -1,0 +1,14 @@
+title = "Paid Media Agent secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Short dummy credentials in the direct-provider configuration test"
+condition = "AND"
+paths = ['''(^|/)tests/unit/test_direct_adapters\.py$''']
+regexTarget = "line"
+regexes = ['''^\s*settings = Settings\(_env_file=None, openai_ads_api_key="key", x_ads_consumer_key="partial"\)(  # type: ignore\[call-arg\])?\s*$''']

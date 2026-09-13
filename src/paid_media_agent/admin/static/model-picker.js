@@ -1,4 +1,3 @@
-/* The GTM CORE combobox anatomy, adapted to the console's dependency-free DOM. */
 window.createModelPicker = ({ el, logo, preset, selected, loadModels, onChange }) => {
   let value = selected;
   let models = [];

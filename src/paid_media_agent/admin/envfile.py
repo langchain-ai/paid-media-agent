@@ -142,30 +142,6 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         example="config/accounts.toml",
     ),
     EnvKeySpec(
-        name="LINKEDIN_CLIENT_ID",
-        group="direct",
-        secret=False,
-        description="LinkedIn app client id (token refresh)",
-    ),
-    EnvKeySpec(
-        name="LINKEDIN_CLIENT_SECRET",
-        group="direct",
-        secret=True,
-        description="LinkedIn app client secret (token refresh)",
-    ),
-    EnvKeySpec(
-        name="LINKEDIN_ACCESS_TOKEN",
-        group="direct",
-        secret=True,
-        description="LinkedIn Marketing API access token",
-    ),
-    EnvKeySpec(
-        name="LINKEDIN_REFRESH_TOKEN",
-        group="direct",
-        secret=True,
-        description="LinkedIn refresh token",
-    ),
-    EnvKeySpec(
         name="X_ADS_CONSUMER_KEY", group="direct", secret=True, description="X Ads API consumer key"
     ),
     EnvKeySpec(

@@ -9,7 +9,9 @@ from paid_media_agent.domain.proposals import ApprovalClaim, ProposalRecord, Wri
 
 
 class ProposalRepository(Protocol):
-    def save(self, record: ProposalRecord) -> None: ...
+    def save(self, record: ProposalRecord, *, expected: ProposalRecord | None = None) -> bool:
+        """Insert when absent, or replace only the exact expected record. False means conflict."""
+        ...
 
     def get(self, proposal_id: UUID) -> ProposalRecord | None: ...
 

@@ -1,4 +1,4 @@
-"""Direct LinkedIn, X, and OpenAI Ads adapters: request shape, auth, and normalization."""
+"""Direct X and OpenAI Ads adapters: request shape, auth, and normalization."""
 
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ from paid_media_agent.tools.direct import (
     direct_raw_tools,
     direct_read_providers,
 )
-from paid_media_agent.tools.direct.linkedin import LinkedInReadProvider, linkedin_raw_tools
 from paid_media_agent.tools.direct.openai_ads import OpenAIAdsReadProvider, openai_ads_raw_tools
 from paid_media_agent.tools.direct.x_ads import (
     XAdsReadProvider,
@@ -26,7 +25,6 @@ from paid_media_agent.tools.direct.x_ads import (
     stats_windows,
     x_ads_raw_tools,
 )
-from paid_media_agent.tools.normalize import normalize_rows
 from paid_media_agent.tools.providers import ProviderError
 
 
@@ -35,140 +33,16 @@ def _factory(handler: Any) -> Any:
 
 
 def _catalog() -> Any:
-    return build_authorized_catalog(
-        [*linkedin_raw_tools(), *x_ads_raw_tools(), *openai_ads_raw_tools()], source="direct"
-    )
+    return build_authorized_catalog([*x_ads_raw_tools(), *openai_ads_raw_tools()], source="direct")
 
 
 def test_direct_tools_classify_as_reads_with_account_scope() -> None:
     catalog = _catalog()
     names = {e.qualified_name: e for e in catalog.read_entries()}
-    assert (
-        "linkedin_ads__get_campaign_performance" in names
-        and "x_ads__get_campaign_performance" in names
-    )
+    assert "x_ads__get_campaign_performance" in names
     assert "openai_ads__list_campaigns" in names
     denied = {e.qualified_name: e.policy.reason for e in catalog.denied_entries()}
-    assert denied["linkedin_ads__list_ad_accounts"] == "no_account_scope", (
-        "account listing is host-only"
-    )
-
-
-def test_settings_direct_platforms_require_complete_credentials(tmp_path: Any) -> None:
-    settings = Settings(_env_file=None, linkedin_access_token="tok", x_ads_consumer_key="k")  # type: ignore[call-arg]
-    assert configured_direct_platforms(settings) == (Platform.LINKEDIN_ADS,)
-    assert {t.platform for t in direct_raw_tools(settings)} == {"linkedin_ads"}
-
-
-def test_pipeboard_linkedin_takes_precedence_over_saved_direct_credentials() -> None:
-    settings = Settings(
-        _env_file=None,  # type: ignore[call-arg]
-        pipeboard_api_token="pipeboard-test-token",
-        linkedin_access_token="legacy-direct-token",
-    )
-    assert (
-        settings.pipeboard_endpoints()[Platform.LINKEDIN_ADS]
-        == "https://linkedin-ads.mcp.pipeboard.co/"
-    )
-    assert Platform.LINKEDIN_ADS not in configured_direct_platforms(settings)
-    assert not any(tool.platform == "linkedin_ads" for tool in direct_raw_tools(settings))
-    assert Platform.LINKEDIN_ADS not in direct_read_providers(settings)
-
-
-async def test_linkedin_daily_analytics_request_and_refresh_on_401() -> None:
-    seen: list[httpx.Request] = []
-    state = {"token": "old-token"}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request)
-        if request.url.host == "www.linkedin.com":
-            return httpx.Response(200, json={"access_token": "new-token", "expires_in": 100})
-        if request.headers["Authorization"] != "Bearer new-token" and state["token"] == "old-token":
-            state["token"] = "expired"
-            return httpx.Response(401, json={"message": "expired"})
-        if request.url.path == "/rest/adAnalytics":
-            return httpx.Response(
-                200,
-                json={
-                    "elements": [
-                        {
-                            "dateRange": {"start": {"year": 2026, "month": 8, "day": 1}},
-                            "pivotValues": ["urn:li:sponsoredCampaign:77"],
-                            "impressions": 1000,
-                            "clicks": 20,
-                            "costInLocalCurrency": "42.5",
-                            "externalWebsiteConversions": 3,
-                        },
-                    ]
-                },
-            )
-        if request.url.path.endswith("/adCampaigns"):
-            return httpx.Response(
-                200,
-                json={
-                    "elements": [
-                        {
-                            "id": 77,
-                            "name": "Brand",
-                            "status": "ACTIVE",
-                            "dailyBudget": {"amount": "50", "currencyCode": "USD"},
-                        }
-                    ]
-                },
-            )
-        return httpx.Response(404)
-
-    provider = LinkedInReadProvider(
-        access_token=SecretStr("old-token"),
-        refresh_token=SecretStr("r"),
-        client_id="cid",
-        client_secret=SecretStr("cs"),
-        client_factory=_factory(handler),
-    )
-    entry = _catalog().get("linkedin_ads__get_campaign_performance")
-    assert entry is not None
-    result = await provider.call_read(
-        entry, {"account_id": "123", "start_date": "2026-08-01", "end_date": "2026-08-14"}
-    )
-    analytics = next(
-        r
-        for r in seen
-        if r.url.path == "/rest/adAnalytics" and r.headers["Authorization"] == "Bearer new-token"
-    )
-    assert (
-        analytics.headers["LinkedIn-Version"]
-        and analytics.headers["X-Restli-Protocol-Version"] == "2.0.0"
-    )
-    assert "dateRange=(start:(year:2026,month:8,day:1),end:(year:2026,month:8,day:14))" in str(
-        analytics.url
-    )
-    assert "pivot=CAMPAIGN&timeGranularity=DAILY" in str(analytics.url)
-    row = result.payload["rows"][0]
-    assert row == {
-        "date": "2026-08-01",
-        "campaign_id": "77",
-        "campaign_name": "Brand",
-        "spend": "42.5",
-        "impressions": 1000,
-        "clicks": 20,
-        "conversions": 3,
-    }
-    normalized, missing = normalize_rows(
-        platform=Platform.LINKEDIN_ADS,
-        account_ref="li",
-        currency="USD",
-        timezone="UTC",
-        rows=result.payload["rows"],
-        entity_type=__import__(
-            "paid_media_agent.domain.common", fromlist=["EntityType"]
-        ).EntityType.CAMPAIGN,
-        data_complete_through=None,
-    )
-    assert str(normalized[0].spend) == "42.500000" and missing == ("conversion_value",)
-    with pytest.raises(ProviderError):
-        await provider.call_read(
-            entry, {"account_id": "12; drop", "start_date": "2026-08-01", "end_date": "2026-08-14"}
-        )
+    assert denied["x_ads__list_ad_accounts"] == "no_account_scope", "account listing is host-only"
 
 
 def test_oauth1_header_is_deterministic_and_percent_encoded() -> None:
@@ -287,14 +161,14 @@ async def test_openai_ads_insights_params_and_rows() -> None:
                 json={
                     "data": [
                         {
-                            "date": "2026-08-01",
+                            "readable_time": "2026-08-01",
                             "campaign_id": "cmp_1",
                             "campaign_name": "Launch",
                             "spend": "12.50",
                             "impressions": 300,
                             "clicks": 9,
                             "conversions": 2,
-                            "conversion_value": "80",
+                            "order_created_attributed_sales": "80",
                         }
                     ]
                 },
@@ -310,14 +184,19 @@ async def test_openai_ads_insights_params_and_rows() -> None:
     params = seen[0].url.params
     assert (
         params["aggregation_level"] == "campaign"
-        and params["time_ranges[]"] == "2026-08-01..2026-08-07"
+        and params["time_granularity"] == "daily"
+        and json.loads(params["time_ranges[]"])
+        == {"type": "date_range", "since": "2026-08-01", "until": "2026-08-07"}
     )
     assert params.get_list("fields[]") == [
+        "campaign_id",
+        "campaign_name",
+        "readable_time",
         "spend",
         "impressions",
         "clicks",
         "conversions",
-        "conversion_value",
+        "order_created_attributed_sales",
     ]
     assert result.payload["rows"][0]["conversion_value"] == "80"
 
@@ -332,12 +211,12 @@ async def test_composite_provider_routes_by_platform() -> None:
 
             return ProviderResult(payload={"from": self.tag})
 
-    composite = CompositeReadProvider(Stub("pipeboard"), {Platform.LINKEDIN_ADS: Stub("linkedin")})
+    composite = CompositeReadProvider(Stub("pipeboard"), {Platform.OPENAI_ADS: Stub("openai")})
     catalog = _catalog()
-    li = catalog.get("linkedin_ads__list_campaigns")
+    li = catalog.get("openai_ads__list_campaigns")
     x = catalog.get("x_ads__list_campaigns")
     assert li is not None and x is not None
-    assert (await composite.call_read(li, {})).payload["from"] == "linkedin"
+    assert (await composite.call_read(li, {})).payload["from"] == "openai"
     assert (await composite.call_read(x, {})).payload["from"] == "pipeboard"
     with pytest.raises(ProviderError):
         await CompositeReadProvider(None, {}).call_read(x, {})
@@ -350,49 +229,14 @@ def test_errors_never_carry_credentials() -> None:
         401,
         request=httpx.Request(
             "GET",
-            "https://api.linkedin.com/x",
+            "https://ads-api.x.com/12/accounts",
             headers={"Authorization": "Bearer secret-token-value"},
         ),
     )
     with pytest.raises(ProviderError) as info:
-        raise_for_status(response, context="linkedin")
+        raise_for_status(response, context="x")
     assert "secret-token-value" not in str(info.value) and "401" in str(info.value)
     assert json.dumps(str(info.value))
-
-
-async def test_linkedin_creative_grain_pivots_the_same_analytics_call() -> None:
-    seen: list[httpx.Request] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request)
-        if request.url.path == "/rest/adAnalytics":
-            return httpx.Response(
-                200,
-                json={
-                    "elements": [
-                        {
-                            "dateRange": {"start": {"year": 2026, "month": 8, "day": 2}},
-                            "pivotValues": ["urn:li:sponsoredCreative:9001"],
-                            "impressions": 300,
-                            "clicks": 9,
-                            "costInLocalCurrency": "12.25",
-                            "externalWebsiteConversions": 1,
-                        }
-                    ]
-                },
-            )
-        return httpx.Response(200, json={"elements": []})
-
-    provider = LinkedInReadProvider(access_token=SecretStr("t"), client_factory=_factory(handler))
-    entry = _catalog().get("linkedin_ads__get_creative_performance")
-    assert entry is not None
-    result = await provider.call_read(
-        entry, {"account_id": "123", "start_date": "2026-08-01", "end_date": "2026-08-07"}
-    )
-    assert "pivot=CREATIVE" in str(next(r.url for r in seen if r.url.path == "/rest/adAnalytics"))
-    assert result.payload["entity_type"] == "creative"
-    row = result.payload["rows"][0]
-    assert (row["creative_id"], row["spend"], row["conversions"]) == ("9001", "12.25", 1)
 
 
 async def test_x_ad_group_grain_uses_line_items() -> None:
@@ -461,7 +305,7 @@ async def test_openai_ads_ad_group_grain_aggregates_by_ad_group() -> None:
             json={
                 "data": [
                     {
-                        "date": "2026-08-01",
+                        "readable_time": "2026-08-01",
                         "campaign_id": "c1",
                         "ad_group_id": "g1",
                         "ad_group_name": "Group",
@@ -483,3 +327,32 @@ async def test_openai_ads_ad_group_grain_aggregates_by_ad_group() -> None:
     assert seen[0].url.params["aggregation_level"] == "ad_group"
     assert result.payload["entity_type"] == "ad_group"
     assert result.payload["rows"][0]["ad_group_id"] == "g1"
+
+
+def test_direct_platforms_require_complete_credentials() -> None:
+    settings = Settings(_env_file=None, openai_ads_api_key="key", x_ads_consumer_key="partial")  # type: ignore[call-arg]
+    assert configured_direct_platforms(settings) == (Platform.OPENAI_ADS,)
+    assert {t.platform for t in direct_raw_tools(settings)} == {"openai_ads"}
+    assert set(direct_read_providers(settings)) == {Platform.OPENAI_ADS}
+
+
+async def test_openai_ads_paginates_and_rejects_incomplete_results() -> None:
+    repeat_cursor = False
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "after" in request.url.params:
+            if repeat_cursor:
+                return httpx.Response(200, json={"data": [], "has_more": True, "last_id": "page1"})
+            return httpx.Response(200, json={"data": [{"id": "c2"}], "has_more": False})
+        return httpx.Response(
+            200, json={"data": [{"id": "c1"}], "has_more": True, "last_id": "page1"}
+        )
+
+    provider = OpenAIAdsReadProvider(api_key=SecretStr("key"), client_factory=_factory(handler))
+    entry = _catalog().get("openai_ads__list_campaigns")
+    assert entry is not None
+    result = await provider.call_read(entry, {"account_id": "account"})
+    assert [row["id"] for row in result.payload["campaigns"]] == ["c1", "c2"]
+    repeat_cursor = True
+    with pytest.raises(ProviderError, match="pagination cursor"):
+        await provider.call_read(entry, {"account_id": "account"})

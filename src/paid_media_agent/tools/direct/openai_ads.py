@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from typing import Any
 
@@ -23,7 +24,15 @@ from paid_media_agent.tools.providers import ProviderError, ProviderResult
 
 OPENAI_ADS_API_BASE = "https://api.ads.openai.com/v1"
 ENDPOINT = "direct://openai_ads"
-INSIGHT_FIELDS = ("spend", "impressions", "clicks", "conversions", "conversion_value")
+INSIGHT_FIELDS = (
+    "readable_time",
+    "spend",
+    "impressions",
+    "clicks",
+    "conversions",
+    "order_created_attributed_sales",
+)
+MAX_PAGES = 50
 
 
 def _schema(extra: dict[str, JsonValue], required: list[str]) -> dict[str, JsonValue]:
@@ -122,6 +131,31 @@ class OpenAIAdsReadProvider:
             raise ProviderError(f"{context}: malformed response")
         return body
 
+    async def _pages(
+        self,
+        client: httpx.AsyncClient,
+        path: str,
+        params: dict[str, str | list[str]],
+        *,
+        context: str,
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        cursors: set[str] = set()
+        for _ in range(MAX_PAGES):
+            body = await self._get(client, path, params, context=context)
+            data = body.get("data")
+            if not isinstance(data, list) or any(not isinstance(row, dict) for row in data):
+                raise ProviderError(f"{context}: malformed data")
+            rows.extend(data)
+            if not body.get("has_more"):
+                return rows
+            cursor = body.get("last_id")
+            if not isinstance(cursor, str) or not cursor or cursor in cursors:
+                raise ProviderError(f"{context}: invalid pagination cursor")
+            cursors.add(cursor)
+            params = {**params, "after": cursor}
+        raise ProviderError(f"{context}: too many pages; narrow the date range")
+
     async def call_read(
         self, entry: CatalogEntry, arguments: dict[str, JsonValue]
     ) -> ProviderResult:
@@ -144,8 +178,8 @@ class OpenAIAdsReadProvider:
                 )
             account_id = require_id(arguments.get("account_id"), name="account_id")
             if entry.name == "list_campaigns":
-                body = await self._get(
-                    client, "/campaigns", {"limit": "500"}, context="openai ads campaigns"
+                campaigns = await self._pages(
+                    client, "/campaigns", {"limit": "100"}, context="openai ads campaigns"
                 )
                 status = arguments.get("status")
                 listed: list[dict[str, JsonValue]] = [
@@ -156,7 +190,7 @@ class OpenAIAdsReadProvider:
                         "daily_budget": c.get("daily_budget"),
                         "currency": c.get("currency"),
                     }
-                    for c in body.get("data", [])
+                    for c in campaigns
                     if isinstance(c, dict) and (status is None or c.get("status") == status)
                 ]
                 return ProviderResult(payload={"campaigns": listed, "account_id": account_id})
@@ -165,24 +199,29 @@ class OpenAIAdsReadProvider:
                 start, end = require_window(arguments.get("start_date"), arguments.get("end_date"))
                 params: dict[str, str | list[str]] = {
                     "aggregation_level": "ad_group" if ad_groups else "campaign",
-                    "time_granularity": "day",
-                    "time_ranges[]": f"{start.isoformat()}..{end.isoformat()}",
+                    "time_granularity": "daily",
+                    "time_ranges[]": json.dumps(
+                        {"type": "date_range", "since": start.isoformat(), "until": end.isoformat()}
+                    ),
                     "limit": "2000",
-                    "fields[]": list(INSIGHT_FIELDS),
+                    "fields[]": [
+                        "campaign_id",
+                        "campaign_name",
+                        *(["ad_group_id", "ad_group_name"] if ad_groups else []),
+                        *INSIGHT_FIELDS,
+                    ],
                 }
-                body = await self._get(
+                data = await self._pages(
                     client, "/ad_account/insights", params, context="openai ads insights"
                 )
-                data = body.get("data")
-                if not isinstance(data, list):
-                    raise ProviderError("openai ads insights: malformed data")
                 rows: list[dict[str, JsonValue]] = []
                 for item in data:
-                    if not isinstance(item, dict):
-                        continue
-                    day = item.get("date") or item.get("time_range_start") or item.get("day")
-                    if not isinstance(day, str):
-                        continue
+                    day = item.get("readable_time")
+                    entity_id = item.get("ad_group_id" if ad_groups else "campaign_id")
+                    if not isinstance(day, str) or not entity_id:
+                        raise ProviderError(
+                            "openai ads insights: row is missing its date or entity"
+                        )
                     rows.append(
                         {
                             "date": day[:10],
@@ -200,7 +239,7 @@ class OpenAIAdsReadProvider:
                             "impressions": item.get("impressions"),
                             "clicks": item.get("clicks"),
                             "conversions": item.get("conversions"),
-                            "conversion_value": item.get("conversion_value"),
+                            "conversion_value": item.get("order_created_attributed_sales"),
                         }
                     )
                 return ProviderResult(

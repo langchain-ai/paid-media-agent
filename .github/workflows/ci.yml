@@ -33,9 +33,24 @@ jobs:
         run: uv run --frozen paid-media-agent demo --with-proposal
       - name: MDA definition import smoke
         run: uv run --frozen python -c "import agent; print(agent.agent.config['name'])"
-      - name: Secret scan
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan Git history with Gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
         run: |
-          ! grep -rnE "xox[abp]-[A-Za-z0-9-]{8,}|sk-ant-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}|BEGIN (RSA|OPENSSH) PRIVATE" \
-            --include='*.py' --include='*.md' --include='*.toml' --include='*.json' --include='*.yaml' \
-            --exclude-dir=.venv --exclude-dir=.git . \
-            | grep -v "src/paid_media_agent/middleware/redaction.py" | grep -v "tests/unit/test_proposals_and_security.py"
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$GITLEAKS_SHA256" "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git . --config .gitleaks.toml --log-opts=--all \
+            --redact=100 --ignore-gitleaks-allow --no-banner --no-color

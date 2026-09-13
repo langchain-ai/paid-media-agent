@@ -1,4 +1,4 @@
-"""UI JSON views. Every field maps to a shared presentation object; no UI-only behavior."""
+"""JSON responses for completed API runs."""
 
 from __future__ import annotations
 

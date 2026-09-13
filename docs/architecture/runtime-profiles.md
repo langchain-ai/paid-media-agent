@@ -8,16 +8,16 @@ no network calls and stores no process-global mutable state.
 
 ## One configured profile
 
-`runtime/mda.py::configured_profile` resolves what a process runs: the live Pipeboard catalog and
-direct adapters when their credentials exist, the fixture catalog otherwise; the reviewed write
-policy validated against that catalog; the approval policy from `PAID_MEDIA_APPROVER_IDS`. Three
-callers compile it:
+`runtime/mda.py::configured_profile` resolves the catalog, reviewed write policy, and approval
+policy from `PAID_MEDIA_APPROVER_IDS`. `PAID_MEDIA_DATA_MODE=sample` uses only fixtures; `live`
+requires connected providers and excludes synthetic platforms. The default `auto` mode selects
+providers from configured credentials and otherwise uses fixtures. Three callers compile it:
 
 - `agent.py` hands the components to `define_deep_agent`. Managed Deep Agents supplies the
   checkpointer, the per-thread sandbox, identity, schedules, and Slack. This is the recommended
   deployment.
 - `runtime/self_hosted.py::build_self_hosted_runtime` compiles the same components with
-  `create_deep_agent` behind the FastAPI boundary and the rich Slack adapter, with proposals,
+  `create_deep_agent` behind the FastAPI boundary and the Slack adapter, with proposals,
   claims, receipts, dedupe, thread ownership, and checkpoints in Postgres when `DATABASE_URL` is
   set and in memory otherwise.
 - `runtime/local.py::build_configured_runtime` compiles them with an in-memory checkpointer for
@@ -31,12 +31,13 @@ test suite.
 In the deployment the model's filesystem is the MDA sandbox: `/skills` (synced by MDA, the wiki
 included as `skills/paid-media-wiki/`) and `/workspace` (the thread's scratch space). The checkout's
 `skills/` is a relative link to `workspace/skills/`. Local coding-agent skills in `.agents/skills/`
-are not synced to the sandbox. Nothing else
-from the repository is present. Every other input reaches the model through host tools: the
-organization profile through `get_org_context`, artifacts through their ids, files through
-`render_report`. Locally the repository is the filesystem. Writes are allowed under `/workspace`
-except `workspace/skills`, which stays read-only; `.agents` and `.claude` are inaccessible to the
-paid-media agent. The same host tools are used in both runtimes.
+are not synced to the sandbox. Business context belongs in
+`workspace/skills/company-context/`, alongside the runtime skills. Original briefs remain in
+`workspace/sources/` and are not synced. See [customization](../customization.md).
+
+Locally the repository is the filesystem. Writes are allowed under `/workspace` except
+`workspace/skills`, which stays read-only. Coding-agent files, raw sources, and secret paths are denied. Provider reads and report generation use the same
+host tools in both runtimes.
 
 ## Parity contract
 
@@ -46,9 +47,8 @@ presentation may differ. Capability and approval policy may not.
 
 ## Self-hosting
 
-The self-hosted profile is the same assembly with durable state you own. Its model filesystem is
-the repository (writes only under `/workspace`), so skills, the wiki, and org pages are readable
-directly, and the same host tools are used anyway so nothing depends on that. See
+The self-hosted profile is the same assembly with durable state you own. It reads the same
+runtime skills and company context, with the local filesystem permissions described above. See
 [docs/self-hosting.md](../self-hosting.md).
 
 | Profile | Main advantage | Main cost or limit |
@@ -56,7 +56,7 @@ directly, and the same host tools are used anyway so nothing depends on that. Se
 | MDA | one command, managed threads, sandbox, schedules, identity, Slack | generic approval card, US region, in-memory proposal state per process |
 | Self-hosted | your data, auth, Slack cards with edits, Postgres durability | you run the API, database, Slack app, upgrades, and backups |
 
-## Implementation notes (2026-09-08)
+## Runtime components
 
 - `runtime/profiles.py` defines `RuntimeProfile`: artifacts, accounts, catalog provider, read and
   write providers, write policy, approval policy, signer, repositories, and run mode.

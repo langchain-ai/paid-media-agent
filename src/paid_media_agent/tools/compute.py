@@ -37,7 +37,7 @@ def _q(value: Decimal) -> Decimal:
 def _ratio(
     numerator: Decimal | int | None, denominator: Decimal | int | None, scale: Decimal = Decimal(1)
 ) -> Decimal | None:
-    """Return numerator / denominator * scale, or None when either side is missing or zero."""
+    """Return numerator / denominator * scale, or None for missing inputs or a zero denominator."""
     if numerator is None or denominator is None:
         return None
     denom = Decimal(denominator)

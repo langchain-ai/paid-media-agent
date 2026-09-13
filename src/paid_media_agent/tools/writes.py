@@ -66,6 +66,7 @@ DISCOVER_WRITE_OPERATIONS_TOOL = "discover_write_operations"
 
 DEFAULT_READBACK_ATTEMPTS = 3
 DEFAULT_READBACK_SECONDS = 20.0
+DEFAULT_READBACK_RETRY_SECONDS = 0.5
 DEFAULT_MUTATION_TIMEOUT_SECONDS = 30.0
 
 _STATUS_FIELDS = frozenset({"status", "state", "enabled", "paused", "active"})
@@ -443,7 +444,7 @@ class ProposalService:
             history=(f"{self._clock().isoformat()} proposed by {requester_ref}",),
             routing_id=secrets.token_urlsafe(18),
         )
-        self._proposals.save(record)
+        self._save(record)
         return record
 
     def get(self, proposal_id: UUID) -> ProposalRecord | None:
@@ -491,7 +492,7 @@ class ProposalService:
             history=(*record.history, f"{self._clock().isoformat()} revised by {editor_ref}"),
             routing_id=secrets.token_urlsafe(18),
         )
-        self._proposals.save(updated)
+        self._save(updated, expected=record)
         return updated
 
     def reject(self, proposal_id: UUID, *, actor_ref: str, message: str = "") -> ProposalRecord:
@@ -506,7 +507,7 @@ class ProposalService:
                 ),
             }
         )
-        self._proposals.save(updated)
+        self._save(updated, expected=record)
         return updated
 
     def approve(self, proposal_id: UUID, *, approver_ref: str) -> ApprovalClaim:
@@ -538,15 +539,20 @@ class ProposalService:
             signature="",
         )
         claim = claim.model_copy(update={"signature": self._signer.sign(claim.signing_material())})
-        self._approvals.save(claim)
-        self._proposals.save(
+        self._save(
             record.model_copy(
                 update={
                     "history": (*record.history, f"{now.isoformat()} approved by {approver_ref}")
                 }
-            )
+            ),
+            expected=record,
         )
+        self._approvals.save(claim)
         return claim
+
+    def _save(self, record: ProposalRecord, *, expected: ProposalRecord | None = None) -> None:
+        if not self._proposals.save(record, expected=expected):
+            raise WriteDenied("proposal_changed", "reload the current proposal before retrying")
 
     def _require(self, proposal_id: UUID) -> ProposalRecord:
         record = self._proposals.get(proposal_id)
@@ -554,8 +560,17 @@ class ProposalService:
             raise WriteDenied("unknown_proposal")
         return record
 
-    def mark(self, proposal_id: UUID, event: ProposalEvent, note: str) -> ProposalRecord:
-        record = self._require(proposal_id)
+    def mark(
+        self,
+        proposal_id: UUID,
+        event: ProposalEvent,
+        note: str,
+        *,
+        expected: ProposalRecord | None = None,
+    ) -> ProposalRecord:
+        record = expected if expected is not None else self._require(proposal_id)
+        if record.changeset.proposal_id != proposal_id:
+            raise WriteDenied("unknown_proposal")
         try:
             state_value = transition(record.state, event)
         except InvalidTransition as exc:
@@ -563,7 +578,7 @@ class ProposalService:
         updated = record.model_copy(
             update={"state": state_value, "history": (*record.history, note)}
         )
-        self._proposals.save(updated)
+        self._save(updated, expected=record)
         return updated
 
 
@@ -705,32 +720,39 @@ class WriteExecutor:
         }
         expected = {fv.field: fv.value for fv in cs.after}
         before = {fv.field: fv.value for fv in cs.before}
-        deadline = self._clock() + timedelta(seconds=self._readback_seconds)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self._readback_seconds
         attempts = 0
         observed: tuple[FieldValue, ...] = ()
-        while attempts < self._readback_attempts and self._clock() <= deadline:
+        while attempts < self._readback_attempts:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
             attempts += 1
             try:
-                state = await read_entity_state(
-                    self._read_provider, readback_entry, read_args, operation
+                state = await asyncio.wait_for(
+                    read_entity_state(self._read_provider, readback_entry, read_args, operation),
+                    timeout=remaining,
                 )
+            except TimeoutError:
+                return "unproven", observed, attempts
             except ProviderError:
-                await self._sleep(0)
-                continue
-            observed = tuple(
-                FieldValue(
-                    field=f,
-                    value=_json_ready(state.get(operation.readback_fields[f])),
-                    unit=operation.units.get(f),
+                pass
+            else:
+                observed = tuple(
+                    FieldValue(
+                        field=f,
+                        value=_json_ready(state.get(operation.readback_fields[f])),
+                        unit=operation.units.get(f),
+                    )
+                    for f in expected
                 )
-                for f in expected
-            )
-            actual = {fv.field: fv.value for fv in observed}
-            if all(values_equal(actual.get(f), v) for f, v in expected.items()):
-                return "matches_after", observed, attempts
-            if all(values_equal(actual.get(f), v) for f, v in before.items()):
-                await self._sleep(0)
-                continue
+                actual = {fv.field: fv.value for fv in observed}
+                if all(values_equal(actual.get(f), v) for f, v in expected.items()):
+                    return "matches_after", observed, attempts
+            remaining = deadline - loop.time()
+            if attempts < self._readback_attempts and remaining > 0:
+                await self._sleep(min(DEFAULT_READBACK_RETRY_SECONDS, remaining))
         if observed and all(
             values_equal({fv.field: fv.value for fv in observed}.get(f), v)
             for f, v in before.items()
@@ -756,14 +778,15 @@ class WriteExecutor:
             raise WriteDenied("unknown_proposal")
         catalog_revision = self._catalog_provider.current().revision
         if record.state is not ProposalState.AWAITING_APPROVAL:
-            return self._rejected(record, catalog_revision, f"proposal is {record.state.value}")
+            receipt = self._receipts.get(proposal_id)
+            if receipt is not None and receipt.revision == record.changeset.revision:
+                return receipt
+            raise WriteDenied("not_awaiting_approval", f"proposal is {record.state.value}")
         claim = self._approvals.latest_unused(
             record.changeset.proposal_id, record.changeset.revision
         )
         if claim is None:
-            return self._rejected(
-                record, catalog_revision, "no valid approval claim for this revision"
-            )
+            raise WriteDenied("approval_required", "no valid approval claim for this revision")
         try:
             self._verify_claim(record, claim)
             entry, operation, readback_entry, catalog_revision = self._verify_catalog(record)
@@ -773,19 +796,22 @@ class WriteExecutor:
                 proposal_id,
                 ProposalEvent.REJECT,
                 f"{self._clock().isoformat()} execution refused: {exc.reason}",
+                expected=record,
             )
             return self._rejected(
                 record, catalog_revision, f"{exc.reason}: {exc.detail}".rstrip(": ")
             )
-        if not self._approvals.mark_used(claim.claim_id):
-            self._service.mark(proposal_id, ProposalEvent.REJECT, "approval replay refused")
-            return self._rejected(record, catalog_revision, "approval already used")
-
         record = self._service.mark(
             proposal_id,
             ProposalEvent.APPROVE,
             f"{self._clock().isoformat()} executing with claim {claim.claim_id}",
+            expected=record,
         )
+        if not self._approvals.mark_used(claim.claim_id):
+            self._service.mark(
+                proposal_id, ProposalEvent.FAIL, "approval replay refused", expected=record
+            )
+            return self._rejected(record, catalog_revision, "approval already used")
         arguments = dict(record.changeset.canonical_args)
         if operation.validate_only_arg is not None:
             try:

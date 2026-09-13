@@ -69,25 +69,45 @@ class PostgresProposalRepository:
     def __init__(self, pool: Any) -> None:
         self._pool = pool
 
-    def save(self, record: ProposalRecord) -> None:
+    def save(self, record: ProposalRecord, *, expected: ProposalRecord | None = None) -> bool:
+        proposal_id = record.changeset.proposal_id
+        if expected is not None and expected.changeset.proposal_id != proposal_id:
+            return False
         payload = json.dumps(record.model_dump(mode="json"))
         with self._pool.connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO pma_proposals (proposal_id, routing_id, thread_id, state, record)
-                VALUES (%s, %s, %s, %s, %s::jsonb)
-                ON CONFLICT (proposal_id) DO UPDATE
-                SET routing_id = EXCLUDED.routing_id, state = EXCLUDED.state, record = EXCLUDED.record, updated_at = now()
-                """,
-                (
-                    record.changeset.proposal_id,
-                    record.routing_id,
-                    record.changeset.thread_id,
-                    record.state.value,
-                    payload,
-                ),
-            )
+            if expected is None:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO pma_proposals (proposal_id, routing_id, thread_id, state, record)
+                    VALUES (%s, %s, %s, %s, %s::jsonb)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (
+                        proposal_id,
+                        record.routing_id,
+                        record.changeset.thread_id,
+                        record.state.value,
+                        payload,
+                    ),
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    UPDATE pma_proposals
+                    SET routing_id = %s, thread_id = %s, state = %s, record = %s::jsonb, updated_at = now()
+                    WHERE proposal_id = %s AND record = %s::jsonb
+                    """,
+                    (
+                        record.routing_id,
+                        record.changeset.thread_id,
+                        record.state.value,
+                        payload,
+                        proposal_id,
+                        json.dumps(expected.model_dump(mode="json")),
+                    ),
+                )
             conn.commit()
+            return bool(cursor.rowcount == 1)
 
     def _load(self, row: Any) -> ProposalRecord | None:
         if row is None:

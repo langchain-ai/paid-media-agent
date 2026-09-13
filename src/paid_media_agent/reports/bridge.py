@@ -36,7 +36,7 @@ class ArtifactBridge:
         resolved = path.resolve()
         if self._root not in resolved.parents:
             raise BridgeError("artifact path is outside the output directory")
-        if resolved.is_symlink():
+        if path.is_symlink():
             raise BridgeError("symlinked artifacts are not delivered")
         media_type = ALLOWED_SUFFIXES.get(resolved.suffix.lower())
         if media_type is None:

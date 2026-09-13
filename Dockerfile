@@ -1,6 +1,4 @@
-# Self-hosted API (`paid-media-agent serve`) with the rich Slack transports. Pango and Cairo are
-# included so PDF reports render here. No .env is copied; pass secrets as environment variables
-# or a mounted file. Managed Deep Agents (`mda deploy .`) is the one-command alternative.
+# Self-hosted API and Slack worker with native PDF dependencies.
 FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

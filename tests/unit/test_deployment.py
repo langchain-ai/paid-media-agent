@@ -100,5 +100,38 @@ def test_invalid_customization_does_not_change_files(
         result = config_set(tmp_path, updates)
         assert not result.ok
         assert (tmp_path / ".env").read_bytes() == before
-    assert not config_set(tmp_path, {"PAID_MEDIA_REPORT_TIME": "09:00"}).ok
+    assert config_set(tmp_path, {"PAID_MEDIA_REPORT_TIME": "09:00"}).ok
+    assert not (tmp_path / "schedules").exists()
     assert read_env(tmp_path)["PAID_MEDIA_SLACK_NAME"] == "Existing Agent"
+
+
+def test_compose_slack_shares_runtime_config_and_storage(project_root: Path) -> None:
+    import yaml
+
+    services = yaml.safe_load((project_root / "docker-compose.yml").read_text())["services"]
+    api, slack = services["api"], services["slack"]
+    assert api["ports"] == ["127.0.0.1:8080:8080"]
+    assert slack["profiles"] == ["slack"]
+    assert slack["command"] == ["paid-media-agent", "slack"]
+    assert slack["environment"] == api["environment"]
+    assert slack["volumes"] == api["volumes"]
+    assert {
+        "workspace:/app/workspace",
+        "./workspace/skills:/app/skills:ro",
+        "./config:/app/config:ro",
+    } <= set(slack["volumes"])
+    assert slack["healthcheck"] == {"disable": True}
+
+
+def test_removed_schedule_stays_disabled_when_updating_settings(
+    tmp_path: Path, project_root: Path
+) -> None:
+    shutil.copytree(project_root / "schedules", tmp_path / "schedules")
+    (tmp_path / "schedules/weekly_report.py").unlink()
+    result = config_set(tmp_path, {"PAID_MEDIA_REPORT_TIME": "09:30"})
+    assert result.ok, result.summary
+    assert not (tmp_path / "schedules/weekly_report.py").exists()
+    assert (
+        runpy.run_path(str(tmp_path / "schedules/monthly_report.py"))["schedule"].config["cron"]
+        == "30 9 1 * *"
+    )

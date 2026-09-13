@@ -39,8 +39,7 @@ class LoadedCatalog:
 async def load_catalog(settings: Settings, *, project_root: Path | None = None) -> LoadedCatalog:
     """Live Pipeboard catalog when a token is configured, otherwise the fixture catalog.
 
-    X and OpenAI Ads join the same catalog when configured. Legacy direct LinkedIn works only
-    without Pipeboard, so the two providers never compete for the same platform.
+    X and OpenAI Ads join the same catalog when configured.
     The reviewed write-policy file decides which live mutations are admitted.
     """
     from paid_media_agent.tools.direct import (

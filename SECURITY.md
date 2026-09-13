@@ -4,8 +4,7 @@
 
 Use GitHub's private vulnerability reporting on this repository ("Report a vulnerability" under
 the Security tab). Do not open a public issue for a security problem and do not include account
-identifiers, tokens, or provider payloads in a report. The maintainer contact for out-of-band
-reports is recorded in [open-questions.md](open-questions.md) until the public release names one.
+identifiers, tokens, or provider payloads in a report.
 
 ## What counts
 

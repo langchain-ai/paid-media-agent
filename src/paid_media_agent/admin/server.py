@@ -8,14 +8,13 @@ import json
 import os
 import secrets
 import signal
-import tempfile
 import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field, SecretStr
 
@@ -52,11 +51,6 @@ ACTIONS: dict[str, Callable[..., actions.ActionResult]] = {
     "status": lambda root, **_: actions.status(root),
     "ask": lambda root, question="", **_: actions.ask_question(root, str(question)),
 }
-
-
-class OrgUpdate(BaseModel):
-    answers: dict[str, str] = Field(default_factory=dict)
-    links: list[str] = Field(default_factory=list)
 
 
 class ConfigUpdate(BaseModel):
@@ -103,7 +97,7 @@ class ConsoleState:
         prefixes: tuple[str, ...] = (
             ("paid_media_model", "paid_media_tool_selector_model")
             if name == "model_test"
-            else ("pipeboard_", "linkedin_", "x_ads_", "openai_ads_")
+            else ("pipeboard_", "x_ads_", "openai_ads_")
         )
         if name == "mda_check":
             prefixes += ("paid_media_model", "paid_media_sandbox_")
@@ -343,45 +337,6 @@ def create_console_app(
             console.check_stamps[name] = stamp
             console.checks[name] = {"status": result["status"], "summary": result["summary"]}
         return result
-
-    @app.get("/api/org")
-    def get_org(console: ConsoleState = Depends(_authorized)) -> dict[str, JsonValue]:
-        return actions.org_show(console.root).model_dump(mode="json")
-
-    @app.post("/api/org")
-    def post_org(
-        body: OrgUpdate, console: ConsoleState = Depends(_authorized)
-    ) -> dict[str, JsonValue]:
-        result = actions.org_set(console.root, body.answers) if body.answers else None
-        links = [
-            actions.org_add_link(console.root, url).model_dump(mode="json") for url in body.links
-        ]
-        if result is None:
-            return {
-                "action": "org_set",
-                "ok": True,
-                "status": "ok",
-                "summary": "no answers changed",
-                "detail": {"links": links},
-            }
-        merged = result.model_dump(mode="json")
-        merged["detail"]["links"] = links
-        return merged
-
-    @app.post("/api/org/files")
-    async def post_org_file(
-        file: UploadFile, console: ConsoleState = Depends(_authorized)
-    ) -> dict[str, JsonValue]:
-        from paid_media_agent.org import MAX_SOURCE_BYTES
-
-        data = await file.read(MAX_SOURCE_BYTES + 1)
-        if len(data) > MAX_SOURCE_BYTES:
-            raise HTTPException(status_code=413, detail="files up to 1 MB")
-        name = Path(file.filename or "upload.txt").name
-        with tempfile.TemporaryDirectory() as tmp:
-            staged = Path(tmp) / name
-            staged.write_bytes(data)
-            return actions.org_add_file(console.root, staged).model_dump(mode="json")
 
     @app.post("/api/accounts")
     def post_account(

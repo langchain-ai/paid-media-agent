@@ -54,21 +54,17 @@ class ExecuteChangeArgs(BaseModel):
     )
 
 
-def _caller_from_config(config: Any) -> tuple[str, str]:
-    """Thread and acting user. Our surfaces set `caller_ref`; Managed Deep Agents sets the user
-    header and `langgraph_auth_user`; a bare local run is `local-user`."""
-    configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
-    thread_id = str(configurable.get("thread_id") or "local-thread")
-    auth_user = configurable.get("langgraph_auth_user")
-    identity = getattr(auth_user, "identity", None) or (
-        auth_user.get("identity") if isinstance(auth_user, dict) else None
-    )
-    caller = configurable.get("caller_ref") or configurable.get("x-mda-user-id") or identity
-    return thread_id, str(caller or "local-user")
-
-
 def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
-    return _caller_from_config(getattr(runtime, "config", None) or {})
+    """Use MDA's verified identity, or the caller injected by a local transport."""
+    config = getattr(runtime, "config", None) or {}
+    configurable = config.get("configurable", {})
+    thread_id = str(configurable.get("thread_id") or "local-thread")
+    if hasattr(runtime, "identity"):
+        identity = runtime.identity
+        user = identity.get("user") if isinstance(identity, Mapping) else None
+        actor = user.get("id") if isinstance(user, Mapping) else None
+        return thread_id, actor if isinstance(actor, str) else "anonymous"
+    return thread_id, str(configurable.get("caller_ref") or "local-user")
 
 
 def _proposal_id_from_call(tool_call: Mapping[str, Any]) -> UUID | None:
@@ -95,7 +91,7 @@ def build_execute_interrupt(service: ProposalService) -> InterruptOnConfig:
         proposal_id = _proposal_id_from_call(request.tool_call)
         if proposal_id is None:
             return False
-        thread_id, _ = _caller_from_config(getattr(request.runtime, "config", None) or {})
+        thread_id, _ = _caller_from_runtime(request.runtime)
         return service.belongs_to(proposal_id, thread_id)
 
     def _description(tool_call: Any, state: Any, runtime: Any) -> str:  # noqa: ARG001
@@ -159,7 +155,7 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
         user, but only when the proposal belongs to this thread and is still the revision that was
         presented: `revision` is frozen in the tool call when the card is raised, so an edit made in
         between is refused instead of executing unseen. Surfaces that create the claim themselves
-        (the API, the rich Slack adapter, the demo) pass straight through.
+        (the API, the Slack adapter, the demo) pass straight through.
         """
         try:
             pid = UUID(proposal_id)
@@ -188,12 +184,13 @@ def build_write_tools(service: ProposalService, executor: WriteExecutor) -> list
             return json.dumps({"denied": True, "reason": exc.reason, "detail": exc.detail})
         return json.dumps({"receipt": ReceiptView.from_receipt(receipt).model_dump(mode="json")})
 
-    def _get(proposal_id: str) -> str:
+    def _get(proposal_id: str, runtime: ToolRuntime) -> str:
         try:
             record = service.get(UUID(proposal_id))
         except ValueError:
             return json.dumps({"denied": True, "reason": "invalid_proposal_id"})
-        if record is None:
+        thread_id, _ = _caller_from_runtime(runtime)
+        if record is None or not service.belongs_to(record.changeset.proposal_id, thread_id):
             return json.dumps({"denied": True, "reason": "unknown_proposal"})
         return json.dumps({"proposal": ProposalView.from_record(record).model_dump(mode="json")})
 

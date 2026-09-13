@@ -647,7 +647,7 @@
           ]),
           el("dl", { class: "deployment-review" }, [
             reviewRow("Model", s.modelDone ? String(d.model?.spec || "Configured").replace(/^langsmith:/, "") : "Choose a model to continue", "model"),
-            reviewRow("Accounts", d.data_mode === "sample" ? "Sample data · synthetic accounts" : `${accountCount} ad account${accountCount === 1 ? "" : "s"}`, "pipeboard"),
+            reviewRow("Accounts", d.data_mode === "sample" ? "Sample data · synthetic accounts" : s.realAccounts ? `${accountCount} ad account${accountCount === 1 ? "" : "s"}` : "Choose accounts or sample data", "pipeboard"),
             el("div", { class: "deployment-review-row" }, [el("dt", { text: "Sandbox" }), el("dd", { text: d.mda?.sandbox_declared && d.mda?.sandbox_recipe ? "Included · built automatically on deploy" : "Missing sandbox setup files" })]),
           ]),
           signup,
@@ -1014,25 +1014,18 @@
       list.append(node);
     });
   }
-  function renderOrgContext(route) {
-    const prompt = "Use .agents/skills/paid-media-org-onboarding/SKILL.md to set up my business context locally. Read any existing context first. Use the briefs, public links, or text files I share, ask only for missing details, and save my answers with the paid-media-agent org CLI. Don't invent targets or overwrite unrelated answers.";
-    const manual = route.steps.map(step => el("div", { class: "org-manual-step" }, [
-      el("p", { class: "name", text: step.title }),
-      el("p", { class: "note", text: step.description }),
-      ...step.cli.split("\n").map(command => el("div", { class: "step-cli" }, [el("code", { text: command }), el("button", { class: "btn btn-ghost btn-compact copy", type: "button", text: "Copy", "aria-label": `Copy ${command}`, onclick: ev => copyText(command, ev.currentTarget) })])),
-    ]));
+  function renderOrgContext() {
+    const prompt = "Read .agents/skills/paid-media-org-onboarding/SKILL.md and help me configure this agent for my business. Read existing context, use the briefs I share, ask only for missing facts, and update workspace/skills/company-context/ directly. Keep original sources local and preserve unrelated content.";
     return el("section", { class: "step org-guide", "aria-labelledby": "org-guide-title" }, [
       el("div", { class: "org-guide-section" }, [
-        el("h2", { id: "org-guide-title", text: "Let your coding agent handle it" }),
-        el("p", { class: "note", text: "Open this project in your coding agent and share a campaign brief or plan. It will read what you have, ask for missing details, and save the context locally." }),
-        el("blockquote", { class: "org-prompt", text: "Learn about my business: what counts as a conversion, our CPA or ROAS targets, budget, and markets." }),
+        el("h2", { id: "org-guide-title", text: "Set context with your coding agent" }),
+        el("p", { class: "note", text: "Open this project in Codex, Claude Code, or Cursor and share a campaign brief. Your coding agent writes the business context and skills your deployed agent will use." }),
         el("div", { class: "actions" }, [el("button", { class: "btn btn-primary", type: "button", text: "Copy instructions", onclick: ev => copyText(prompt, ev.currentTarget) })]),
       ]),
       el("div", { class: "org-guide-section" }, [
-        el("h3", { text: "Saved in your project" }),
-        el("p", { class: "note" }, [el("code", { text: "docs/org/" }), " is excluded from Git. Your answers live in ", el("code", { text: "profile.json" }), "; briefs and exports live in ", el("code", { text: "sources/" }), ". The agent reads them before analysis."]),
-        el("p", { class: "hint", text: "Add context locally before deploying. Updates made in MDA do not sync back to this folder." }),
-        disclose("Set up manually", false, manual),
+        el("h3", { text: "Plain Markdown, in your workspace" }),
+        el("p", { class: "note" }, ["Edit ", el("code", { text: "workspace/skills/company-context/SKILL.md" }), " by hand if you prefer. Add conversion definitions, targets, markets, and campaign conventions. Original briefs stay in ", el("code", { text: "workspace/sources/" }), "."]),
+        el("p", { class: "hint", text: "Both folders are excluded from Git. Runtime skills are included when you deploy. See docs/customization.md for examples and optional warehouse connections." }),
       ]),
     ]);
   }
@@ -1057,8 +1050,6 @@
     PAID_MEDIA_TOOL_SELECTOR_MODEL: "Tool selection model",
     ANTHROPIC_API_KEY: "Anthropic API key", OPENAI_API_KEY: "OpenAI API key", GOOGLE_API_KEY: "Google API key",
     LANGSMITH_API_KEY: "LangSmith API key", PIPEBOARD_API_TOKEN: "Pipeboard API token",
-    LINKEDIN_ACCESS_TOKEN: "Access token", LINKEDIN_REFRESH_TOKEN: "Refresh token (optional)",
-    LINKEDIN_CLIENT_ID: "App client ID (optional)", LINKEDIN_CLIENT_SECRET: "App client secret (optional)",
     X_ADS_CONSUMER_KEY: "App API key", X_ADS_CONSUMER_SECRET: "App API secret",
     X_ADS_ACCESS_TOKEN: "Access token", X_ADS_ACCESS_TOKEN_SECRET: "Access token secret",
     OPENAI_ADS_API_KEY: "Ads API key", SLACK_TRANSPORT: "Connection method",
@@ -1078,7 +1069,6 @@
   function buildForm(action, node) {
     const form = el("form", { class: "form advanced-form" });
     const keys = action.keys.map(name => state.config.detail.keys.find(key => key.name === name)).filter(Boolean);
-    const refreshFields = [];
     for (const key of keys) {
       const input = key.name === "SLACK_TRANSPORT"
         ? el("select", { class: "input schedule-select", name: key.name }, [el("button", { type: "button" }, [el("selectedcontent")]), ...[["socket_mode", "Socket Mode"], ["http", "HTTP"]].map(([value, text]) => el("option", { value, text, selected: key.value === value ? true : null }))])
@@ -1088,10 +1078,8 @@
         : key.name === "PAID_MEDIA_TOOL_SELECTOR_MODEL" ? "Optional smaller model that chooses the tools for each request."
         : key.name === "PAID_MEDIA_MODEL_BASE_URL" ? "Optional endpoint for a compatible model provider." : slackTokenHelp(key.name);
       const field = formField(input.id, CONFIG_LABELS[key.name] || key.description, input, help);
-      if (["LINKEDIN_REFRESH_TOKEN", "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"].includes(key.name)) refreshFields.push(field);
-      else form.append(field);
+      form.append(field);
     }
-    if (refreshFields.length) form.append(disclose("Automatic token refresh (optional)", false, refreshFields));
     const save = el("button", { class: "btn btn-primary btn-compact", type: "submit", text: action.label });
     form.append(el("div", { class: "form-actions" }, [el("span", { class: "form-note", text: "Saved on this machine." }), save]));
     form.addEventListener("submit", async (event) => {

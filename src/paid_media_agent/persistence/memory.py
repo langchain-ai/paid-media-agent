@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from threading import Lock
 from uuid import UUID
 
 from paid_media_agent.domain.proposals import ApprovalClaim, ProposalRecord, WriteReceipt
@@ -10,21 +11,29 @@ from paid_media_agent.domain.proposals import ApprovalClaim, ProposalRecord, Wri
 class InMemoryProposalRepository:
     def __init__(self) -> None:
         self._records: dict[UUID, ProposalRecord] = {}
+        self._lock = Lock()
 
-    def save(self, record: ProposalRecord) -> None:
-        self._records[record.changeset.proposal_id] = record
+    def save(self, record: ProposalRecord, *, expected: ProposalRecord | None = None) -> bool:
+        proposal_id = record.changeset.proposal_id
+        if expected is not None and expected.changeset.proposal_id != proposal_id:
+            return False
+        with self._lock:
+            if self._records.get(proposal_id) != expected:
+                return False
+            self._records[proposal_id] = record
+            return True
 
     def get(self, proposal_id: UUID) -> ProposalRecord | None:
-        return self._records.get(proposal_id)
+        with self._lock:
+            return self._records.get(proposal_id)
 
     def get_by_routing_id(self, routing_id: str) -> ProposalRecord | None:
-        for record in self._records.values():
-            if record.routing_id == routing_id:
-                return record
-        return None
+        with self._lock:
+            return next((r for r in self._records.values() if r.routing_id == routing_id), None)
 
     def list_for_thread(self, thread_id: str) -> list[ProposalRecord]:
-        return [r for r in self._records.values() if r.changeset.thread_id == thread_id]
+        with self._lock:
+            return [r for r in self._records.values() if r.changeset.thread_id == thread_id]
 
 
 class InMemoryApprovalRepository:

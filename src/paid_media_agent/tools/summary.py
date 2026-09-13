@@ -23,7 +23,7 @@ from paid_media_agent.tools.compute import ComputeError, aggregate
 from paid_media_agent.tools.normalize import NormalizationError, rows_from_payload
 
 SUMMARIZE_WINDOW_TOOL = "summarize_window"
-SUMMARY_SCHEMA_VERSION = "window-summary/1"
+SUMMARY_SCHEMA_VERSION = "window-summary/2"
 DAY_CHANGE_FLAG = Decimal("0.5")
 """A day whose spend or conversions move by at least this share versus the prior day is flagged."""
 _MONEY = Decimal("0.01")
@@ -31,7 +31,9 @@ _RATIO = Decimal("0.0001")
 
 
 class SummarizeWindowArgs(BaseModel):
-    artifact_ids: list[str] = Field(description="performance_rows artifact ids, one per platform.")
+    artifact_ids: list[str] = Field(
+        description="performance_rows artifact ids, one per platform and account."
+    )
     start_date: date
     end_date: date
     budgets_artifact_ids: list[str] = Field(
@@ -50,8 +52,10 @@ def _ratio_str(numerator: Decimal | int | None, denominator: Decimal | int | Non
     return str((Decimal(numerator) / Decimal(denominator)).quantize(_RATIO, rounding=ROUND_HALF_UP))
 
 
-def _change(current: Decimal, previous: Decimal) -> Decimal | None:
-    return None if previous == 0 else (current - previous) / previous
+def _change(current: Decimal | None, previous: Decimal | None) -> Decimal | None:
+    if current is None or previous is None or previous == 0:
+        return None
+    return (current - previous) / previous
 
 
 def budgets_from_payload(payload: dict[str, JsonValue]) -> dict[str, Decimal]:
@@ -102,14 +106,14 @@ def summarize_rows(
         )
     entities.sort(key=lambda e: Decimal(e["spend"]), reverse=True)
     daily: list[dict[str, Any]] = []
-    previous: dict[str, Decimal] | None = None
+    previous: dict[str, Decimal | None] | None = None
     for day in days:
         day_metrics = aggregate([r for r in selected if r.window.start == day])
-        point = {"spend": day_metrics.spend, "conversions": day_metrics.conversions or Decimal(0)}
+        point = {"spend": day_metrics.spend, "conversions": day_metrics.conversions}
         entry: dict[str, Any] = {
             "date": day.isoformat(),
-            "spend": _money(point["spend"]),
-            "conversions": str(point["conversions"]),
+            "spend": _money(day_metrics.spend),
+            "conversions": None if point["conversions"] is None else str(point["conversions"]),
         }
         if previous is not None:
             for metric in ("spend", "conversions"):
@@ -147,19 +151,41 @@ def summarize_rows(
 def run_summarize_window(artifacts: ArtifactStore, args: SummarizeWindowArgs) -> dict[str, Any]:
     if args.end_date < args.start_date:
         raise ComputeError("window end precedes start")
-    budgets: dict[str, Decimal] = {}
+    budgets: dict[tuple[str, str], dict[str, Decimal]] = {}
     for artifact_id in args.budgets_artifact_ids:
-        budgets.update(budgets_from_payload(artifacts.read(artifact_id).payload))
-    platforms: dict[str, Any] = {}
+        record = artifacts.read(artifact_id)
+        if (
+            record.metadata.kind != "provider_result"
+            or not record.metadata.platform
+            or not record.metadata.account_ref
+        ):
+            raise ComputeError(
+                f"{artifact_id} must be a provider_result with platform and account scope"
+            )
+        scope = (record.metadata.platform, record.metadata.account_ref)
+        budgets.setdefault(scope, {}).update(budgets_from_payload(record.payload))
+    platforms: dict[str, dict[str, Any]] = {}
     for artifact_id in args.artifact_ids:
         record = artifacts.read(artifact_id)
         if record.metadata.kind != "performance_rows":
             raise ComputeError(f"{artifact_id} is not a performance_rows artifact")
         rows = rows_from_payload(record.payload)
-        summary = summarize_rows(rows, start=args.start_date, end=args.end_date, budgets=budgets)
+        if not rows:
+            raise ComputeError(f"{artifact_id} contains no rows")
+        platform = record.metadata.platform or rows[0].platform.value
+        account = record.metadata.account_ref or rows[0].account_ref
+        accounts = platforms.setdefault(platform, {})
+        if account in accounts:
+            raise ComputeError(f"provide one performance_rows artifact for {platform}/{account}")
+        summary = summarize_rows(
+            rows,
+            start=args.start_date,
+            end=args.end_date,
+            budgets=budgets.get((platform, account), {}),
+        )
         summary["source_artifact"] = artifact_id
         summary["missing_fields"] = list(record.payload.get("missing_fields") or [])
-        platforms[record.metadata.platform or rows[0].platform.value] = summary
+        accounts[account] = summary
     metadata = artifacts.write_json(
         "analysis",
         {"schema_version": SUMMARY_SCHEMA_VERSION, "platforms": platforms},

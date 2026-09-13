@@ -8,6 +8,8 @@ __pycache__
 node_modules
 workspace/out/*
 workspace/analysis/*
+workspace/sources/
+docs/org/
 tests
 docs/screenshots
 docs/history

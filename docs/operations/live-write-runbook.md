@@ -15,8 +15,10 @@ runtime never constructs a live write adapter.
 | Reviewed policy row | `admitted = true` row in the write-policy file that validates against the catalog | the operation cannot be proposed at all |
 | Signed approval | host-created claim for the exact revision and digest | refused before any provider call |
 
-Every refusal produces a `rejected` receipt with the reason and moves the proposal to `rejected`.
-A new proposal is required afterwards; approvals are never reused.
+Failed gate or claim validation moves the proposal to `rejected` and records the reason. A missing
+approval leaves it awaiting approval. Concurrent requests cannot overwrite an executing proposal
+or its receipt; reload the current state after `proposal_changed`. Rejected proposals require a
+new proposal and approval.
 
 ## Preparing a canary
 
@@ -49,6 +51,10 @@ A new proposal is required afterwards; approvals are never reused.
    if needed. Never replay an approval.
 5. Reverse the change through a new proposal to prove the reversal plan.
 
+If the worker stops while the proposal is executing or verifying, inspect the provider through
+read-only tools. The agent will not retry the mutation automatically. Confirm the actual state
+before creating a new proposal.
+
 ## Incident response
 
 - Create the kill-switch file immediately: `touch workspace/KILL_SWITCH` (or the configured path).
@@ -58,8 +64,8 @@ A new proposal is required afterwards; approvals are never reused.
 - Collect the proposal id, revision, receipt, and catalog revision from the thread and the receipt
   store. Provider responses are not stored in presentation objects; use the provider console to
   confirm the object state.
-- Record the incident in `log.md` and, if the cause was a schema or policy mismatch, fix the policy
-  row before releasing again.
+- Record the incident in your private incident tracker. If the cause was a schema or policy
+  mismatch, fix the policy row before releasing again.
 
 ## What the canary does not prove
 

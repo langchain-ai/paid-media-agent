@@ -1,4 +1,4 @@
-/* CORE 14 tokens (GTM Platform). One name, two values; components never branch on theme. */
+/* Shared theme tokens. */
 :root {
   --desk: #ecebe8; --shell: #ffffff; --sidebar: #f4f3f1; --canvas: #fbfbfa; --panel: #ffffff;
   --muted: #fafaf8; --hover: #f0efed; --selected: #eae9e7;
@@ -360,10 +360,8 @@ a.btn { text-decoration: none; }
 .org-guide h2 { font-size: var(--text-title); line-height: var(--text-title-lh); font-weight: 500; }
 .org-guide h3 { font-size: var(--text-body); line-height: var(--text-body-lh); font-weight: 500; }
 .org-guide .note { font-size: var(--text-body); line-height: var(--text-body-lh); color: var(--ink-subtle); }
-.org-prompt { margin: 0; border-left: 2px solid var(--line-strong); padding-left: var(--space-lg); font-size: var(--text-body); line-height: var(--text-body-lh); text-wrap: pretty; }
 .org-guide .actions { justify-content: flex-start; }
 .org-guide code { overflow-wrap: anywhere; }
-.org-manual-step { display: flex; flex-direction: column; gap: var(--space-sm); }
 .step-result { border-radius: var(--r-control); background: var(--muted); border: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; opacity: 1; transform: translateY(0); transition: opacity var(--fast) var(--ease-out), transform var(--fast) var(--ease-out); }
 .step-result[data-entering] { opacity: 0; transform: translateY(2px); }
 .result-head { display: flex; align-items: center; gap: 8px; }

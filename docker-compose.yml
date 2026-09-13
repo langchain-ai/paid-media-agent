@@ -1,23 +1,32 @@
-# Self-host in one command: `docker compose up`. Postgres holds proposals, approvals, receipts,
-# and checkpoints. Put keys in a local .env (copy .env.example); compose passes it as environment.
+x-agent: &agent
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql://paid_media:paid_media@postgres:5432/paid_media
+    PAID_MEDIA_RUNTIME: self_hosted
+    PAID_MEDIA_API_HOST: 0.0.0.0
+  depends_on:
+    postgres:
+      condition: service_healthy
+  volumes:
+    - workspace:/app/workspace
+    - ./workspace/skills:/app/skills:ro
+    - ./config:/app/config:ro
+
 services:
   api:
-    build: .
-    ports: ["8080:8080"]
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://paid_media:paid_media@postgres:5432/paid_media
-      PAID_MEDIA_RUNTIME: self_hosted
-      # The image must listen on all interfaces; a local .env usually says 127.0.0.1.
-      PAID_MEDIA_API_HOST: 0.0.0.0
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - workspace:/app/workspace
-      - ./docs/org:/app/docs/org
+    <<: *agent
+    ports: ["127.0.0.1:8080:8080"]
+  slack:
+    <<: *agent
+    profiles: ["slack"]
+    command: ["paid-media-agent", "slack"]
+    healthcheck:
+      disable: true
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: paid_media
       POSTGRES_PASSWORD: paid_media

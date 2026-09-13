@@ -31,7 +31,7 @@ Provider and Pipeboard requests execute in host tools, not agent-authored sandbo
 sandbox is created with default-deny egress. Artifact delivery validates normalized paths, file
 type, size, and ownership before moving bytes anywhere.
 
-## Implementation notes (2026-09-08)
+## Image and probe
 
 - `sandbox/__init__.py` declares the Python 3.13 base. MDA automatically bakes `sandbox/setup.sh`
   on deploy/dev, reuses its recipe snapshot, and rebuilds when the script or base changes. The
@@ -42,8 +42,7 @@ type, size, and ownership before moving bytes anywhere.
   and the declaration. `sandbox use` declares an existing snapshot as the bake base.
 - Sandbox libraries do not install packages in the separate Agent Server. PDF reports still need
   native libraries in the host image where report tools run. Self-hosted Docker includes them.
-- `runtime/sandbox.py` holds only the probe: open a short-lived sandbox, upload the skills, check
-  the workspace, render a PDF, verify no key-like environment values, delete it. The per-process
-  sandbox backend that mirrored host artifacts into a sandbox lives on the `self-hosted` branch.
+- `runtime/sandbox.py` holds the probe: open a short-lived sandbox, upload the skills, check
+  the workspace, render a PDF, verify no key-like environment values, delete it.
 - `execute` stays hidden from the model everywhere. Host code uses the sandbox shell only in the
   probe.

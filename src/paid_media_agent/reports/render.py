@@ -204,9 +204,9 @@ def build_report_payload(
 def reconcile_report(payload: ReportPayload, comparison: PeriodComparison) -> tuple[str, ...]:
     """Return mismatches between rendered values and the analysis. Empty means reconciled."""
     problems: list[str] = []
-    by_platform = {p.platform: p for p in comparison.platforms}
+    by_account = {(p.platform, p.account_ref): p for p in comparison.platforms}
     for section in payload.platform_sections:
-        source = by_platform.get(section.platform)
+        source = by_account.get((section.platform, section.account_ref))
         if source is None:
             problems.append(f"{section.platform.value}: section without analysis source")
             continue
@@ -223,10 +223,12 @@ def reconcile_report(payload: ReportPayload, comparison: PeriodComparison) -> tu
                 problems.append(f"{section.platform.value}.{row.metric}: formatted value differs")
         if set(section.missing_fields) != set(source.missing_fields):
             problems.append(f"{section.platform.value}: missing fields not reproduced")
-    missing_platforms = set(by_platform) - {s.platform for s in payload.platform_sections}
-    if missing_platforms:
+    missing_accounts = set(by_account) - {
+        (s.platform, s.account_ref) for s in payload.platform_sections
+    }
+    if missing_accounts:
         problems.append(
-            f"platform sections missing: {', '.join(p.value for p in missing_platforms)}"
+            f"account sections missing: {', '.join(f'{p.value}/{a}' for p, a in sorted(missing_accounts))}"
         )
     if (comparison.total_suppressed_reason is None) != bool(payload.scorecard):
         problems.append("scorecard presence does not match total suppression")
@@ -295,12 +297,12 @@ class ReportRenderer:
         self._pdf = pdf_engine or HostPdfEngine()
 
     def render_html(self, payload: ReportPayload) -> str:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
         env = Environment(
             loader=FileSystemLoader(str(self._templates)),
             autoescape=select_autoescape(default=True, default_for_string=True),
-            undefined=__import__("jinja2").StrictUndefined,
+            undefined=StrictUndefined,
         )
         return env.get_template("report.html.j2").render(payload=payload)
 
