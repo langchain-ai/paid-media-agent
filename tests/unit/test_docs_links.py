@@ -78,3 +78,25 @@ def test_skills_have_valid_frontmatter(project_root: Path) -> None:
         header = text.split("---")[1]
         keys = {line.split(":")[0] for line in header.strip().splitlines()}
         assert keys == {"name", "description"}, skill
+
+
+def test_company_design_tokens_match_renderer(project_root: Path) -> None:
+    from jinja2 import Environment, FileSystemLoader
+
+    templates = project_root / "src/paid_media_agent/reports/templates"
+    theme = (
+        Environment(loader=FileSystemLoader(templates), autoescape=True)
+        .get_template("tokens.j2")
+        .module
+    )
+    design = (project_root / "workspace/skills/report-design/DESIGN.md").read_text()
+    documented = {}
+    for line in design.splitlines():
+        cells = line.split("|")
+        if len(cells) != 4:
+            continue
+        names = re.findall(r"`([^`]+)`", cells[1])
+        values = re.findall(r"`([^`]+)`", cells[2])
+        if names and values:
+            documented.update(zip(names, values, strict=True))
+    assert documented == theme.tokens

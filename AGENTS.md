@@ -65,6 +65,12 @@ process is not proof of a healthy deployment.
 
 ## Change discipline
 
+For report design, follow [paid-media-design](.agents/skills/paid-media-design/SKILL.md).
+Record company style in [DESIGN.md](workspace/skills/report-design/DESIGN.md) and keep the
+renderer tokens aligned in the same change. Reuse those tokens in HTML, SVG, and PDF;
+do not introduce a separate palette or font in individual reports. Preserve the accepted
+appearance during cleanup. Offer company branding during onboarding without blocking setup.
+
 Read existing code before editing. Prefer direct code, small diffs, and deletion of obsolete paths
 rather than new compatibility layers. Comments explain constraints, not implementation history.
 Use the thermo-nuclear code-quality review skill when available for code reviews.

@@ -80,6 +80,37 @@ rules prevent commits; they do not control MDA uploads.
 
 ## Memory and reports
 
+### Report design
+
+Ask your coding agent:
+
+> Follow .agents/skills/paid-media-design/SKILL.md and apply our company style to reports.
+> Update DESIGN.md and the renderer tokens together, using the brand guidance I provide.
+
+The same skill is available to Claude Code through `.claude/skills/paid-media-design`.
+You can also edit the files manually:
+
+| File | What to change |
+| --- | --- |
+| [DESIGN.md](../workspace/skills/report-design/DESIGN.md) | Company palette, fonts, spacing, logo rules, and report conventions |
+| [tokens.j2](../src/paid_media_agent/reports/templates/tokens.j2) | Matching theme values, report name, and optional logo for the built-in renderer |
+| [report.html.j2](../src/paid_media_agent/reports/templates/report.html.j2) | HTML layout, charts, responsive behavior, and PDF pagination |
+
+Keep `DESIGN.md` and `tokens.j2` aligned. The agent reads the Markdown for custom documents;
+`render_report` reads the template and tokens for reconciled performance reports. Editing only
+one does not update the other. [Component recipes](../workspace/skills/report-design/COMPONENTS.md)
+reuse the company tokens rather than defining another palette.
+
+The default is a light report with one data accent, compact tables, and period-comparison charts.
+Reports omit logos. To add a requested company logo, place its SVG beside `report.html.j2` and
+set `brand.logo_template` and `brand.logo_alt`; `brand.name` controls the label and PDF footer.
+Use only assets you are authorized to distribute. No design service or external account is needed.
+
+Redeploy MDA after changes to its template or runtime skills. For self-hosting, rebuild the
+image after template changes; a local skills mount only updates the Markdown guidance.
+
+### Memory and scheduling
+
 Durable learned memory is off by default. To enable MDA's native memory, add `memory.py` at the
 repository root and redeploy:
 

@@ -1,10 +1,10 @@
-"""Build a ReportPayload from a PeriodComparison and render it with code-owned layout."""
-
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime
-from decimal import Decimal
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
+from decimal import Decimal, InvalidOperation
+from importlib import import_module
 from pathlib import Path
 from typing import Protocol
 
@@ -59,7 +59,7 @@ def _format_metric(metric: str, value: Decimal | int | None, currency: str) -> s
     if metric in ("impressions", "clicks", "conversions"):
         return format_count(value)
     if metric in ("ctr", "cvr"):
-        return format_percent(Decimal(value), places=2)
+        return format_percent(Decimal(value), places=2).lstrip("+")
     return format_ratio(Decimal(value))
 
 
@@ -202,7 +202,6 @@ def build_report_payload(
 
 
 def reconcile_report(payload: ReportPayload, comparison: PeriodComparison) -> tuple[str, ...]:
-    """Return mismatches between rendered values and the analysis. Empty means reconciled."""
     problems: list[str] = []
     by_account = {(p.platform, p.account_ref): p for p in comparison.platforms}
     for section in payload.platform_sections:
@@ -245,29 +244,18 @@ class RenderedReport:
 
 
 def pdf_renderer_available() -> tuple[bool, str]:
-    import os
     import sys
+    from contextlib import redirect_stdout
 
-    # WeasyPrint writes installation advice straight to file descriptor 2 when Pango or Cairo is
-    # missing, so a Python-level redirect is not enough; park fd 2 on /dev/null for the import.
     try:
-        sys.stderr.flush()
-        saved = os.dup(2)
-        with open(os.devnull, "w") as sink:
-            os.dup2(sink.fileno(), 2)
-            try:
-                import weasyprint  # noqa: F401
-            finally:
-                os.dup2(saved, 2)
-                os.close(saved)
+        with redirect_stdout(sys.stderr):
+            import_module("weasyprint")
     except Exception as exc:
         return False, f"{type(exc).__name__}: WeasyPrint native libraries unavailable"
     return True, "ok"
 
 
 class PdfEngine(Protocol):
-    """Where WeasyPrint runs: this process, or a sandbox that has the native libraries."""
-
     def available(self) -> tuple[bool, str]: ...
 
     def write_pdf(self, html: str, *, base_url: str, target: Path) -> None: ...
@@ -281,6 +269,123 @@ class HostPdfEngine:
         from weasyprint import HTML
 
         HTML(string=html, base_url=base_url).write_pdf(str(target))
+
+
+@dataclass(frozen=True)
+class ChartRow:
+    platform: str
+    account: str
+    current: str
+    previous: str
+    current_width: str | None
+    previous_width: str | None
+
+
+@dataclass(frozen=True)
+class ComparisonChart:
+    metric: str
+    title: str
+    caption: str
+    maximum: str
+    rows: tuple[ChartRow, ...]
+
+
+def _chart_value(raw: str | None) -> Decimal | None:
+    if raw is None:
+        return None
+    try:
+        value = Decimal(raw)
+    except InvalidOperation:
+        return None
+    return value if value.is_finite() and value >= 0 else None
+
+
+def comparison_charts(sections: tuple[PlatformSection, ...]) -> tuple[ComparisonChart, ...]:
+    def width(value: Decimal | None, maximum: Decimal) -> str | None:
+        if value is None:
+            return None
+        return format(value / maximum * 100 if maximum else Decimal(0), ".4f")
+
+    currency_groups = [
+        (currency, tuple(s for s in sections if s.currency == currency))
+        for currency in sorted({s.currency for s in sections})
+    ]
+    groups = [
+        (
+            f"Spend · {currency}",
+            "spend",
+            sources,
+            "",
+        )
+        for currency, sources in currency_groups
+    ]
+    groups.append(
+        (
+            "Attributed conversions",
+            "conversions",
+            sections,
+            "Platform attribution; customers may overlap.",
+        )
+    )
+    groups.extend(
+        (
+            f"Cost per conversion · {currency}",
+            "cpa",
+            sources,
+            "",
+        )
+        for currency, sources in currency_groups
+    )
+    groups.append(("Return on ad spend", "roas", sections, ""))
+    charts = []
+    for title, metric, sources, caption in groups:
+        entries = [
+            (s, r, _chart_value(r.raw_current), _chart_value(r.raw_previous))
+            for s in sources
+            for r in s.rows
+            if r.metric == metric
+        ]
+        values = [
+            v for _, _, current, previous in entries for v in (current, previous) if v is not None
+        ]
+        if not values:
+            continue
+        maximum = max(values)
+
+        charts.append(
+            ComparisonChart(
+                metric=metric,
+                title=title,
+                caption=caption,
+                maximum=format_count(maximum),
+                rows=tuple(
+                    ChartRow(
+                        platform=s.platform.value.replace("_", " ").title(),
+                        account=s.account_ref,
+                        current=r.current if current is not None else "unavailable",
+                        previous=r.previous if previous is not None else "unavailable",
+                        current_width=width(current, maximum),
+                        previous_width=width(previous, maximum),
+                    )
+                    for s, r, current, previous in entries
+                ),
+            )
+        )
+    return tuple(charts)
+
+
+def _format_window(window: str) -> str:
+    try:
+        start, end = (date.fromisoformat(part) for part in window.split(".."))
+    except ValueError:
+        return window
+    if start == end:
+        return f"{start:%b} {start.day}, {start.year}"
+    if start.year != end.year:
+        return f"{start:%b} {start.day}, {start.year}-{end:%b} {end.day}, {end.year}"
+    if start.month != end.month:
+        return f"{start:%b} {start.day}-{end:%b} {end.day}, {end.year}"
+    return f"{start:%b} {start.day}-{end.day}, {end.year}"
 
 
 class ReportRenderer:
@@ -304,7 +409,10 @@ class ReportRenderer:
             autoescape=select_autoescape(default=True, default_for_string=True),
             undefined=StrictUndefined,
         )
-        return env.get_template("report.html.j2").render(payload=payload)
+        env.filters["date_window"] = _format_window
+        return env.get_template("report.html.j2").render(
+            payload=payload, charts=comparison_charts(payload.platform_sections)
+        )
 
     def render(self, payload: ReportPayload, *, want_pdf: bool = True) -> RenderedReport:
         html = self.render_html(payload)

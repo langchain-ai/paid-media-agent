@@ -15,6 +15,9 @@ description: Install and configure Paid Media Agent, connect ad platforms, choos
    relying on live data. Keep secrets and provider account IDs out of chat.
 4. Follow the `paid-media-org-onboarding` skill to write business context and custom runtime
    skills locally. The setup console configures connections and deployment, not business context.
+   Offer company report styling through `paid-media-design`. Record lasting brand choices in
+   `workspace/skills/report-design/DESIGN.md` and apply the matching renderer tokens. Use the
+   shipped defaults when no company style is supplied.
 5. Explain the deployment options in `OPERATIONS.md`. MDA manages the runtime, sandbox, and Slack;
    self-hosting uses Docker, Postgres, and an optional Slack app. Review the chosen settings,
    then deploy only when the user requests it. MDA includes the declared sandbox setup recipe.
