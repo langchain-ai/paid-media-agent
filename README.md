@@ -2,8 +2,8 @@
   <p>
     <a href="https://www.langchain.com/">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/langchain-oss-dark.svg">
-        <img src="docs/assets/langchain-oss-light.svg" alt="LangChain OSS" width="152">
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/langchain-company-dark.svg">
+        <img src="docs/assets/langchain-company-light.svg" alt="LangChain" width="152">
       </picture>
     </a>
   </p>
