@@ -20,6 +20,8 @@ Read [the customization guide](../../../docs/customization.md) and any existing
 4. Put repeatable paid-media workflows in `workspace/skills/<skill-name>/SKILL.md`, with a
    specific name, a description stating when to use it, and only the steps the runtime needs.
    Keep coding-agent setup and repository maintenance in `.agents/skills/`.
+   If the supplied briefs include brand guidance, follow `paid-media-design` to record the
+   company's report style in `DESIGN.md` and apply its tokens to the renderer.
 5. Review the resulting context with the user. Explain that runtime skills are deployed to
    the agent. Run the documented checks before deployment.
 
