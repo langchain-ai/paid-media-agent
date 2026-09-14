@@ -14,3 +14,7 @@
 - Runtime skills and editable business context shared across both deployment paths.
 
 Live provider writes remain disabled by default and require the documented release gates.
+
+### Changed
+
+- Clarify the README's capabilities, setup, deployment, and company customization guidance.
