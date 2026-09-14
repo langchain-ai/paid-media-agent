@@ -1,92 +1,311 @@
 <!DOCTYPE html>
+{% from "tokens.j2" import tokens, brand %}
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ payload.title }}</title>
 <style>
-  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 32px; font-size: 12px; }
-  h1 { font-size: 22px; margin-bottom: 4px; }
-  h2 { font-size: 15px; margin-top: 22px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
-  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
-  th, td { border: 1px solid #d8d8d8; padding: 5px 7px; text-align: left; vertical-align: top; }
-  th { background: #f2f2f2; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .muted { color: #666; }
-  .missing { color: #9a3b00; font-weight: 600; }
-  .flag { display: inline-block; background: #fff3e0; border: 1px solid #f0c48a; padding: 1px 5px; margin-right: 4px; border-radius: 3px; font-size: 11px; }
-  .provenance { font-size: 10px; color: #555; }
+  :root {
+    color-scheme: light;
+    {% for name, value in tokens.items() %}--{{ name }}: {{ value }};
+    {% endfor %}
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--ink); font: 14px/1.5 var(--font-family); -webkit-font-smoothing: antialiased; }
+  .report { max-width: var(--content-width); margin: 0 auto; padding: 34px var(--page-gutter) 40px; counter-reset: report-section; }
+  h1, h2, h3, p { margin: 0; }
+  h1, h2, h3 { font-weight: var(--heading-weight); text-wrap: balance; }
+  h1 { margin: 14px 0 10px; font-size: 34px; line-height: 1.12; letter-spacing: -.03em; overflow-wrap: anywhere; }
+  h2 { font: var(--heading-weight) 19px/1.4 var(--font-family); letter-spacing: -.01em; }
+  h3 { font: 500 12px/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+  p + p { margin-top: 8px; }
+  section { margin-top: var(--section-gap); }
+  .masthead { padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .mast-meta { display: flex; justify-content: space-between; align-items: center; gap: 28px; color: var(--muted); font-size: 12px; }
+  .brand-logo { display: inline-flex; flex: none; }
+  .brand-logo svg { height: 28px; width: auto; }
+  .mast-meta .wordmark { color: var(--current); font: 400 10.5px/1.5 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; }
+  .period { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font: 400 11px/1.6 var(--font-mono); }
+  .summary { max-width: 80ch; margin-top: 18px; font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+  dt { color: var(--muted); font-size: 12px; }
+  dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+  .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 22px; padding-bottom: 10px; border-bottom: 1.5px solid var(--ink); }
+  .section-heading h2 { flex: 1; }
+  .section-heading h2::before { counter-increment: report-section; content: counter(report-section, decimal-leading-zero); margin-right: 14px; color: var(--current); font: 400 11px var(--font-mono); letter-spacing: .08em; }
+  .section-meta { color: var(--muted); font: 400 11px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+  .note { margin: 12px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .note strong { color: var(--ink); font-weight: 500; }
+  .metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 24px; border: 1px solid var(--card-line); border-radius: var(--radius-metric); overflow: hidden; }
+  .metric-tile { min-width: 0; padding: 22px 24px; background: var(--canvas); border-right: 1px solid var(--line); }
+  .metric-tile:last-child { border-right: 0; }
+  .metric-tile dt { font: 400 10px/1.5 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+  .metric-value { margin: 8px 0; font-size: 30px; font-weight: 300; line-height: 1.15; letter-spacing: -.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .metric-value.unavailable { font-size: 16px; color: var(--muted); }
+  .metric-unit { font-size: .45em; letter-spacing: 0; color: var(--muted); }
+  .metric-change { color: var(--muted); font: 400 10.5px/1.5 var(--font-mono); }
+  .change { font-variant-numeric: tabular-nums; }
+  .change-increase { color: var(--increase); }
+  .change-decrease { color: var(--decrease); }
+  .chart-section { margin-top: var(--section-gap); }
+  .legend { display: flex; flex-shrink: 0; gap: 16px; color: var(--muted); font-size: 11px; }
+  .legend span { white-space: nowrap; }
+  .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 2px; background: var(--current); }
+  .legend .previous::before { background: transparent; border: 1px solid var(--previous); }
+  .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+  .chart { margin: 0; padding: var(--card-padding); background: var(--paper); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+  .chart h3 { margin-bottom: 18px; }
+  .chart-row, .chart-axis { display: grid; grid-template-columns: 88px minmax(0, 1fr) 106px; align-items: center; gap: 12px; }
+  .chart-row { padding: 18px 0; }
+  .chart-label { font-size: 12px; font-weight: 500; }
+  .chart-account { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 400; overflow-wrap: anywhere; }
+  .chart-bars { display: block; grid-column: 2; grid-row: 1; width: 100%; height: 34px; }
+  .chart-dots { display: block; grid-column: 2; grid-row: 1; width: 100%; height: 28px; overflow: visible; }
+  .chart-values { grid-column: 3; grid-row: 1; margin: 0; text-align: right; }
+  .chart-value { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .chart-value.previous { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+  .chart-axis p { grid-column: 2; display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--line); color: var(--muted); font: 400 10px/1.5 var(--font-mono); }
+  .chart-caption { margin-top: 4px; color: var(--muted); font-size: 11px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.45; }
+  th, td { padding: 7px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--muted); background: var(--paper); font: 400 10px/1.5 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+  th:first-child, td:first-child { padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .definition { display: block; margin-top: 3px; max-width: 260px; font-size: 11px; color: var(--muted); }
+  .drivers { margin-top: 20px; font-size: 12px; }
+  summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: 12px; }
+  summary:hover { color: var(--ink); }
+  summary:focus-visible, .table-wrap:focus-visible { outline: 2px solid var(--current); outline-offset: 4px; border-radius: 4px; }
+  ul { margin: 10px 0 0; padding-left: 16px; }
+  li { margin: 8px 0; overflow-wrap: anywhere; }
+  .recommendation { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 24px; margin-top: 12px; padding: var(--card-padding); background: var(--paper); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+  .confidence { display: block; margin-top: 8px; font-size: 11px; color: var(--muted); }
+  .recommendation dl { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin: 16px 0 0; }
+  .recommendation dd { font-size: 13px; }
+  .recommendation .evidence { margin: 10px 0 16px; color: var(--muted); font-size: 13px; }
+  .provenance { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  .details-body { margin-top: 16px; }
+  .details-body h3 { margin: 20px 0 8px; font-size: 12px; color: var(--ink); }
+  @media screen and (max-width: 680px) {
+    .report { padding: 28px 18px; }
+    h1 { font-size: 26px; }
+    .mast-meta { flex-direction: column; align-items: flex-start; gap: 20px; }
+    .metric-strip, .chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric-tile { padding: 18px; }
+    .metric-tile:nth-child(2) { border-right: 0; }
+    .metric-tile:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .metric-value { font-size: 24px; }
+    .section-heading { flex-direction: column; gap: 8px; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .chart { padding: 20px; }
+    .chart-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .chart-bars, .chart-dots { grid-column: 1 / -1; grid-row: 2; }
+    .chart-values { grid-column: 2; }
+    .chart-axis { display: block; }
+    .chart-label { font-size: 12px; }
+    .chart-value { font-size: 11px; }
+    .recommendation, .recommendation dl { grid-template-columns: 1fr; gap: 16px; }
+    table { min-width: 450px; }
+  }
+  @media screen {
+    details:not([open]) > .details-body { display: none; }
+  }
+  @page {
+    size: A4;
+    margin: 16mm;
+    @bottom-left { content: {{ brand.name | tojson }}; font: 8pt {{ tokens['font-family'] }}; color: {{ tokens.muted }}; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8pt {{ tokens['font-family'] }}; color: {{ tokens.muted }}; }
+  }
+  @media print {
+    body { background: var(--canvas); font-size: 9.5pt; line-height: 1.5; }
+    .report { max-width: none; padding: 0; }
+    .mast-meta, .period { font-size: 8pt; }
+    h1 { margin-top: 16pt; font-size: 22pt; }
+    h2 { font-size: 13pt; }
+    h3 { font-size: 10pt; }
+    h1, h2, h3, .section-heading { break-after: avoid; }
+    .masthead { padding-bottom: 14pt; }
+    .summary { margin-top: 14pt; font-size: 10pt; }
+    dt, .section-meta { font-size: 8pt; }
+    section { margin-top: 20pt; }
+    .section-heading { display: block; margin-bottom: 8pt; padding-bottom: 6pt; }
+    .section-heading h2 { display: inline; }
+    .section-heading .legend, .section-heading .section-meta { float: right; margin-top: 3pt; }
+    .note { font-size: 8pt; margin: 8pt 0; }
+    .metric-strip { margin: 10pt 0 14pt; break-inside: avoid; }
+    .metric-tile { padding: 9pt; }
+    .metric-value { font-size: 18pt; }
+    .metric-value.unavailable { font-size: 11pt; }
+    .metric-change { font-size: 8pt; }
+    .chart-section { margin-top: 18pt; }
+    .legend { font-size: 8pt; }
+    .chart-grid { display: block; }
+    .chart { margin-bottom: 8pt; padding: 8pt; break-inside: avoid; }
+    .chart-row, .chart-axis { grid-template-columns: 90pt minmax(0, 1fr) 100pt; gap: 12pt; }
+    .chart-row { padding: 4pt 0; }
+    .chart h3 { margin-bottom: 4pt; }
+    .chart-axis p { padding-top: 3pt; font-size: 7pt; }
+    .chart-values { grid-column: 3; grid-row: 1; }
+    .chart-bars, .chart-dots { grid-column: 2; grid-row: 1; align-self: center; }
+    .chart-label, .chart-value { font-size: 9pt; }
+    .chart-account, .chart-caption, .chart-value.previous { font-size: 8pt; }
+    .chart-bars { height: 20pt; }
+    .platform-header { break-inside: avoid; break-after: avoid; }
+    table { font-size: 9pt; }
+    th, td { padding: 4pt; }
+    th, .definition { font-size: 8pt; }
+    .table-wrap { overflow: visible; }
+    thead { display: table-header-group; }
+    tr, .chart-row, .recommendation, .drivers { break-inside: avoid; }
+    .drivers { margin-top: 12pt; font-size: 8.5pt; }
+    .recommendation { grid-template-columns: 90pt minmax(0, 1fr); gap: 16pt; padding: 12pt; }
+    .recommendation dl { margin-top: 8pt; gap: 10pt 16pt; }
+    .recommendation dd { font-size: 9pt; }
+    .recommendation .evidence { font-size: 9pt; }
+    .confidence, .provenance { font-size: 8pt; }
+    .provenance { margin-top: 16pt; padding-top: 8pt; }
+    details > .details-body { display: block; margin-top: 8pt; }
+    .recommendation details > .details-body { display: grid; }
+    details::details-content { content-visibility: visible; }
+    summary { list-style: none; cursor: auto; font-size: 8pt; }
+    p, li { orphans: 3; widows: 3; }
+  }
 </style>
 </head>
 <body>
-<h1>{{ payload.title }}</h1>
-<p class="muted">Report {{ payload.report_id }} · schema {{ payload.schema_version }} · generated {{ payload.provenance.generated_at.isoformat() }}</p>
-
-<h2>Scope</h2>
+{% set metric_labels = {"spend": "Spend", "impressions": "Impressions", "clicks": "Clicks", "conversions": "Conversions", "conversion_value": "Conversion value", "ctr": "CTR", "cpc": "CPC", "cpa": "CPA", "roas": "ROAS"} %}
+{% macro signed_change(value) -%}
+<span class="change{% if value.startswith('+') %} change-increase{% elif value.startswith('-') %} change-decrease{% endif %}">{{ value }}</span>
+{%- endmacro %}
+{% macro metric_strip(rows) -%}
+<dl class="metric-strip" aria-label="Key metrics">
+{% for row in rows if row.metric in ("spend", "conversions", "cpa", "roas") %}
+  <div class="metric-tile">
+    <dt>{{ metric_labels.get(row.metric, row.metric) }}</dt>
+    <dd class="metric-value{% if row.raw_current is none %} unavailable{% endif %}">{% if row.raw_current is not none and row.metric in ("spend", "cpa") %}{% set amount, unit = row.current.rsplit(" ", 1) %}{{ amount }} <span class="metric-unit">{{ unit }}</span>{% else %}{{ row.current }}{% endif %}</dd>
+    {% if row.change != "unavailable" %}<dd class="metric-change">{{ signed_change(row.change) }} vs previous</dd>{% endif %}
+  </div>
+{% endfor %}
+</dl>
+{%- endmacro %}
+{% macro metrics(rows, definitions=false) -%}
+<div class="table-wrap" tabindex="0" role="region" aria-label="Metric comparison">
 <table>
-  <tr><th>Accounts</th><td>{{ payload.scope.accounts | join(", ") }}</td></tr>
-  <tr><th>Platforms</th><td>{{ payload.scope.platforms | map(attribute="value") | join(", ") }}</td></tr>
-  <tr><th>Current window</th><td>{{ payload.scope.current_window }}</td></tr>
-  <tr><th>Comparison window</th><td>{{ payload.scope.previous_window }}</td></tr>
-  <tr><th>Currency</th><td>{{ payload.scope.currency or "mixed / unavailable" }}</td></tr>
-  <tr><th>Source coverage</th><td>{{ payload.scope.source_coverage }}</td></tr>
-</table>
-
-<h2>Executive summary</h2>
-<p>{{ payload.executive_summary }}</p>
-
-<h2>Reconciled scorecard</h2>
-{% if payload.total_suppressed_reason %}
-<p class="missing">Cross-platform total suppressed: {{ payload.total_suppressed_reason }}. Per-platform values are shown below.</p>
-{% endif %}
-<table>
-  <tr><th>Metric</th><th>Definition</th><th>Current</th><th>Previous</th><th>Change</th></tr>
-  {% for row in payload.scorecard %}
-  <tr><td>{{ row.metric }}</td><td class="muted">{{ row.definition }}</td><td class="num">{{ row.current }}</td><td class="num">{{ row.previous }}</td><td class="num">{{ row.change }}</td></tr>
+  <thead><tr><th scope="col">Metric</th><th scope="col" class="num">Current</th><th scope="col" class="num">Previous</th><th scope="col" class="num">Change</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr>
+    <td>{{ metric_labels.get(row.metric, row.metric | replace("_", " ")) }}{% if definitions %}<span class="definition">{{ row.definition }}</span>{% endif %}</td>
+    <td class="num">{{ row.current }}</td><td class="num">{{ row.previous }}</td><td class="num">{{ signed_change(row.change) }}</td>
+  </tr>
   {% endfor %}
+  </tbody>
 </table>
+</div>
+{%- endmacro %}
+<main class="report">
+<header class="masthead">
+  <div class="mast-meta">
+    {% if brand.logo_template %}<span class="brand-logo" role="img" aria-label="{{ brand.logo_alt }}">{% include brand.logo_template %}</span>{% else %}<span class="wordmark">{{ brand.name }}</span>{% endif %}
+  </div>
+  <h1>{{ payload.title }}</h1>
+  <p class="period"><span>{{ payload.scope.current_window | date_window }}</span><span>Compared with {{ payload.scope.previous_window | date_window }}</span><span>{{ payload.scope.accounts | length }} account{% if payload.scope.accounts | length != 1 %}s{% endif %} · {{ payload.scope.currency or "Currencies shown per account" }}</span></p>
+  <p class="summary">{{ payload.executive_summary }}</p>
+  {% if payload.unavailable_sources %}<p class="note">Unavailable: {{ payload.unavailable_sources | map("replace", "_", " ") | join(", ") }}.</p>{% endif %}
+</header>
+{% if payload.scorecard %}{{ metric_strip(payload.scorecard) }}{% endif %}
+
+{% if charts %}
+<section class="chart-section" aria-labelledby="comparison-title">
+  <div class="section-heading"><h2 id="comparison-title">Account performance</h2><p class="legend"><span>Current</span><span class="previous">Previous</span></p></div>
+  {% if payload.total_suppressed_reason %}<p class="note"><strong>No combined total:</strong> {{ payload.total_suppressed_reason }}.</p>{% endif %}
+  <div class="chart-grid">
+  {% for chart in charts %}
+  <figure class="chart" aria-labelledby="chart-{{ loop.index }}">
+    <h3 id="chart-{{ loop.index }}">{{ chart.title }}</h3>
+    {% for row in chart.rows %}
+    <div class="chart-row">
+      <p class="chart-label">{{ row.platform }}<span class="chart-account">{{ row.account }}</span></p>
+      <p class="chart-values"><span class="chart-value" aria-label="Current {{ row.current }}">{{ row.current }}</span><span class="chart-value previous" aria-label="Previous {{ row.previous }}">{{ row.previous }}</span></p>
+      {% if chart.metric in ("cpa", "roas") %}
+      <svg class="chart-dots" width="100%" height="28" aria-hidden="true" focusable="false">
+        <line x1="0%" y1="14" x2="100%" y2="14" stroke="{{ tokens.line }}" stroke-width="1" />
+        {% if row.current_width is not none and row.previous_width is not none %}<line x1="{{ row.previous_width }}%" y1="14" x2="{{ row.current_width }}%" y2="14" stroke="{{ tokens.previous }}" stroke-width="2" />{% endif %}
+        {% if row.previous_width is not none %}<circle cx="{{ row.previous_width }}%" cy="14" r="4" fill="{{ tokens.paper }}" stroke="{{ tokens.previous }}" stroke-width="1.3" />{% endif %}
+        {% if row.current_width is not none %}<circle cx="{{ row.current_width }}%" cy="14" r="3.5" fill="{{ tokens.current }}" />{% endif %}
+      </svg>
+      {% else %}
+      <svg class="chart-bars" viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        {% for position in (0, 25, 50, 75, 100) %}<line x1="{{ position }}" y1="0" x2="{{ position }}" y2="14" stroke="{{ tokens.line }}" stroke-width=".3" />{% endfor %}
+        {% if row.current_width is not none %}<rect x="0" y="0" width="{{ row.current_width }}" height="5" rx=".5" fill="{{ tokens.current }}" />{% endif %}
+        {% if row.previous_width is not none %}<rect x="0" y="9" width="{{ row.previous_width }}" height="5" rx=".5" fill="{{ tokens['previous-fill'] }}" stroke="{{ tokens.previous }}" stroke-width=".4" />{% endif %}
+      </svg>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div class="chart-axis" aria-label="Scale from 0 to {{ chart.maximum }}"><p><span>0</span><span>{{ chart.maximum }}</span></p></div>
+    {% if chart.caption %}<figcaption class="chart-caption">{{ chart.caption }}</figcaption>{% endif %}
+  </figure>
+  {% endfor %}
+  </div>
+</section>
+{% elif payload.total_suppressed_reason %}
+<p class="note">No combined total: {{ payload.total_suppressed_reason }}.</p>
+{% endif %}
+
+{% if payload.scorecard %}
+<section aria-labelledby="scorecard-title"><div class="section-heading"><h2 id="scorecard-title">All accounts</h2></div>{{ metrics(payload.scorecard, definitions=true) }}</section>
+{% endif %}
 
 {% for section in payload.platform_sections %}
-<h2>{{ section.platform.value }} · {{ section.account_ref }} ({{ section.currency }})</h2>
-{% if section.quality_flags %}
-<p>{% for flag in section.quality_flags %}<span class="flag">{{ flag }}</span>{% endfor %}</p>
-{% endif %}
-{% if section.missing_fields %}
-<p class="missing">Missing fields (never treated as zero): {{ section.missing_fields | join(", ") }}</p>
-{% endif %}
-<table>
-  <tr><th>Metric</th><th>Current</th><th>Previous</th><th>Change</th></tr>
-  {% for row in section.rows %}
-  <tr><td>{{ row.metric }}</td><td class="num">{{ row.current }}</td><td class="num">{{ row.previous }}</td><td class="num">{{ row.change }}</td></tr>
+<section class="platform-section" aria-labelledby="platform-{{ loop.index }}">
+  <div class="platform-header">
+  <div class="section-heading"><h2 id="platform-{{ loop.index }}">{{ section.platform.value | replace("_", " ") | title }}</h2><p class="section-meta">{{ section.account_ref }} · {{ section.currency }}</p></div>
+  {% if section.quality_flags or section.missing_fields %}
+  <div class="note">
+    {% if section.quality_flags %}<p>Coverage: {{ section.quality_flags | map("replace", "_", " ") | join(", ") }}.</p>{% endif %}
+    {% if section.missing_fields %}<p>Unavailable: {{ section.missing_fields | map("replace", "_", " ") | join(", ") }}.</p>{% endif %}
+  </div>
+  {% endif %}
+  {{ metric_strip(section.rows) }}
+  </div>
+  {{ metrics(section.rows) }}
+  {% if section.drivers %}<details class="drivers"><summary>Campaign movements</summary><div class="details-body"><ul>{% for driver in section.drivers %}<li>{{ driver }}</li>{% endfor %}</ul></div></details>{% endif %}
+</section>
+{% endfor %}
+
+{% if payload.recommendations %}
+<section aria-labelledby="recommendations-title">
+  <div class="section-heading"><h2 id="recommendations-title">Next steps</h2></div>
+  {% for rec in payload.recommendations %}
+  <article class="recommendation">
+    <div><h3>{{ rec.target }}</h3><span class="confidence">{{ rec.confidence | capitalize }} confidence</span></div>
+    <div><p>{{ rec.action }}</p><p class="evidence">{{ rec.evidence }}</p>
+    <details><summary>Measurement &amp; follow-up</summary><dl class="details-body">
+      <div><dt>Expected effect</dt><dd>{{ rec.expected_effect }}</dd></div>
+      <div><dt>Measurement</dt><dd>{{ rec.measurement }}</dd></div>
+      <div><dt>Reversal</dt><dd>{{ rec.reversal }}</dd></div>
+    </dl></details></div>
+  </article>
   {% endfor %}
-</table>
-{% if section.drivers %}
-<ul>{% for driver in section.drivers %}<li>{{ driver }}</li>{% endfor %}</ul>
-{% endif %}
-{% endfor %}
-
-{% if payload.unavailable_sources %}
-<h2>Unavailable sources</h2>
-<ul>{% for source in payload.unavailable_sources %}<li class="missing">{{ source }}</li>{% endfor %}</ul>
+</section>
 {% endif %}
 
-<h2>Recommendations</h2>
-{% if not payload.recommendations %}<p class="muted">No recommendations were requested.</p>{% endif %}
-{% for rec in payload.recommendations %}
-<table>
-  <tr><th>Target</th><td>{{ rec.target }}</td></tr>
-  <tr><th>Action</th><td>{{ rec.action }}</td></tr>
-  <tr><th>Evidence</th><td>{{ rec.evidence }}</td></tr>
-  <tr><th>Expected effect</th><td>{{ rec.expected_effect }}</td></tr>
-  <tr><th>Confidence</th><td>{{ rec.confidence }}</td></tr>
-  <tr><th>Measurement</th><td>{{ rec.measurement }}</td></tr>
-  <tr><th>Reversal</th><td>{{ rec.reversal }}</td></tr>
-</table>
-{% endfor %}
-
-<h2>Data quality</h2>
-<ul>{% for item in payload.data_quality %}<li>{{ item }}</li>{% endfor %}</ul>
-
-<h2>Provenance</h2>
-<p class="provenance">Analysis artifact {{ payload.provenance.analysis_artifact_id }} · sources {{ payload.provenance.source_artifacts | join(", ") }} · analysis {{ payload.provenance.analysis_version }} ({{ payload.provenance.analysis_schema_version }}) · report schema {{ payload.provenance.report_schema_version }}</p>
+<footer class="provenance">
+  <details><summary>Sources &amp; data notes</summary><div class="details-body">
+  <p>Accounts: {{ payload.scope.accounts | join(", ") }} · {{ payload.scope.source_coverage }}</p>
+  <p>Change colors show increases and decreases, not whether a result is favorable.</p>
+  <ul>{% for item in payload.data_quality %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% if payload.unavailable_sources %}<p>Unavailable sources: {{ payload.unavailable_sources | join(", ") }}.</p>{% endif %}
+  <h3>Sources</h3>
+  <p>Generated {{ payload.provenance.generated_at.strftime("%b") }} {{ payload.provenance.generated_at.day }}, {{ payload.provenance.generated_at.year }} at {{ payload.provenance.generated_at.strftime("%H:%M %Z") }} · Report {{ payload.report_id }}</p>
+  <p>Analysis artifact {{ payload.provenance.analysis_artifact_id }} · Sources {{ payload.provenance.source_artifacts | join(", ") }}</p>
+  <p>Analysis {{ payload.provenance.analysis_version }} ({{ payload.provenance.analysis_schema_version }}) · Report schema {{ payload.provenance.report_schema_version }}</p>
+  </div></details>
+</footer>
+</main>
 </body>
 </html>
