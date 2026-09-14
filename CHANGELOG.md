@@ -18,3 +18,4 @@ Live provider writes remain disabled by default and require the documented relea
 ### Changed
 
 - Clarify the README's capabilities, setup, deployment, and company customization guidance.
+- Use the LangChain company logo in the README, with light and dark variants.

@@ -1,5 +1,8 @@
 # Visual assets
 
+The README header uses the official [LangChain company logo](https://www.langchain.com/brand-assets).
+Its light and dark SVGs are preserved as supplied, with their original proportions and colors.
+
 The setup console uses vendor marks to identify integrations. Source categories are recorded in
 `src/paid_media_agent/admin/static/logos.js`:
 
