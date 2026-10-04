@@ -23,7 +23,7 @@ jobs:
           match = re.search(r"^## Unreleased\n(.*?)(?=^## |\Z)", text, re.S | re.M)
           pathlib.Path("RELEASE_NOTES.md").write_text(match.group(1).strip() if match else "See CHANGELOG.md.")
           PY
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           body_path: RELEASE_NOTES.md
           files: dist/*
