@@ -12,6 +12,7 @@ agent therefore separates analysis, proposal, approval, execution, and verificat
 - Creation defaults to paused or draft.
 - Activation is a separate approval.
 - One proposal revision per approval.
+- The host binds requester and approver identity; a missing managed identity cannot use a configurable caller.
 
 ## Review content
 
@@ -30,4 +31,3 @@ release should enable narrow, reversible operations before broad creation or mea
 A network timeout after submission is not a failure that can be retried safely. Record the attempt,
 perform bounded read-only reconciliation, and return unknown if the provider state cannot be proven.
 The next action is investigation or a new proposal, not replaying the old approval.
-

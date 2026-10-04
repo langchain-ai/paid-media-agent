@@ -59,11 +59,16 @@ def _caller_from_runtime(runtime: Any) -> tuple[str, str]:
     config = getattr(runtime, "config", None) or {}
     configurable = config.get("configurable", {})
     thread_id = str(configurable.get("thread_id") or "local-thread")
+    server_info = getattr(runtime, "server_info", None)
+    if server_info is not None:
+        principal = getattr(server_info, "principal", None)
+        actor = getattr(principal, "id", None)
+        return thread_id, actor if isinstance(actor, str) and actor else "anonymous"
     if hasattr(runtime, "identity"):
         identity = runtime.identity
         user = identity.get("user") if isinstance(identity, Mapping) else None
         actor = user.get("id") if isinstance(user, Mapping) else None
-        return thread_id, actor if isinstance(actor, str) else "anonymous"
+        return thread_id, actor if isinstance(actor, str) and actor else "anonymous"
     return thread_id, str(configurable.get("caller_ref") or "local-user")
 
 

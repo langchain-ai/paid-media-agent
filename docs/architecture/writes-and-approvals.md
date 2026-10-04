@@ -12,6 +12,10 @@ The approval flow is an execution protocol, not a prompt convention.
 The review card and execution payload are derived from the same persisted `ChangeSet`. A surface
 cannot submit replacement arguments during approval.
 
+Managed tools use MDA's verified `runtime.server_info.principal.id` for requester and approver
+identity (or `runtime.identity.user.id` on older SDKs). Missing managed identity resolves to
+`anonymous`, never the configurable caller. Only local transports supply `caller_ref`.
+
 ## Host checks
 
 Before execution, trusted code verifies:

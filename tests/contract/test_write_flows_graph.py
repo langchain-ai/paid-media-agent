@@ -515,3 +515,38 @@ async def test_mda_uses_verified_identity_instead_of_configurable_caller(
     assert len(provider.mutation_calls) == 1
     missing_identity = SimpleNamespace(identity=None, config=cfg)
     assert _caller_from_runtime(missing_identity) == ("t-1", "anonymous")
+
+
+@pytest.mark.parametrize("actor", [None, "", 42, "reviewer-1"])
+def test_managed_principal_never_falls_back_to_configurable_caller(actor: object) -> None:
+    from types import SimpleNamespace
+
+    from paid_media_agent.tools.write_tools import _caller_from_runtime
+
+    cfg = config(caller="untrusted-caller")
+    for server_info in (
+        SimpleNamespace(principal=None),
+        SimpleNamespace(principal=SimpleNamespace(id=actor)),
+    ):
+        runtime = SimpleNamespace(server_info=server_info, config=cfg)
+        expected = (
+            "reviewer-1"
+            if server_info is not None
+            and getattr(server_info.principal, "id", None) == "reviewer-1"
+            else "anonymous"
+        )
+        assert _caller_from_runtime(runtime) == ("t-1", expected)
+
+
+def test_legacy_managed_and_local_caller_identity() -> None:
+    from types import SimpleNamespace
+
+    from paid_media_agent.tools.write_tools import _caller_from_runtime
+
+    cfg = config(caller="local-reviewer")
+    runtime = SimpleNamespace(identity={"user": {"id": "managed-reviewer"}}, config=cfg)
+    assert _caller_from_runtime(runtime) == ("t-1", "managed-reviewer")
+    assert _caller_from_runtime(SimpleNamespace(server_info=None, config=cfg)) == (
+        "t-1",
+        "local-reviewer",
+    )
