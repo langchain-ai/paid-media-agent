@@ -11,8 +11,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - name: Build the wheel and sdist
         run: uv build
       - name: Cut the release notes from CHANGELOG.md
@@ -23,7 +23,7 @@ jobs:
           match = re.search(r"^## Unreleased\n(.*?)(?=^## |\Z)", text, re.S | re.M)
           pathlib.Path("RELEASE_NOTES.md").write_text(match.group(1).strip() if match else "See CHANGELOG.md.")
           PY
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           body_path: RELEASE_NOTES.md
           files: dist/*
