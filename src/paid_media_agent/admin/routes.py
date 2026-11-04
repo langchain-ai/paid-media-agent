@@ -407,7 +407,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 title="Deploy your agent",
                 description="Review accounts, report schedules, and Slack settings in Setup, then deploy. The first deployment connects Slack.",
                 status="blocked" if not mda_ready else "todo",
-                cli="uv run mda deploy .",
+                cli="uv run mda deploy",
                 action=StepAction(
                     kind="process", label="Deploy", action="mda-deploy", payload={"confirm": True}
                 ),

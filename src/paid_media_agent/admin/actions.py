@@ -916,7 +916,7 @@ def mda_check(root: Path) -> ActionResult:
         "provider_key_set": not model_error and _provider_key_set(settings, env),
         "import_smoke": _agent_import_smoke(root),
         "report_schedules": schedule_check,
-        "deploy_command": "uv run mda deploy .",
+        "deploy_command": "uv run mda deploy",
         "dev_command": "uv run mda dev",
     }
     blocking = [

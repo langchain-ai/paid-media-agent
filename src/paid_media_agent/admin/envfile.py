@@ -74,6 +74,13 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         example="INFO",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_TEMPLATE_TELEMETRY",
+        group="runtime",
+        secret=False,
+        description="Traces name the template and its version; false leaves it off",
+        example="true",
+    ),
+    EnvKeySpec(
         name="PIPEBOARD_API_TOKEN",
         group="pipeboard",
         secret=True,

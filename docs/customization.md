@@ -67,7 +67,7 @@ They are for the coding agent and are not runtime skills.
 Both deployment paths read the runtime bundle at `/skills/`:
 
 - **MDA:** the root `skills` link points to `workspace/skills`. MDA syncs that folder into its
-  managed context. Deploy local changes with `uv run mda deploy .`. MDA's Context Hub can also
+  managed context. Deploy local changes with `uv run mda deploy`. MDA's Context Hub can also
   manage deployed context; changes there do not update your checkout automatically.
 - **Self-hosted Docker:** the image includes the runtime skills. Docker Compose mounts
   `workspace/skills` read-only, so local context is available without a separate copy. Start a new
@@ -115,14 +115,18 @@ Durable learned memory is off by default. To enable MDA's native memory, add `me
 repository root and redeploy:
 
 ```python
-from managed_deepagents import define_memory
+from managed_deepagents import MemoryLayer, define_memory
 
-memory = define_memory(scope="agent")
+memory = define_memory(agent=MemoryLayer())
 ```
 
-This memory is shared by every caller of the deployment, and every caller can influence what the
-agent saves. Use it for shared procedures, never private per-person facts or credentials. Keep it
-off when callers should not influence one another. Tool permissions and approvals remain host-owned.
+This layer, mounted at `/memories/agent/`, is shared by every caller of the deployment, and every
+caller can influence what the agent saves. Use it for shared procedures, never private per-person
+facts or credentials. Keep it off when callers should not influence one another. Tool permissions
+and approvals remain host-owned.
+
+Adding `user=MemoryLayer()` gives each person a private layer at `/memories/user/`, which MDA mounts
+only for a verified person, by default in their Slack DM and in Studio.
 
 Keep stable business definitions in the workspace. Self-hosted Postgres persists conversations;
 this template does not add a separate long-term memory service. Learned preferences should not
@@ -177,5 +181,6 @@ it in reports. Never imply a warehouse or CRM is connected until the configured 
 ## References
 
 - [MDA project structure](https://docs.langchain.com/langsmith/python/managed-deep-agents-project-structure)
+- [MDA memory](https://docs.langchain.com/langsmith/python/managed-deep-agents-memory)
 - [OpenWiki](https://github.com/langchain-ai/openwiki)
 - [Agent Skills specification](https://agentskills.io/specification)

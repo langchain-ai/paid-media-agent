@@ -16,7 +16,7 @@ from langchain.agents.middleware import (
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from paid_media_agent.config import ModelConfig, Settings
+from paid_media_agent.config import ModelConfig, Settings, template_marker
 from paid_media_agent.middleware.authorization import (
     HIDDEN_BUILTIN_TOOLS,
     InvocationGuardMiddleware,
@@ -96,6 +96,8 @@ class AgentComponents:
     system_prompt: str
     skills: tuple[str, ...]
     metadata: AssemblyMetadata
+    run_metadata: Mapping[str, str]
+    """Root-run trace metadata: the template marker, or empty when the operator turned it off."""
     proposal_service: ProposalService
     write_executor: WriteExecutor
     read_dispatcher: ReadDispatcher
@@ -284,6 +286,7 @@ def build_agent_components(
         system_prompt=prompt,
         skills=("/skills/",),
         metadata=metadata,
+        run_metadata=template_marker() if settings.paid_media_template_telemetry else {},
         proposal_service=services.proposal_service,
         write_executor=services.write_executor,
         read_dispatcher=services.read_dispatcher,

@@ -413,7 +413,7 @@ def mda_dev() -> None:
     "--yes", is_flag=True, help="Confirm the deployment. Deploying is an outward-facing action."
 )
 def mda_deploy(yes: bool) -> None:
-    """Run `mda deploy .` after preflight and explicit confirmation."""
+    """Run `mda deploy` after preflight and explicit confirmation."""
     import subprocess
 
     from paid_media_agent.admin.processes import PROCESS_TEMPLATES

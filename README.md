@@ -132,7 +132,7 @@ For **Managed Deep Agents**, choose **Deploy agent** in setup, or validate and d
 
 ```bash
 uv run paid-media-agent mda check
-uv run mda deploy .
+uv run mda deploy
 ```
 
 You'll need a LangSmith organization with MDA access, an API key with deployment permissions,
@@ -155,8 +155,15 @@ Managed schedules can post text to Slack once you configure a delivery channel. 
 available locally and through the self-hosted API. Automatic PDF attachments to Slack are not included.
 
 [Managed hosting is paid](https://www.langchain.com/pricing); model and connector charges depend
-on your providers. For local development, `uv run mda dev .` opens the managed runtime in LangSmith
-Studio so you can inspect model calls, tool results, and approval requests.
+on your providers. These MDA commands cover day-to-day work:
+
+| Command | Purpose |
+| --- | --- |
+| `uv run mda dev` | Run the agent locally in LangSmith Studio to inspect model calls, tool results, and approvals |
+| `uv run mda deploy --name paid-media-agent-test` | Deploy a separate copy to test changes |
+| `uv run mda deploy` | Ship your changes |
+| `uv run mda logs` | Tail the deployed agent's logs |
+| `uv run mda build` | Compile what would ship into `.mda/build/` without deploying |
 
 ## Build on it
 

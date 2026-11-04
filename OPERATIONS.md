@@ -53,7 +53,7 @@ MDA is available in US LangSmith Cloud. See the current
 
 ```bash
 uv run paid-media-agent mda check
-uv run mda deploy .
+uv run mda deploy
 ```
 
 MDA builds the project, syncs instructions and runtime skills to Context Hub, provisions the
@@ -65,7 +65,7 @@ MDA's deployment status and a successful agent response establish readiness. Loc
 not verify your cloud permissions. [Hosting is paid](https://www.langchain.com/pricing).
 `uv run mda delete` removes the deployment and its managed sandboxes and snapshots.
 
-For development, `uv run mda dev .` opens the managed runtime in LangSmith Studio. Inspect model
+For development, `uv run mda dev` opens the managed runtime in LangSmith Studio. Inspect model
 calls, tool results, and approval interrupts there.
 
 ### Identity and memory
@@ -75,8 +75,13 @@ agent. For end-user private conversations, configure MDA's
 [Supabase identity](https://docs.langchain.com/langsmith/python/managed-deep-agents-identity).
 Approval authority remains a separate host-owned configuration.
 
-Durable memory is off by default. Enable MDA's native `memory.py` declaration only when all callers
-may share learned knowledge. See [Customization](docs/customization.md#memory-and-reports).
+Every run's trace names the template and its version (`ls_template: langchain-ai/paid-media-agent`)
+on both deployment paths, so LangChain can count adopters; nothing about you or your people goes
+with it. `PAID_MEDIA_TEMPLATE_TELEMETRY=false` turns it off.
+
+Durable memory is off by default. Enable the shared layer in MDA's native `memory.py` only when all
+callers may share learned knowledge. A personal layer mounts only for a verified person. See
+[Customization](docs/customization.md#memory-and-scheduling).
 
 ### Slack settings
 
@@ -106,7 +111,7 @@ Edit the static cron, timezone, prompt, and destination in those files. The cons
 time/day changes through `PAID_MEDIA_REPORT_TIME`, `PAID_MEDIA_REPORT_TIMEZONE`,
 `PAID_MEDIA_WEEKLY_REPORT_DAY` (0 Monday to 6 Sunday), and `PAID_MEDIA_MONTHLY_REPORT_DAY` (1–28).
 Use `config set` for these environment settings so their schedule declarations stay synchronized.
-A waited `mda deploy .` reconciles schedules; `--no-wait` skips that step.
+A waited `mda deploy` reconciles schedules; `--no-wait` skips that step.
 
 The local `report` command uses known campaign-performance adapters. Other provider schemas can
 be explored through `ask`; they need a normalization mapping before inclusion in typed reports.

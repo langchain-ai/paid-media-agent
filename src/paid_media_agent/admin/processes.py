@@ -17,7 +17,7 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
     "mda-dev": (sys.executable, "-m", "managed_deepagents", "dev"),
-    "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy", "."),
+    "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy"),
     "serve": (sys.executable, "-m", "paid_media_agent.cli", "serve"),
     "slack": (sys.executable, "-m", "paid_media_agent.cli", "slack"),
 }
@@ -70,7 +70,7 @@ class ProcessManager:
             "serve": "uv run paid-media-agent serve",
             "slack": "uv run paid-media-agent slack",
             "mda-dev": "uv run mda dev",
-            "mda-deploy": "uv run mda deploy .",
+            "mda-deploy": "uv run mda deploy",
             "studio": "uv run langgraph dev",
         }
         return friendly.get(name, " ".join(self.command_for(name)))

@@ -5,12 +5,14 @@ from __future__ import annotations
 import tomllib
 from collections.abc import Mapping
 from datetime import date
+from importlib import metadata as package_metadata
 from pathlib import Path
 from typing import Literal
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from paid_media_agent import __version__
 from paid_media_agent.domain.common import Platform
 
 RuntimeName = Literal["local", "mda", "self_hosted"]
@@ -18,6 +20,17 @@ RuntimeName = Literal["local", "mda", "self_hosted"]
 SlackTransport = Literal["socket_mode", "http"]
 
 DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
+TEMPLATE = "langchain-ai/paid-media-agent"
+
+
+def template_marker() -> dict[str, str]:
+    """The template and its version, so LangChain can count adopters. Nothing about the deployment
+    or its people goes in it."""
+    try:
+        version = package_metadata.version("paid-media-agent")
+    except package_metadata.PackageNotFoundError:
+        version = __version__
+    return {"ls_template": TEMPLATE, "ls_template_version": version}
 
 
 class ModelConfig(BaseModel):
@@ -128,6 +141,8 @@ class Settings(BaseSettings):
     paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
     """Idle seconds before MDA deletes a thread's sandbox; written into sandbox/__init__.py."""
     paid_media_log_level: str = "INFO"
+    paid_media_template_telemetry: bool = True
+    """Every run's root trace names the template and its version (`template_marker`)."""
     paid_media_workspace_root: Path = Path("workspace")
     paid_media_fixture_anchor: date | None = None
     """Last complete day of the synthetic data. Unset means two days ago, so the demo never ages

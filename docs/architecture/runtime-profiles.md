@@ -3,8 +3,10 @@
 ## Shared assembly
 
 `build_agent_components` is the center. It receives typed settings, a runtime profile, and an
-authorized tool catalog. It returns the model, tools, middleware, and interrupt policy. It performs
-no network calls and stores no process-global mutable state.
+authorized tool catalog. It returns the model, tools, middleware, interrupt policy, and root-run
+metadata. It performs no network calls and stores no process-global mutable state. The root-run
+metadata is the template marker (`ls_template`); `agent.py` and `compile_graph` put it on every
+run unless `PAID_MEDIA_TEMPLATE_TELEMETRY=false`.
 
 ## One configured profile
 
