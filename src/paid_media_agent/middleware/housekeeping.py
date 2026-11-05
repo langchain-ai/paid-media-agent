@@ -5,8 +5,8 @@ middleware, first in the list, recognizes it in `before_agent`, deletes the agen
 check-ins (one-time schedules the agent made with `schedule_check_in`; they no longer count
 against MDA's per-owner cap but would otherwise pile up in listings), and ends the run with a
 one-line summary that no channel receives. It never touches a schedule it did not make, and it
-reads no account and calls no provider. A person who types the marker gets the same: a tidy and
-no model call, which is harmless.
+reads no account and calls no provider. Any run whose whole message is the marker gets the same,
+which is harmless; a marker typed in Slack arrives escaped and decorated, so it reaches the model.
 """
 
 from __future__ import annotations
