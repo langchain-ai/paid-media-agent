@@ -56,8 +56,10 @@ deletes expired check-ins that carry the metadata key, and ends the run before a
 `surfaces/progress.py` is a deterministic phrasebook: every tool call reads as an analyst's step
 in two tenses ("Reading Google Ads campaign performance" / "Read Google Ads campaign performance").
 Platform reads are parsed from `<platform>__<operation>`, file tools from their path (a wiki page is
-"the wiki on bidding and budget"), and a helper launch from its type. A phrase never carries
-argument text.
+"the wiki on bidding and budget"), and a helper launch from its type. A tool call is model output,
+so a phrase never carries text the model chose: no argument, and only names the repository ships
+(its tools, skills, and wiki pages, and a fixed vocabulary for what a platform read covers).
+Anything else reads generically: "a guide", "the paid-media wiki", "Google Ads data", "a tool".
 
 - On MDA, `channels/slack.py` passes `plan_from_state` as the channel's `status`. MDA calls it with
   the agent's state as the run starts, around each model call, and every few seconds while a call
@@ -72,7 +74,8 @@ argument text.
 store under the conversation's thread. Each run writes only its own key. On MDA a helper's
 `runtime.thread` is its lead's thread, so helper spend lands in the lead's conversation. Without a
 store the meter keeps an in-memory one. An unlisted model counts as unpriced and the footer then
-omits the cost.
+omits the cost. Only a `provider:` prefix and a dated snapshot suffix are ignored when matching a
+price, so a variant such as `gpt-5.5-mini` is unpriced rather than billed at `gpt-5.5` rates.
 
 `middleware/footer.py` starts a job when a person's message starts a run (not a helper
 notification or housekeeping) and appends one line to the final reply of a Slack turn that did work:

@@ -8,14 +8,16 @@ The phrasebook is deterministic and grows without an entry per platform tool:
 
 - **This repository's tools** have an entry each.
 - **Platform read tools** (`{platform}__{operation}`) are parsed: the platform becomes its name
-  ("Meta Ads") and the operation's verb is put in both tenses.
-- **Built-in file tools** are phrased from their path: a skill is its guide, a wiki page is the
-  wiki's note on that topic, `/workspace/analysis` is saved analysis.
-- **Anything else** is its name, humanized.
+  ("Meta Ads"), the operation's verb is put in both tenses, and what it reads is named only from
+  a fixed vocabulary ("campaign performance"); any other operation reads "data".
+- **Built-in file tools** are phrased from their path: a shipped skill is its guide, a shipped wiki
+  page is the wiki's note on that topic, `/workspace/analysis` is saved analysis.
+- **Anything else** is "Using a tool". Add an entry here when you add a tool.
 
-A step is shown before anyone reviews it, so a phrase never carries argument text (no account
-alias, query, or anybody's words). The only names it shows are this repository's own: a skill's
-directory, a wiki page, a helper's type, a platform.
+A step is shown before anyone reviews it, and a tool call is model output, so a phrase never
+carries text the model chose: no argument (account alias, query, path, anybody's words), and no
+name this repository does not know (an unknown skill reads "a guide", an unknown wiki page "the
+paid-media wiki", an unknown tool "a tool").
 
 Two surfaces read it. On Managed Deep Agents, `plan_from_state` is the Slack channel's `status`
 chooser (`channels/slack.py`): Slack shows the current turn's steps as a plan above the reply.
@@ -93,7 +95,66 @@ _VERBS: Mapping[str, Phrase] = {
     "describe": ("Describing", "Described"),
 }
 
+#: Words a platform operation may show; any other word makes the subject "data".
+_SUBJECT_WORDS = frozenset(
+    {
+        "account",
+        "accounts",
+        "ad",
+        "ads",
+        "group",
+        "groups",
+        "set",
+        "sets",
+        "audience",
+        "audiences",
+        "budget",
+        "budgets",
+        "campaign",
+        "campaigns",
+        "conversion",
+        "conversions",
+        "creative",
+        "creatives",
+        "insights",
+        "keyword",
+        "keywords",
+        "line",
+        "item",
+        "items",
+        "metrics",
+        "performance",
+        "property",
+        "properties",
+        "report",
+        "reports",
+        "search",
+        "terms",
+        "spend",
+        "stats",
+        "traffic",
+        "events",
+    }
+)
+
 _WIKI = "paid-media-wiki"
+#: The wiki's pages, by file stem (`tests/unit/test_progress_phrasebook.py` keeps this in step).
+WIKI_PAGES = frozenset(
+    {
+        "anomaly-and-significance",
+        "answer-style",
+        "benchmarks",
+        "bidding-and-budget",
+        "decision-model",
+        "goals-and-economics",
+        "metrics-and-attribution",
+        "platform-differences",
+        "platform-playbooks",
+        "reporting",
+        "sources",
+        "write-safety",
+    }
+)
 _SKILL_NAMES: Mapping[str, str] = {
     "company-context": "your company context",
     "report-design": "the report design guide",
@@ -108,11 +169,6 @@ def _words(name: str) -> str:
     return re.sub(r"[-_]+", " ", name).strip()
 
 
-def _humanize(name: str) -> str:
-    words = _words(name)
-    return words[:1].upper() + words[1:] if words else "Working"
-
-
 def _place(path: object) -> str:
     """A path as an analyst would name it."""
     raw = str(path or "").strip()
@@ -123,9 +179,9 @@ def _place(path: object) -> str:
     if skill:
         name, rest = skill.group(1), skill.group(2) or ""
         page = posixpath.splitext(posixpath.basename(rest))[0]
-        if name == _WIKI and page and page.upper() != "SKILL":
+        if name == _WIKI and page in WIKI_PAGES:
             return f"the wiki on {_words(page)}"
-        return _SKILL_NAMES.get(name, f"the {_words(name)} guide")
+        return _SKILL_NAMES.get(name, "a guide")
     if norm.startswith("/memories/user"):
         return "your preferences"
     if norm.startswith("/memories"):
@@ -160,12 +216,10 @@ def _platform_phrase(name: str) -> Phrase | None:
         return None
     service = PLATFORM_NAMES[platform]
     verb, _, rest = operation.partition("_")
-    tenses = _VERBS.get(verb)
-    subject = _words(rest)
-    if tenses is None or not subject:
-        work = _words(operation)
-        return f"Checking {service} {work}", f"Checked {service} {work}"
-    return f"{tenses[0]} {service} {subject}", f"{tenses[1]} {service} {subject}"
+    running, done = _VERBS.get(verb, ("Reading", "Read"))
+    words = rest.split("_") if verb in _VERBS else []
+    subject = " ".join(words) if words and set(words) <= _SUBJECT_WORDS else "data"
+    return f"{running} {service} {subject}", f"{done} {service} {subject}"
 
 
 def phrase(name: str, args: Mapping[str, object] | None = None) -> Phrase:
@@ -177,10 +231,7 @@ def phrase(name: str, args: Mapping[str, object] | None = None) -> Phrase:
             return f"Handing {work} to a helper", f"Handed {work} to a helper"
         return "Starting a background helper", "Started a background helper"
     known = TOOL_PHRASES.get(name) or _file_phrase(name, args) or _platform_phrase(name)
-    if known is not None:
-        return known
-    humanized = _humanize(name)
-    return humanized, humanized
+    return known or ("Using a tool", "Used a tool")
 
 
 def _field(message: Any, key: str) -> Any:

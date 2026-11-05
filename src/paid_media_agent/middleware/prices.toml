@@ -13,9 +13,10 @@
 # A `long_context` table holds the prices a request pays once its whole prompt (cache reads and
 # writes included) passes `above_input_tokens`.
 #
-# A model is matched by its name without the `provider:` prefix or a dated suffix, so
-# `anthropic:claude-sonnet-4-6-20260217` reads `claude-sonnet-4-6`. A model missing here shows no
-# cost in the footer rather than a wrong one.
+# A model is matched by its name, or one of its `aliases`, without the `provider:` prefix or a dated
+# snapshot suffix, so `anthropic:claude-sonnet-4-6-20260217` reads `claude-sonnet-4-6`. Nothing else
+# is inferred: `gpt-5.5-mini` is not `gpt-5.5`. A model missing here shows no cost in the footer
+# rather than a wrong one.
 
 [anthropic]
 source = "https://platform.claude.com/docs/en/about-claude/pricing"
@@ -79,6 +80,7 @@ date = 2026-11-04
 
 # Paid tier, text input. Cache storage per hour is not counted.
 [google.models.gemini-3-flash]
+aliases = ["gemini-3-flash-preview"]
 input = 0.50
 output = 3.00
 cache_read = 0.05

@@ -77,27 +77,22 @@ def _price(row: Mapping[str, Any]) -> Price:
 
 @cache
 def load_prices() -> Mapping[str, Price]:
-    """Every model in `prices.toml`, keyed by its bare name."""
+    """Every model in `prices.toml`, keyed by its bare name and each of its `aliases`."""
     text = resources.files("paid_media_agent.middleware").joinpath("prices.toml").read_text("utf-8")
     prices: dict[str, Price] = {}
     for provider in tomllib.loads(text).values():
         for name, row in (provider.get("models") or {}).items():
-            prices[name] = _price(row)
+            price = _price(row)
+            for key in (name, *row.get("aliases", ())):
+                prices[key] = price
     return prices
 
 
 def price_for(model: str, prices: Mapping[str, Price] | None = None) -> Price | None:
-    """The price of `model` (`provider:` prefix and dated suffix ignored), or None if unlisted.
-
-    The longest listed name that the model starts with, followed by `-`, also matches, so
-    `gemini-3-flash-preview` reads `gemini-3-flash`.
-    """
+    """The price of `model`, or None if unlisted. Only a `provider:` prefix and a dated snapshot
+    suffix are ignored: a variant such as `-mini` or `-pro` is another model with other prices."""
     table = load_prices() if prices is None else prices
-    bare = _DATED.sub("", model.rpartition(":")[2].strip().lower())
-    if bare in table:
-        return table[bare]
-    matches = [name for name in table if bare.startswith(f"{name}-")]
-    return table[max(matches, key=len)] if matches else None
+    return table.get(_DATED.sub("", model.rpartition(":")[2].strip().lower()))
 
 
 def _count(details: Mapping[str, Any], key: str) -> int:

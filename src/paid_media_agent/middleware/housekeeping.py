@@ -27,21 +27,32 @@ _PAGE = 100
 
 
 async def tidy_check_ins(schedules: Any) -> int:
-    """Delete this agent's expired check-ins; returns how many."""
+    """Delete this agent's expired check-ins; returns how many.
+
+    Every page is read before anything is deleted: the listing's offsets count the server's rows,
+    so deleting while paging would skip one row per deletion.
+    """
     owner = {"type": "agent"}
-    removed, offset = 0, 0
+    expired: list[str] = []
+    offset = 0
     while True:
         page = await schedules.list(owner=owner, limit=_PAGE, offset=offset, include_expired=True)
-        for record in page.get("items", []):
-            if record.get("expired") and METADATA_KEY in (record.get("metadata") or {}):
-                try:
-                    await schedules.delete(record["id"], owner=owner)
-                    removed += 1
-                except Exception as error:  # tomorrow's pass tries again
-                    _LOGGER.warning("[housekeeping] check-in not deleted: %s", type(error).__name__)
+        expired += [
+            str(record["id"])
+            for record in page.get("items", [])
+            if record.get("expired") and METADATA_KEY in (record.get("metadata") or {})
+        ]
         offset = page.get("next_offset") or 0
         if not offset:
-            return removed
+            break
+    removed = 0
+    for schedule_id in expired:
+        try:
+            await schedules.delete(schedule_id, owner=owner)
+            removed += 1
+        except Exception as error:  # tomorrow's pass tries again
+            _LOGGER.warning("[housekeeping] check-in not deleted: %s", type(error).__name__)
+    return removed
 
 
 def _latest_human_text(state: AgentState[Any]) -> str:

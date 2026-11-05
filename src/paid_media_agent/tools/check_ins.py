@@ -34,6 +34,7 @@ CHECK_IN_TOOLS: tuple[str, ...] = (SCHEDULE_CHECK_IN_TOOL, CANCEL_CHECK_IN_TOOL)
 METADATA_KEY = "paid_media_agent"
 MIN_MINUTES = 5
 MAX_MINUTES = 30 * 24 * 60
+_PAGE = 100
 
 
 class ScheduleCheckInArgs(BaseModel):
@@ -90,12 +91,20 @@ def _unavailable() -> str:
 
 
 async def _pending(schedules: Any, owner: dict[str, str], thread_id: str) -> list[dict[str, Any]]:
-    page = await schedules.list(owner=owner, limit=50)
-    return [
-        {"check_in_id": record["id"], "due_at": record.get("at", "")}
-        for record in page.get("items", [])
-        if _mine(record, thread_id)
-    ]
+    """This thread's pending check-ins. The owner's schedules span every thread, so read all pages
+    (MDA caps an owner at a few dozen unexpired schedules)."""
+    found: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        page = await schedules.list(owner=owner, limit=_PAGE, offset=offset)
+        found += [
+            {"check_in_id": record["id"], "due_at": record.get("at", "")}
+            for record in page.get("items", [])
+            if _mine(record, thread_id)
+        ]
+        offset = page.get("next_offset") or 0
+        if not offset:
+            return found
 
 
 def build_check_in_tools() -> list[BaseTool]:

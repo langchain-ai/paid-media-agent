@@ -24,6 +24,8 @@ def test_prices_match_bare_dated_and_prefixed_names() -> None:
     assert price_for("claude-sonnet-4-6-20260217") == sonnet
     assert price_for("google_genai:gemini-3-flash-preview") == load_prices()["gemini-3-flash"]
     assert price_for("openai:kimi-k2-0905-preview") is None, "unlisted models are never guessed"
+    assert price_for("openai:gpt-5.5-mini") is None and price_for("gpt-5.5-pro") is None
+    assert price_for("gemini-3-flash-lite") is None
 
 
 def test_cost_prices_cache_reads_and_writes_apart() -> None:

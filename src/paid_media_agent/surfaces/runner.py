@@ -16,6 +16,7 @@ from langgraph.types import Command
 from paid_media_agent.domain.common import JsonValue
 from paid_media_agent.domain.presentation import ProposalView, ReceiptView
 from paid_media_agent.domain.proposals import ProposalState
+from paid_media_agent.middleware.footer import FOOTER_KEY
 from paid_media_agent.persistence.interfaces import ReceiptRepository, ThreadOwnershipStore
 from paid_media_agent.tools.artifacts import ArtifactError, ArtifactStore
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL
@@ -29,6 +30,8 @@ class RunOutcome:
     interrupted: bool
     proposal: ProposalView | None
     receipt: ReceiptView | None
+    footer: str = ""
+    """The run footer at the end of `text`, when the reply has one (`middleware/footer.py`)."""
 
 
 @dataclass(frozen=True)
@@ -141,9 +144,11 @@ class AgentRunner:
         snapshot = await self._graph.aget_state(config)
         interrupted = bool(snapshot.interrupts)
         messages = state.get("messages", [])
-        text = ""
+        text = footer = ""
         if messages:
             text = _content_text(messages[-1].content)
+            found = getattr(messages[-1], "additional_kwargs", {}).get(FOOTER_KEY)
+            footer = found if isinstance(found, str) and text.endswith(found) else ""
         proposal = self.latest_proposal(thread_id)
         receipt = None
         if proposal is not None:
@@ -158,6 +163,7 @@ class AgentRunner:
             interrupted=interrupted,
             proposal=proposal,
             receipt=receipt,
+            footer=footer,
         )
 
     async def _run(

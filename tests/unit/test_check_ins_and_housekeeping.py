@@ -39,8 +39,12 @@ class FakeSchedules:
     async def get(self, id: str, *, owner: dict[str, str]) -> dict[str, Any]:
         return self.records[id]
 
-    async def list(self, *, owner: dict[str, str], **_: Any) -> dict[str, Any]:
-        return {"items": list(self.records.values()), "next_offset": None}
+    async def list(
+        self, *, owner: dict[str, str], limit: int = 20, offset: int = 0, **_: Any
+    ) -> dict[str, Any]:
+        rows = list(self.records.values())
+        end = offset + limit
+        return {"items": rows[offset:end], "next_offset": end if end < len(rows) else None}
 
     async def delete(self, id: str, *, owner: dict[str, str]) -> None:
         self.deleted.append(id)
@@ -118,16 +122,18 @@ async def test_cancel_reaches_only_this_threads_check_ins() -> None:
     assert schedules.deleted == [created["check_in_id"]]
 
 
-async def test_housekeeping_tidies_only_expired_check_ins() -> None:
+async def test_housekeeping_tidies_only_expired_check_ins_across_pages() -> None:
+    ours = {"metadata": {METADATA_KEY: "check-in"}, "expired": True}
+    expired = [{"id": f"old-{i}", **ours} for i in range(150)]
     schedules = FakeSchedules(
         [
-            {"id": "old", "metadata": {METADATA_KEY: "check-in"}, "expired": True},
+            *expired,
             {"id": "due", "metadata": {METADATA_KEY: "check-in"}, "expired": False},
             {"id": "operator", "metadata": {}, "expired": True},
         ]
     )
-    assert await tidy_check_ins(schedules) == 1
-    assert schedules.deleted == ["old"]
+    assert await tidy_check_ins(schedules) == 150
+    assert sorted(schedules.records) == ["due", "operator"]
 
 
 async def test_housekeeping_run_ends_in_code_without_a_model_call(

@@ -9,7 +9,7 @@ from paid_media_agent.surfaces.slack.delivery import SlackDelivery, deliver
 from paid_media_agent.surfaces.slack.service import SlackReply
 
 
-async def test_native_stream_preserves_text_and_generic_tool_progress() -> None:
+async def test_native_stream_preserves_text_and_phrases_an_unknown_tool_generically() -> None:
     stream = SimpleNamespace(append=AsyncMock(), stop=AsyncMock())
     client = SimpleNamespace(
         agents_sessions_setStatus=AsyncMock(),
@@ -41,13 +41,13 @@ async def test_native_stream_preserves_text_and_generic_tool_progress() -> None:
         {
             "type": "task_update",
             "id": "call-1",
-            "title": "Custom warehouse tool",
+            "title": "Using a tool",
             "status": "in_progress",
         },
         {
             "type": "task_update",
             "id": "call-1",
-            "title": "Custom warehouse tool",
+            "title": "Used a tool",
             "status": "complete",
         },
     ]
@@ -76,10 +76,11 @@ async def test_steps_read_as_analyst_work_and_a_footer_posts_once() -> None:
     skill = {"file_path": "/skills/paid-media-wiki/benchmarks.md"}
     await delivery.event(RunEvent("tool", id="c2", name="read_file", args=skill))
     await delivery.event(RunEvent("tool", id="c2", name="read_file", status="complete"))
-    await delivery.event(RunEvent("text", text="CPA rose 12%.", id="m1"))
+    # Streamed with leading whitespace that the final reply text has stripped.
+    await delivery.event(RunEvent("text", text="\n\nCPA rose 12%.", id="m1"))
     footer = "_<1 min · ~$0.02_"
-    text = f"CPA rose 12%.\n\n{footer}"
-    outcome = RunOutcome("thread", text, False, None, None)
+    text = f"CPA rose 12%.\n\n\n{footer}"
+    outcome = RunOutcome("thread", text, False, None, None, footer=footer)
     await delivery.finish(SlackReply("C1", "1", render_answer(text), outcome))
     titles = [
         call.kwargs["chunks"][0].to_dict()["title"]

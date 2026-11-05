@@ -26,7 +26,8 @@
   `schedules/housekeeping.py` run deletes expired check-ins in code, with no model call.
 - Slack shows each step while a run works, in paid-media phrasing ("Reading Google Ads campaign
   performance", "Comparing the two periods"): MDA's channel `status` plan, and the same phrases in
-  the self-hosted adapter's task updates. A step never carries arguments.
+  the self-hosted adapter's task updates. A step never carries text the model chose: no
+  arguments, and no skill, wiki page, or tool name the repository does not ship.
 - A footer line on Slack replies that did work: helpers running, minutes since the request, and an
   estimated cost for the lead and its helpers, from dated list prices in
   `src/paid_media_agent/middleware/prices.toml`. The model never sees it.

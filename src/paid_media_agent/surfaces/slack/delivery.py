@@ -88,12 +88,13 @@ class SlackDelivery:
             return
         remaining = ""
         text, streamed = reply.message.text, self.last_text
-        if text.strip() != streamed.strip():
-            # The reply can be the streamed text plus a footer; post only what is new.
-            if streamed.strip() and text.startswith(streamed):
-                remaining = text[len(streamed) :]
-            else:
-                remaining = ("\n\n" if streamed else "") + text
+        footer = reply.outcome.footer if reply.outcome is not None else ""
+        body = text.removesuffix(footer).strip() if footer else text.strip()
+        if body != streamed.strip():
+            remaining = ("\n\n" if streamed else "") + text
+        elif footer:
+            # The answer is already on screen; the footer is the only new line.
+            remaining = f"\n\n{footer}"
         interrupted = bool(reply.outcome and reply.outcome.interrupted)
         await self.stream.stop(
             markdown_text=remaining,

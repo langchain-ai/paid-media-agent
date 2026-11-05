@@ -140,7 +140,8 @@ A custom icon is `channels/slack-icon.png`: a 512 × 512 PNG under 1 MB. The con
 MDA supplies Slack rendering, the Stop button, and approve/reject interactions. While a run works,
 the channel's `status` shows its steps as Slack's plan, in paid-media phrasing ("Reading Google
 Ads campaign performance", "Comparing the two periods"; `src/paid_media_agent/surfaces/progress.py`).
-A phrase never carries account aliases or anyone's words. `status` is experimental in MDA 0.10.
+A phrase never carries text the model chose: no account aliases, paths, or anyone's words, and an
+unknown skill, wiki page, or tool reads generically ("a guide", "a tool"). `status` is experimental in MDA 0.10.
 A reply to a turn that did work ends with one line: helpers still running, minutes since the
 request, and an estimated cost for the lead and its helpers, such as
 `_2 helpers · 6 min · ~$0.41_`. Prices come from `src/paid_media_agent/middleware/prices.toml`; a

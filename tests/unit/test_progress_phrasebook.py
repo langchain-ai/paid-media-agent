@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from paid_media_agent.surfaces.progress import (
     MAX_STEPS,
     TOOL_PHRASES,
+    WIKI_PAGES,
     phrase,
     plan_from_state,
     plan_steps,
@@ -49,7 +50,22 @@ from paid_media_agent.tools.fixtures import build_fixture_catalog
             {"subagent_type": "account-puller", "description": "Pull acme for 90 days"},
             ("Handing the account pull to a helper", "Handed the account pull to a helper"),
         ),
-        ("mystery_tool", {}, ("Mystery tool", "Mystery tool")),
+        ("mystery_tool", {}, ("Using a tool", "Used a tool")),
+        (
+            "google_ads__get_fire_the_agency",
+            {},
+            ("Reading Google Ads data", "Read Google Ads data"),
+        ),
+        (
+            "read_file",
+            {"file_path": "/skills/acme-cpa-up-40pct/SKILL.md"},
+            ("Reading a guide", "Read a guide"),
+        ),
+        (
+            "read_file",
+            {"file_path": "/skills/paid-media-wiki/fire-the-agency.md"},
+            ("Reading the paid-media wiki", "Read the paid-media wiki"),
+        ),
     ],
 )
 def test_phrases_read_as_analyst_work(
@@ -72,6 +88,11 @@ def test_every_repository_tool_and_fixture_read_has_a_phrase() -> None:
         if entry.tool_class is ToolClass.READ:
             running, done = phrase(entry.qualified_name)
             assert "__" not in running and "_" not in done, entry.qualified_name
+
+
+def test_wiki_pages_match_the_shipped_wiki(project_root: Path) -> None:
+    wiki = project_root / "workspace/skills/paid-media-wiki"
+    assert {p.stem for p in wiki.glob("*.md") if p.stem != "SKILL"} == WIKI_PAGES
 
 
 def test_phrases_never_carry_argument_text() -> None:
