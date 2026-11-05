@@ -45,7 +45,12 @@
     only for self-hosting.
   - `config set` accepts `LANGSMITH_WORKSPACE_ID` and checks `PAID_MEDIA_MODEL`'s shape.
   - The demo labels its receipt as simulated.
-  - OPERATIONS gains a step-by-step "Deploy to Slack" guide, which the onboarding skill follows.
+  - A step-by-step deploy guide, [docs/deploy-mda.md](docs/deploy-mda.md), which the onboarding
+    skill follows.
+- MDA-first README, like the design agent's: an `install.sh` one-liner, then three commands to
+  enter keys, map accounts, and deploy; a "say this to your coding agent" table; and a questions
+  section. `accounts discover --add` maps every newly found ad account to an alias in one step.
+  AGENTS.md routes each request to its skill.
 
 Live provider writes remain disabled by default and require the documented release gates.
 
