@@ -41,6 +41,10 @@ Live provider writes remain disabled by default and require the documented relea
 - Require `managed-deepagents` 0.10.1 or later (and `deepagents` 0.7.30 or later). Document MDA's
   agent and personal memory layers and the day-to-day `mda` commands, including
   `mda channels setup`.
+- Pipeboard loads through `langchain.mcp` (FastMCP, MCP 2.x) instead of `langchain-mcp-adapters`.
+  `mda build` 0.10 adds `langchain[mcp]` and `fastmcp` to the deployed image, which need MCP 2, so
+  the old `mcp<2` pin made every MDA 0.10 deploy fail to build. Tools are listed and called with no
+  elicitation handler, so a server cannot pause a host-side call.
 - Require Python 3.12 or later. `managed-deepagents` 0.10.0 and 0.10.1 fail to import on 3.11
   (pydantic rejects a `typing.TypedDict` there), and MDA builds the deployment on your local
   interpreter, so a 3.11 checkout could not deploy. CI now tests 3.12 and 3.13.
