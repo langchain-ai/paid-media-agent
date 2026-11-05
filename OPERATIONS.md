@@ -56,10 +56,23 @@ uv run paid-media-agent mda check
 uv run mda deploy
 ```
 
-MDA builds the project, syncs instructions and runtime skills to Context Hub, provisions the
-sandbox, and configures the native Slack channel. If prompted, open the Slack authorization link,
-authorize your workspace, and return to the terminal. The console offers **Continue deployment**
-for the same handoff. After success, open the printed LangSmith deployment URL or the agent's Slack DM.
+Requires `managed-deepagents` 0.10.1 or later (`uv sync` installs it). MDA builds the project,
+syncs instructions and runtime skills to Context Hub, provisions the sandbox, and configures the
+native Slack channel. A first deploy asks which Slack app to use: one LangSmith creates and manages,
+a new one from a manifest, or one you already have. When Slack still needs you (authorizing
+LangSmith, installing or approving the app), deploy prints the link and waits until Slack reports it
+done. The console offers **Continue deployment** for the same handoff. After success, open the
+printed LangSmith deployment URL or the agent's Slack DM. `uv run mda channels setup` checks or
+finishes the Slack setup later without deploying.
+
+`mda deploy` creates a **serverless** deployment by default, which can scale to zero. Proposals,
+approvals, receipts, and analysis artifacts in the MDA profile are process-local (see
+[Writes](#writes)), so a scale-down between a proposal and its approval loses the proposal and the
+approval is refused. That fails closed, but the change has to be proposed again. Before enabling live
+writes, deploy with `uv run mda deploy --deployment-type dedicated`. Existing deployments keep
+their type. In 0.10, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, and `LANGSMITH_WORKSPACE_ID` come
+from your shell first and the project `.env` second; unset a stale shell value if deploy targets the
+wrong workspace.
 
 MDA's deployment status and a successful agent response establish readiness. Local preflight does
 not verify your cloud permissions. [Hosting is paid](https://www.langchain.com/pricing).
@@ -83,6 +96,31 @@ Durable memory is off by default. Enable the shared layer in MDA's native `memor
 callers may share learned knowledge. A personal layer mounts only for a verified person. See
 [Customization](docs/customization.md#memory-and-scheduling).
 
+### Background helpers and check-ins
+
+On MDA the agent can hand long work to a background helper and answer later in the same thread.
+Three helpers are declared in `agent.py` as async subagents: `account-puller` for pulls and
+comparisons across many accounts or long windows, `report-builder` for a full rendered report, and
+`general-purpose` for other read-only research. `mda build` turns each into a graph of its own
+(`paid-media-agent--account-puller`, ...) on the same deployment, sharing the lead's sandbox and
+trace. When a helper finishes, it wakes the lead on its thread and MDA posts the answer to the
+Slack thread the request came from. Every helper is read-only: its tools are reads, comparisons,
+and report rendering, with the lead's invocation guard, redaction, and call limits. Proposals and
+approvals stay with the lead.
+
+Any caller allowed to start runs on the deployment can run a helper graph directly, as themselves.
+It can only read.
+
+`schedule_check_in` lets the agent come back to a conversation later, for example two days after
+an approved budget change. A check-in is a one-time MDA runtime schedule on the thread; it survives
+redeploys and answers in the same conversation. It reads and reports like any run, and any change
+it suggests needs a new approval. Each owner holds at most 20 runtime schedules
+(`MDA_MAX_AGENT_SCHEDULES` raises it). `schedules/housekeeping.py` runs daily at 05:30 UTC,
+deletes expired check-ins in code, and ends without a model call or a post.
+
+The self-hosted server has neither: no Agent Server to launch helpers on and no durable scheduler.
+There the agent does long pulls in its own turn.
+
 ### Slack settings
 
 Edit `channels/slack.py` or save these optional values with `config set`, then redeploy:
@@ -92,12 +130,21 @@ Edit `channels/slack.py` or save these optional values with `config set`, then r
 | `PAID_MEDIA_SLACK_NAME` | Paid Media Agent |
 | `PAID_MEDIA_SLACK_DESCRIPTION` | Cross-account campaign analysis description |
 | `PAID_MEDIA_SLACK_BACKGROUND_COLOR` | Platform default |
-| `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES` | `false`: mentions, direct messages, and active-thread replies |
+| `PAID_MEDIA_SLACK_TRIGGER_MODE` | `thread`: a mention, then every reply in that thread. `mention`: only mentions. `all`: every message in joined channels. Direct messages always start runs |
 | `PAID_MEDIA_SLACK_ALLOW_BOT_TRIGGERS` | `false` |
 
+`PAID_MEDIA_SLACK_TRIGGER_MODE` replaces `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES`, which MDA 0.10
+deprecated. If your `.env` set the old key to `true`, set `PAID_MEDIA_SLACK_TRIGGER_MODE=all`.
+
 A custom icon is `channels/slack-icon.png`: a 512 × 512 PNG under 1 MB. The console can upload it.
-MDA supplies Slack rendering and approve/reject interactions. This project does not add custom
-paid-media cards to the managed channel.
+MDA supplies Slack rendering, the Stop button, and approve/reject interactions. While a run works,
+the channel's `status` shows its steps as Slack's plan, in paid-media phrasing ("Reading Google
+Ads campaign performance", "Comparing the two periods"; `src/paid_media_agent/surfaces/progress.py`).
+A phrase never carries account aliases or anyone's words. `status` is experimental in MDA 0.10.
+A reply to a turn that did work ends with one line: helpers still running, minutes since the
+request, and an estimated cost for the lead and its helpers, such as
+`_2 helpers · 6 min · ~$0.41_`. Prices come from `src/paid_media_agent/middleware/prices.toml`; a
+model it does not list shows no cost. This project adds no custom cards to the managed channel.
 
 ### Reports and schedules
 
@@ -127,7 +174,8 @@ existing thread sandboxes retain their files until expiry. MDA owns provisioning
 
 The model reads synced skills under `/skills` and uses `/workspace` for thread scratch files.
 Host-created analysis artifacts stay on the host and are accessed through analysis tools. The
-current tool policy exposes filesystem operations but no arbitrary shell or subagent execution.
+current tool policy exposes filesystem operations but no arbitrary shell and no blocking `task`
+subagent; background helpers are read-only async subagents that share the lead's sandbox.
 
 Optional standalone snapshot tools:
 
@@ -147,8 +195,9 @@ Compose includes PDF libraries and persists checkpoints and local artifacts. You
 the report command; MDA cron declarations are not a self-hosted scheduler.
 
 The API and Slack share the same model, catalog, analysis, reports, and approval rules as MDA.
-Slack uses native status and streaming with generic tool progress. Keep any customization in the
-shared tools and skills, not tool-specific message renderers.
+Slack uses native status and streaming, with each tool call shown as a task in the same phrasing as
+MDA's plan and the same footer on replies. Keep any customization in the shared tools, skills, and
+phrasebook, not tool-specific message renderers.
 
 ## Direct platforms
 

@@ -35,8 +35,10 @@ follow [customization](customization.md) to edit business context and skills man
 docker compose --profile slack up --build -d
 ```
 
-Mention the app in a channel or send it a DM. Replies stream text and tool progress using Slack's
-native agent APIs. Slack's agent features depend on your workspace's plan and admin settings.
+Mention the app in a channel or send it a DM. Replies stream text and each step ("Reading Google Ads
+campaign performance") using Slack's native agent APIs, and a reply that did work ends with a line
+for minutes taken and estimated cost. Background helpers and check-ins need Managed Deep Agents;
+here long pulls run in the request. Slack's agent features depend on your workspace's plan and admin settings.
 Customize the app's name, icon, and description in Slack's app settings.
 
 When writes are enabled, the agent presents the proposed action and approval controls. Set

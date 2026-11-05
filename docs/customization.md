@@ -126,7 +126,10 @@ facts or credentials. Keep it off when callers should not influence one another.
 and approvals remain host-owned.
 
 Adding `user=MemoryLayer()` gives each person a private layer at `/memories/user/`, which MDA mounts
-only for a verified person, by default in their Slack DM and in Studio.
+only for a verified person, by default in their Slack DM and in Studio. MDA can also select memory
+per run when `agent.py` exports a factory instead of a definition; this template keeps a static
+definition, so a person's private notes never load in a shared channel thread. Do not use the
+deprecated `allow` callback on a layer.
 
 Keep stable business definitions in the workspace. Self-hosted Postgres persists conversations;
 this template does not add a separate long-term memory service. Learned preferences should not
@@ -158,6 +161,24 @@ run has no Slack delivery destination. Remove a schedule file and redeploy to di
 Self-hosted installations can call the documented report command from their own scheduler.
 Scheduled analysis uses the same skills, accounts, and tools as an interactive run.
 
+### Background helpers, check-ins, and Slack progress
+
+These run on Managed Deep Agents and live in code, so a skill edit cannot widen them:
+
+| Change | Where |
+| --- | --- |
+| A helper's brief, description, or tools | `src/paid_media_agent/subagents.py` |
+| Add a helper | A spec in `subagents.py`, and a literal entry in `agent.py`'s `subagents` list: `{**_components.helper("name"), "name": "name", "async": True}`. `mda build` reads the literal `name` and `"async"` without running code |
+| When the agent hands work off or schedules a check-in | The "Long work and check-ins" section of `workspace/skills/paid-media-analysis/SKILL.md` |
+| Step phrasing in Slack | `src/paid_media_agent/surfaces/progress.py` |
+| Prices behind the footer's estimate | `src/paid_media_agent/middleware/prices.toml` |
+| Housekeeping time | `schedules/housekeeping.py` |
+
+Keep helpers read-only. A helper is a graph of its own that any deployment caller can run, and it
+does not inherit the lead's middleware, so give it reads and deterministic tools only and keep its
+guard stack. `general-purpose` is declared so MDA does not add its default background copy, which
+would carry every lead tool.
+
 ## Optional warehouses and dbt
 
 BigQuery, other warehouses, and dbt are optional extensions. This project does not include a
@@ -182,5 +203,6 @@ it in reports. Never imply a warehouse or CRM is connected until the configured 
 
 - [MDA project structure](https://docs.langchain.com/langsmith/python/managed-deep-agents-project-structure)
 - [MDA memory](https://docs.langchain.com/langsmith/python/managed-deep-agents-memory)
+- [MDA changelog](https://docs.langchain.com/langsmith/python/managed-deep-agents-changelog)
 - [OpenWiki](https://github.com/langchain-ai/openwiki)
 - [Agent Skills specification](https://agentskills.io/specification)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,9 @@ from paid_media_agent.middleware.authorization import (
     ToolSurfacePolicy,
 )
 from paid_media_agent.middleware.current_date import CurrentDateMiddleware
+from paid_media_agent.middleware.footer import RunFooterMiddleware
+from paid_media_agent.middleware.housekeeping import HousekeepingMiddleware
+from paid_media_agent.middleware.meter import Meter, MeterMiddleware
 from paid_media_agent.middleware.offload import ResultOffloadMiddleware
 from paid_media_agent.middleware.redaction import RedactionMiddleware
 from paid_media_agent.middleware.timeout import ModelTimeoutMiddleware
@@ -34,7 +37,9 @@ from paid_media_agent.middleware.tool_selection import (
     plan_selection,
 )
 from paid_media_agent.runtime.profiles import RuntimeProfile
+from paid_media_agent.subagents import ASYNC_TASK_TOOLS, HELPER_FILESYSTEM_TOOLS, helper_specs
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog
+from paid_media_agent.tools.check_ins import build_check_in_tools
 from paid_media_agent.tools.compare_periods import COMPARE_PERIODS_TOOL, build_compare_periods_tool
 from paid_media_agent.tools.discovery import (
     DISCOVER_TOOLS_TOOL,
@@ -101,6 +106,13 @@ class AgentComponents:
     proposal_service: ProposalService
     write_executor: WriteExecutor
     read_dispatcher: ReadDispatcher
+    meter: Meter
+    helpers: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    """Background helper specs (`subagents.py`), keyed by name. Empty off Managed Deep Agents."""
+
+    def helper(self, name: str) -> dict[str, Any]:
+        """One helper's spec for `agent.py`, which adds the literal `name` and `"async"`."""
+        return dict(self.helpers[name])
 
 
 @dataclass(frozen=True)
@@ -186,8 +198,13 @@ def build_agent_components(
     model: BaseChatModel | None = None,
     selector_model: BaseChatModel | None = None,
     system_prompt: str | None = None,
+    managed: bool = False,
 ) -> AgentComponents:
-    """Compose model, tools, middleware, and interrupt policy. No network, no global state."""
+    """Compose model, tools, middleware, and interrupt policy. No network, no global state.
+
+    `managed` is Managed Deep Agents: the lead also gets check-ins and background helpers, which
+    need its runtime schedules and Agent Server. Every other path leaves both out.
+    """
     model_config = settings.model_settings()
     resolved_model = resolve_model(
         model_config,
@@ -200,18 +217,19 @@ def build_agent_components(
     project_root = runtime.skills_root or Path.cwd()
 
     platform_tools = build_platform_read_tools(catalog, services.read_dispatcher)
-    core_tools: list[BaseTool] = [
+    render_tool = build_render_report_tool(runtime.artifacts)
+    analysis_tools: list[BaseTool] = [
         build_list_accounts_tool(runtime.accounts),
         build_discover_tools_tool(runtime.catalog_provider),
         build_compare_periods_tool(runtime.artifacts),
         build_summarize_window_tool(runtime.artifacts),
-        build_render_report_tool(runtime.artifacts),
     ]
+    core_tools: list[BaseTool] = [*analysis_tools, render_tool]
+    if managed:
+        core_tools += build_check_in_tools()
     write_tools = build_write_tools(services.proposal_service, services.write_executor)
     tools: tuple[BaseTool, ...] = (*core_tools, *write_tools, *platform_tools)
 
-    allowed = frozenset({*FILESYSTEM_TOOLS, *(t.name for t in tools)})
-    surface = ToolSurfacePolicy(allowed_tool_names=allowed, hidden_tool_names=HIDDEN_BUILTIN_TOOLS)
     plan = plan_selection(model_config, max_tools=settings.paid_media_max_selected_tools)
     selection_model = selector_model
     if selection_model is None and plan.strategy is SelectionStrategy.PORTABLE_SELECTOR:
@@ -223,38 +241,76 @@ def build_agent_components(
             selection_model = lenient_selector(selected, selector_config) or selected
         else:
             selection_model = lenient_selector(resolved_model, model_config)
-    selection = build_selection_middleware(
-        plan,
-        searchable_tool_names=[t.name for t in platform_tools],
-        always_include=[
-            *FILESYSTEM_TOOLS,
-            *(t.name for t in core_tools),
-            *(t.name for t in write_tools),
-        ],
-        selector_model=selection_model,
-    )
-    secrets = tuple(s for s in _secret_values(settings) if s)
-    retry: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
-    if model_config.provider != "scripted":
-        # Transient model failures should not kill a run; bounded, and tool effects never repeat.
-        # A run also ends after a fixed number of model calls instead of looping on tools.
-        retry = (
-            ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),
-            ModelTimeoutMiddleware(settings.paid_media_model_timeout_seconds),
-            ModelCallLimitMiddleware(
-                run_limit=settings.paid_media_max_model_calls, exit_behavior="end"
-            ),
+    secrets = tuple(s for s in (*_secret_values(settings), *runtime.extra_secrets) if s)
+    platform_names = [t.name for t in platform_tools]
+
+    def guards(
+        visible: Sequence[str], always: Sequence[str]
+    ) -> list[AgentMiddleware[Any, Any, Any]]:
+        """The stack every agent runs with, lead or helper: bounded model calls, today's date, tool
+        selection, the invocation guard, result offload, and redaction."""
+        bounded: list[AgentMiddleware[Any, Any, Any]] = []
+        if model_config.provider != "scripted":
+            # Transient model failures should not kill a run; bounded, and tool effects never
+            # repeat. A run also ends after a fixed number of model calls instead of looping.
+            bounded = [
+                ModelRetryMiddleware(max_retries=MODEL_RETRY_ATTEMPTS, on_failure="continue"),
+                ModelTimeoutMiddleware(settings.paid_media_model_timeout_seconds),
+                ModelCallLimitMiddleware(
+                    run_limit=settings.paid_media_max_model_calls, exit_behavior="end"
+                ),
+            ]
+        surface = ToolSurfacePolicy(
+            allowed_tool_names=frozenset(visible), hidden_tool_names=HIDDEN_BUILTIN_TOOLS
         )
+        return [
+            *bounded,
+            CurrentDateMiddleware(),
+            *build_selection_middleware(
+                plan,
+                searchable_tool_names=platform_names,
+                always_include=list(always),
+                selector_model=selection_model,
+            ),
+            InvocationGuardMiddleware(surface=surface, catalog_provider=runtime.catalog_provider),
+            ResultOffloadMiddleware(
+                runtime.artifacts, max_chars=settings.paid_media_result_offload_chars
+            ),
+            RedactionMiddleware(secrets=secrets),
+        ]
+
+    background = ASYNC_TASK_TOOLS if managed else ()
+    lead_always = [
+        *FILESYSTEM_TOOLS,
+        *(t.name for t in core_tools),
+        *(t.name for t in write_tools),
+        *background,
+    ]
+    meter = Meter(default_model=model_config.model)
+    # Housekeeping first: its run ends in `before_agent`, before anything else does work.
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...] = (
-        *retry,
-        CurrentDateMiddleware(),
-        *selection,
-        InvocationGuardMiddleware(surface=surface, catalog_provider=runtime.catalog_provider),
-        ResultOffloadMiddleware(
-            runtime.artifacts, max_chars=settings.paid_media_result_offload_chars
-        ),
-        RedactionMiddleware(secrets=(*secrets, *runtime.extra_secrets)),
+        HousekeepingMiddleware(),
+        RunFooterMiddleware(meter),
+        MeterMiddleware(meter),
+        *guards([*lead_always, *platform_names], lead_always),
     )
+
+    helpers: dict[str, dict[str, Any]] = {}
+    if managed:
+
+        def helper_middleware(
+            helper_tools: Sequence[BaseTool],
+        ) -> list[AgentMiddleware[Any, Any, Any]]:
+            names = [t.name for t in helper_tools]
+            always = [*HELPER_FILESYSTEM_TOOLS, *(n for n in names if n not in platform_names)]
+            return [MeterMiddleware(meter), *guards([*HELPER_FILESYSTEM_TOOLS, *names], always)]
+
+        helpers = helper_specs(
+            analysis_tools=[*analysis_tools, *platform_tools],
+            render_tool=render_tool,
+            middleware=helper_middleware,
+        )
+
     interrupt_on: dict[str, InterruptOnConfig] = {}
     if write_tools:
         interrupt_on[EXECUTE_CHANGE_TOOL] = build_execute_interrupt(services.proposal_service)
@@ -290,6 +346,8 @@ def build_agent_components(
         proposal_service=services.proposal_service,
         write_executor=services.write_executor,
         read_dispatcher=services.read_dispatcher,
+        meter=meter,
+        helpers=helpers,
     )
 
 

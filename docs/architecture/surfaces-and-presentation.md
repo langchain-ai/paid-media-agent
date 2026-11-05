@@ -8,12 +8,17 @@ Server and Slack channel around the shared agent definition.
 
 MDA owns the managed Slack connection and message rendering through `channels/slack.py`.
 The agent summarizes a proposed action before `execute_change` interrupts for approval.
+`trigger_mode` defaults to `thread` (one mention, then the thread's replies). The channel's
+`status` shows the run's steps as Slack's plan, and replies that did work end with a footer line;
+see [background work and progress](background-and-progress.md). Slack's native Stop button cancels
+a thread's runs.
 
 Self-hosting uses one async Bolt app for Socket Mode and signed HTTP. Bolt verifies requests
 and acknowledges events before starting the run. `SlackDelivery` sends assistant Markdown and
-generic tool progress through Slack's native streaming API. The session is `processing` while
-the agent works, `suspended` when approval is required, and `active` after completion or failure.
-Tool progress includes the name and status, never arguments or raw results. No tool-specific
+tool progress through Slack's native streaming API, phrased by `surfaces/progress.py`. The session
+is `processing` while the agent works, `suspended` when approval is required, and `active` after
+completion or failure. A step is a phrase and a status, never arguments or raw results. Runs from
+the Slack adapter carry `surface: slack` in their config, so they get the same footer as MDA. No tool-specific
 cards or paid-media report layouts are embedded in the Slack adapter.
 
 The only custom Block Kit is a generic Approve/Reject action row. Button values are opaque

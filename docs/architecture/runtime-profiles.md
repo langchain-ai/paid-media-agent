@@ -3,8 +3,10 @@
 ## Shared assembly
 
 `build_agent_components` is the center. It receives typed settings, a runtime profile, and an
-authorized tool catalog. It returns the model, tools, middleware, interrupt policy, and root-run
-metadata. It performs no network calls and stores no process-global mutable state. The root-run
+authorized tool catalog. It returns the model, tools, middleware, interrupt policy, root-run
+metadata, the cost meter, and, with `managed=True`, the background helper specs. `managed` adds the
+check-in tools and the async-task tool names to the lead's surface; only `build_mda_components`
+passes it. It performs no network calls and stores no process-global mutable state. The root-run
 metadata is the template marker (`ls_template`); `agent.py` and `compile_graph` put it on every
 run unless `PAID_MEDIA_TEMPLATE_TELEMETRY=false`.
 
@@ -15,9 +17,10 @@ policy from `PAID_MEDIA_APPROVER_IDS`. `PAID_MEDIA_DATA_MODE=sample` uses only f
 requires connected providers and excludes synthetic platforms. The default `auto` mode selects
 providers from configured credentials and otherwise uses fixtures. Three callers compile it:
 
-- `agent.py` hands the components to `define_deep_agent`. Managed Deep Agents supplies the
-  checkpointer, the per-thread sandbox, identity, schedules, and Slack. This is the recommended
-  deployment.
+- `agent.py` hands the components to `define_deep_agent`, with the helpers as async subagents.
+  Managed Deep Agents supplies the checkpointer, the per-thread sandbox, identity, schedules,
+  runtime schedules, the Agent Server the helpers run on, and Slack. This is the recommended
+  deployment. It needs `managed-deepagents` 0.10.1 or later.
 - `runtime/self_hosted.py::build_self_hosted_runtime` compiles the same components with
   `create_deep_agent` behind the FastAPI boundary and the Slack adapter, with proposals,
   claims, receipts, dedupe, thread ownership, and checkpoints in Postgres when `DATABASE_URL` is
@@ -45,7 +48,9 @@ host tools in both runtimes.
 
 For the same model, catalog, thread state, and user request, the deployment and the local CLI
 expose the same authorized capabilities and terminal domain objects. Timing, trace metadata, and
-presentation may differ. Capability and approval policy may not.
+presentation may differ. Capability and approval policy may not. The one difference is where work
+runs: on MDA the lead can hand reads to background helpers and schedule check-ins, which need its
+Agent Server and runtime schedules. Both are read-only and add no write capability.
 
 ## Self-hosting
 
@@ -55,7 +60,7 @@ runtime skills and company context, with the local filesystem permissions descri
 
 | Profile | Main advantage | Main cost or limit |
 |---|---|---|
-| MDA | one command, managed threads, sandbox, schedules, identity, Slack | generic approval card, US region, in-memory proposal state per process |
+| MDA | one command, managed threads, sandbox, schedules, identity, Slack, background helpers, check-ins | generic approval card, US region, in-memory proposal state per process (serverless deployments can scale to zero) |
 | Self-hosted | your data, auth, Slack cards with edits, Postgres durability | you run the API, database, Slack app, upgrades, and backups |
 
 ## Runtime components
@@ -70,5 +75,6 @@ runtime skills and company context, with the local filesystem permissions descri
 - `runtime/local.py::compile_graph` uses a `FilesystemBackend` rooted at the checkout, skills from
   `/skills/`, and permissions that deny `.env`, `.venv`, `.git`, `.mda`, and any write outside
   `/workspace/`.
-- `connectors/mcp.py` is intentionally absent: MDA's MCP connector would bind provider tools to the
-  model directly, bypassing the authorized catalog. Tools always enter through the assembly.
+- `tools/mcp.py` (MDA's MCP declaration; MDA 0.10 removed the old `connectors/` layout) is
+  intentionally absent: it would bind provider tools to the model directly, bypassing the
+  authorized catalog. Tools always enter through the assembly.

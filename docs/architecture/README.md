@@ -9,8 +9,9 @@ code; surfaces only translate inputs and presentation.
 2. [Tools and context](tools-and-context.md)
 3. [Writes and approvals](writes-and-approvals.md)
 4. [Surfaces and presentation](surfaces-and-presentation.md)
-5. [Sandbox and snapshots](sandbox-and-snapshots.md)
-6. [Capability map](capability-map.md)
+5. [Background work and progress](background-and-progress.md)
+6. [Sandbox and snapshots](sandbox-and-snapshots.md)
+7. [Capability map](capability-map.md)
 
 ## Binding invariants
 
@@ -26,6 +27,7 @@ code; surfaces only translate inputs and presentation.
 10. Same domain and presentation objects across Slack, the CLI, and schedules.
 11. Public context only. Private company evidence never enters the repository.
 12. Add complexity only after a measured failure in the simpler design.
+13. Background helpers are read-only by their tool list and their own guard stack, never by prompt.
 
 ## Ownership test
 

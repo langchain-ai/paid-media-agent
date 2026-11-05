@@ -17,6 +17,10 @@
 | Deliver artifact | `render_report` files | host artifact bridge | artifact receipt | unsafe path, type, size, or delivery error |
 | Read business context | runtime skills | `workspace/skills/company-context/` | curated Markdown, excluded from Git | missing definitions or targets remain unknown |
 | Run on MDA | `agent.py` | shared components + MDA config | managed thread and sandbox | deployment/config mismatch |
+| Hand off long work (MDA) | `start_async_task` | `subagents.py` helper specs, read-only, own guard stack | helper's Agent Server thread; lead woken by `notify_parent` | helper error or timeout reported to the lead |
+| Come back later (MDA) | `schedule_check_in`, `cancel_check_in` | `tools/check_ins.py` over `runtime.schedules` | one-time same-thread schedule | schedule cap, no runtime schedules |
+| Tidy check-ins (MDA) | `schedules/housekeeping.py` | `middleware/housekeeping.py`, no model call | expired schedules deleted | listing or delete failure, retried next day |
+| Show progress and cost | Slack `status`, reply footer | `surfaces/progress.py`, `middleware/meter.py`, `middleware/footer.py` | meter totals in the LangGraph store | unlisted model price (cost omitted) |
 | Run self-hosted | `serve`, `slack`, `docker compose up` | shared components + Postgres (`runtime/self_hosted.py`) | self-hosted thread | auth, persistence, or adapter mismatch |
 | Run locally | `paid-media-agent ask`, `report`, `mda dev` | the same components compiled by `runtime/local.py` | in-memory thread | model key or catalog mismatch |
 | Onboard and operate | `setup` console or CLI groups | `admin/actions.py` (host-side, no model) | `.env`, `config/accounts.toml`, process logs | doctor failures, invalid key, gate refusal |

@@ -1,0 +1,84 @@
+# List prices for the Slack footer's cost estimate (middleware/meter.py), in USD per million tokens.
+#
+# Every figure is an estimate, copied by hand from the provider's public pricing page on `date`.
+# Providers change prices, discount batch and regional traffic, and bill some features on top; the
+# invoice is the source of truth. Re-check the page and update `date` when you change a figure.
+#
+# Fields per model:
+#   input           uncached prompt tokens
+#   output          generated tokens (reasoning included)
+#   cache_read      prompt tokens read from the cache
+#   cache_write_5m  prompt tokens written to the cache for 5 minutes (defaults to `input`)
+#   cache_write_1h  prompt tokens written to the cache for 1 hour (defaults to `cache_write_5m`)
+# A `long_context` table holds the prices a request pays once its whole prompt (cache reads and
+# writes included) passes `above_input_tokens`.
+#
+# A model is matched by its name without the `provider:` prefix or a dated suffix, so
+# `anthropic:claude-sonnet-4-6-20260217` reads `claude-sonnet-4-6`. A model missing here shows no
+# cost in the footer rather than a wrong one.
+
+[anthropic]
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+date = 2026-11-04
+
+[anthropic.models.claude-sonnet-4-6]
+input = 3.00
+output = 15.00
+cache_write_5m = 3.75
+cache_write_1h = 6.00
+cache_read = 0.30
+
+[anthropic.models.claude-sonnet-5-5]
+input = 2.00
+output = 10.00
+cache_write_5m = 2.50
+cache_write_1h = 4.00
+cache_read = 0.10
+
+[anthropic.models.claude-opus-5-5]
+input = 4.00
+output = 20.00
+cache_write_5m = 5.00
+cache_write_1h = 8.00
+cache_read = 0.20
+
+[anthropic.models.claude-haiku-5-5]
+input = 0.10
+output = 0.50
+cache_write_5m = 0.125
+cache_write_1h = 0.20
+cache_read = 0.01
+
+[anthropic.models.claude-haiku-5-5.long_context]
+above_input_tokens = 100_000
+input = 0.50
+output = 2.50
+cache_write_5m = 0.625
+cache_write_1h = 1.00
+cache_read = 0.05
+
+[openai]
+source = "https://developers.openai.com/api/docs/pricing"
+date = 2026-11-04
+
+# Standard tier. OpenAI bills cache writes as ordinary input.
+[openai.models."gpt-5.5"]
+input = 5.00
+output = 30.00
+cache_read = 0.50
+
+[openai.models."gpt-5.5".long_context]
+above_input_tokens = 272_000
+input = 10.00
+output = 45.00
+cache_read = 1.00
+
+[google]
+source = "https://aistudio.google.com/docs/pricing"
+date = 2026-11-04
+
+# Paid tier, text input. Cache storage per hour is not counted.
+[google.models.gemini-3-flash]
+input = 0.50
+output = 3.00
+cache_read = 0.05

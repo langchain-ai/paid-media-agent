@@ -44,6 +44,13 @@ or on your own infrastructure. You choose the model.
   recommendations. Download HTML, or PDF when the host has the rendering libraries installed.
 - **Prepare changes for review.** Propose campaign updates with a reason and a plan for checking
   the result.
+- **Work in the background.** On Managed Deep Agents, long multi-account pulls and full reports go
+  to read-only background helpers, and the agent answers in the same Slack thread when they
+  finish. It can also come back later on its own, for example two days after an approved budget
+  change.
+- **Show its work in Slack.** Each step appears while it runs ("Reading Google Ads campaign
+  performance", "Comparing the two periods"), and a reply ends with a line for helpers still
+  running, minutes taken, and an estimated cost.
 
 The model decides what to investigate. Code calculates the metrics and checks report figures
 against the source data. Large responses stay in files; the model receives summaries with the
@@ -126,6 +133,7 @@ Choose who operates the infrastructure:
 | Hosting | LangSmith manages the runtime and sandbox | You run the API and Postgres |
 | Slack | Authorize the managed Slack app | Connect your own Slack app |
 | Scheduled reports | Managed weekly and monthly schedules | Run the report command with your scheduler |
+| Background work | Read-only helpers and check-ins | Long pulls run in the request |
 | Guide | [Managed deployment](OPERATIONS.md#deploying-with-managed-deep-agents) | [Self-hosting](docs/self-hosting.md) |
 
 For **Managed Deep Agents**, choose **Deploy agent** in setup, or validate and deploy from the terminal:
@@ -137,8 +145,10 @@ uv run mda deploy
 
 You'll need a LangSmith organization with MDA access, an API key with deployment permissions,
 and a model key. Deployment syncs the instructions and skills, provisions the sandbox, and
-configures Slack. Authorize your workspace when prompted. The sandbox snapshot is reused until
-its recipe changes. After deployment, open the printed LangSmith URL to inspect your agent.
+configures Slack. The first deploy asks which Slack app to use; authorize your workspace when
+prompted. The sandbox snapshot is reused until its recipe changes. After deployment, open the
+printed LangSmith URL to inspect your agent. New deployments are serverless by default; see
+[Operations](OPERATIONS.md#deploying-with-managed-deep-agents) before enabling live writes.
 
 To **self-host**, install Docker, configure your model and accounts, then generate API credentials
 and start the services:
@@ -163,6 +173,7 @@ on your providers. These MDA commands cover day-to-day work:
 | `uv run mda deploy --name paid-media-agent-test` | Deploy a separate copy to test changes |
 | `uv run mda deploy` | Ship your changes |
 | `uv run mda logs` | Tail the deployed agent's logs |
+| `uv run mda channels setup` | Check or finish the Slack setup without deploying |
 | `uv run mda build` | Compile what would ship into `.mda/build/` without deploying |
 
 ## Build on it

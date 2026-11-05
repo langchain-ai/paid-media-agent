@@ -32,6 +32,9 @@ conversion, audience, or another provider resource.
    live path; say so plainly.
 9. If the receipt is `unknown`, explain that no blind retry is safe, check state with a read tool, and
    offer a new proposal if needed.
+10. After a `verified` change, offer a check-in when `schedule_check_in` is available: a day or two
+    out for budget and bid changes, with a note naming the alias, the change, and the window to
+    compare. A check-in only reads and reports; another change needs a new proposal.
 
 If execution returns `proposal_changed`, reload it with `get_proposal`. Do not resubmit a proposal
 that is executing or verifying. If its worker stopped, check the provider through read-only tools

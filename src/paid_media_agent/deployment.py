@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from datetime import time
 from pathlib import Path
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator
@@ -33,8 +34,9 @@ class DeploymentSettings(BaseSettings):
         pattern=r"^$|^#[0-9a-fA-F]{6}$",
         description="Optional Slack icon background, #RRGGBB",
     )
-    slack_trigger_on_all_messages: bool = Field(
-        default=False, description="Respond to every channel message"
+    slack_trigger_mode: Literal["mention", "thread", "all"] = Field(
+        default="thread",
+        description="Which channel messages start runs: mention, thread (one mention, then replies), or all",
     )
     slack_allow_bot_triggers: bool = Field(
         default=False, description="Allow other Slack bots to start runs"

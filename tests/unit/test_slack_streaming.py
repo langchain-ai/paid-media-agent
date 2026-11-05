@@ -41,13 +41,13 @@ async def test_native_stream_preserves_text_and_generic_tool_progress() -> None:
         {
             "type": "task_update",
             "id": "call-1",
-            "title": "custom warehouse tool",
+            "title": "Custom warehouse tool",
             "status": "in_progress",
         },
         {
             "type": "task_update",
             "id": "call-1",
-            "title": "custom warehouse tool",
+            "title": "Custom warehouse tool",
             "status": "complete",
         },
     ]
@@ -59,6 +59,43 @@ async def test_native_stream_preserves_text_and_generic_tool_progress() -> None:
         markdown_text="", blocks=None, chunks=None, session_status="active"
     )
     client.chat_postMessage.assert_not_called()
+
+
+async def test_steps_read_as_analyst_work_and_a_footer_posts_once() -> None:
+    stream = SimpleNamespace(append=AsyncMock(), stop=AsyncMock())
+    client = SimpleNamespace(
+        agents_sessions_setStatus=AsyncMock(),
+        chat_stream=lambda **_kwargs: stream,
+        chat_postMessage=AsyncMock(),
+    )
+    delivery = SlackDelivery(client, channel="C1", thread_ts="1", team="T1", user="U1")
+    await delivery.event(RunEvent("start"))
+    read = "google_ads__get_campaign_performance"
+    await delivery.event(RunEvent("tool", id="c1", name=read, args={"account_alias": "acme"}))
+    await delivery.event(RunEvent("tool", id="c1", name=read, status="complete"))
+    skill = {"file_path": "/skills/paid-media-wiki/benchmarks.md"}
+    await delivery.event(RunEvent("tool", id="c2", name="read_file", args=skill))
+    await delivery.event(RunEvent("tool", id="c2", name="read_file", status="complete"))
+    await delivery.event(RunEvent("text", text="CPA rose 12%.", id="m1"))
+    footer = "_<1 min · ~$0.02_"
+    text = f"CPA rose 12%.\n\n{footer}"
+    outcome = RunOutcome("thread", text, False, None, None)
+    await delivery.finish(SlackReply("C1", "1", render_answer(text), outcome))
+    titles = [
+        call.kwargs["chunks"][0].to_dict()["title"]
+        for call in stream.append.await_args_list
+        if "chunks" in call.kwargs
+    ]
+    assert titles == [
+        "Reading Google Ads campaign performance",
+        "Read Google Ads campaign performance",
+        "Reading the wiki on benchmarks",
+        "Read the wiki on benchmarks",
+    ]
+    assert not any("acme" in title for title in titles), "a phrase never carries arguments"
+    stream.stop.assert_awaited_once_with(
+        markdown_text=f"\n\n{footer}", blocks=None, chunks=None, session_status="active"
+    )
 
 
 async def test_failed_run_closes_stream_and_clears_processing_status() -> None:
@@ -114,7 +151,7 @@ async def test_approval_suspends_native_session_and_marks_tool_pending() -> None
         {
             "type": "task_update",
             "id": "action-1",
-            "title": "execute change",
+            "title": "Waiting for approval",
             "status": "pending",
         }
     ]
