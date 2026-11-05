@@ -29,8 +29,8 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         name="PAID_MEDIA_MODEL",
         group="model",
         secret=False,
-        description="provider:model, e.g. anthropic:claude-fable-5-1",
-        example="anthropic:claude-fable-5-1",
+        description="provider:model, e.g. anthropic:claude-opus-5-5",
+        example="anthropic:claude-opus-5-5",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_BASE_URL",
@@ -292,6 +292,13 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         group="model",
         secret=True,
         description="Second LangSmith key for the gateway; point PAID_MEDIA_MODEL_API_KEY_ENV at it",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_MODEL_EFFORT",
+        group="model",
+        secret=False,
+        description="Reasoning effort for Anthropic, OpenAI, or Gateway models: low, medium, high",
+        example="medium",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_TIMEOUT_SECONDS",

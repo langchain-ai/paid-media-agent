@@ -76,6 +76,8 @@ WRITE_TOOLS: tuple[str, ...] = (
     GET_PROPOSAL_TOOL,
 )
 MODEL_RETRY_ATTEMPTS = 2
+#: Providers whose LangChain chat model takes `reasoning_effort` (the gateway is ChatOpenAI).
+EFFORT_PROVIDERS = frozenset({"anthropic", "openai", "langsmith"})
 
 
 @dataclass(frozen=True)
@@ -164,12 +166,14 @@ def resolve_model(
     *,
     api_key_env: str | None = None,
     timeout_seconds: int = 120,
+    effort: str | None = None,
 ) -> BaseChatModel:
     """Initialize the configured provider model. No implicit gateway: `langsmith:` specs opt in.
 
     `api_key_env` names the environment variable holding the key when the provider does not read
     its default one (for example an OpenAI-compatible endpoint with its own key). Every request
-    gets a timeout and two SDK retries; the retry middleware handles what remains.
+    gets a timeout and two SDK retries; the retry middleware handles what remains. `effort` is
+    the reasoning effort, for providers that take one (`EFFORT_PROVIDERS`).
     """
     if override is not None:
         return override
@@ -182,6 +186,12 @@ def resolve_model(
         kwargs["base_url"] = str(config.base_url)
     if api_key_env and os.environ.get(api_key_env):
         kwargs["api_key"] = os.environ[api_key_env]
+    if effort is not None:
+        if config.provider not in EFFORT_PROVIDERS:
+            raise ValueError(
+                f"PAID_MEDIA_MODEL_EFFORT is not supported for {config.provider}; unset it"
+            )
+        kwargs["reasoning_effort"] = effort
     resolved: BaseChatModel = init_chat_model(config.spec, **kwargs)
     return resolved
 
@@ -211,6 +221,7 @@ def build_agent_components(
         model,
         api_key_env=settings.paid_media_model_api_key_env,
         timeout_seconds=settings.paid_media_model_timeout_seconds,
+        effort=settings.paid_media_model_effort,
     )
     services = _build_services(settings, runtime)
 

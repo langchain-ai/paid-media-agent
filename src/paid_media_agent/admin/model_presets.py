@@ -11,7 +11,7 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
     {
         "id": "langsmith",
         "label": "LangSmith Gateway",
-        "model": "langsmith:anthropic/claude-fable-5-1",
+        "model": "langsmith:anthropic/claude-opus-5-5",
         "key": "LANGSMITH_API_KEY",
         "url": "https://smith.langchain.com/settings",
         "note": "One key, every provider, traced",
@@ -23,7 +23,7 @@ MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
         "id": "anthropic",
         "label": "Anthropic",
         "logo": "anthropic",
-        "model": "anthropic:claude-fable-5-1",
+        "model": "anthropic:claude-opus-5-5",
         "key": "ANTHROPIC_API_KEY",
         "package": "",
         "extra": "",

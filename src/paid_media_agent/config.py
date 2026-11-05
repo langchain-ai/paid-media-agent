@@ -19,7 +19,7 @@ RuntimeName = Literal["local", "mda", "self_hosted"]
 """Which path the setup console guides you through. Managed Deep Agents is the recommended one."""
 SlackTransport = Literal["socket_mode", "http"]
 
-DEFAULT_MODEL_SPEC = "anthropic:claude-fable-5-1"
+DEFAULT_MODEL_SPEC = "anthropic:claude-opus-5-5"
 TEMPLATE = "langchain-ai/paid-media-agent"
 
 
@@ -128,6 +128,9 @@ class Settings(BaseSettings):
     paid_media_tool_selector_model: str | None = None
     paid_media_model_api_key_env: str | None = None
     """Env var holding the model API key when the provider does not read its default one."""
+    paid_media_model_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    """Reasoning effort for Anthropic, OpenAI, and LangSmith Gateway models; unset is the
+    provider's default. Passed as LangChain's `reasoning_effort`."""
     paid_media_model_timeout_seconds: int = Field(default=120, ge=10)
     """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_max_model_calls: int = Field(default=40, ge=5)
@@ -195,6 +198,7 @@ class Settings(BaseSettings):
         "paid_media_model_base_url",
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
+        "paid_media_model_effort",
         "paid_media_live_write_catalog_revision",
         mode="before",
     )

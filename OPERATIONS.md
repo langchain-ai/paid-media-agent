@@ -218,6 +218,10 @@ Do not infer a connection from a saved key. Check the catalog and one real read 
 The LangSmith Gateway uses `langsmith:provider/model`. Other providers have optional extras:
 `google`, `groq`, `xai`, `mistral`, and `deepseek`.
 
+`PAID_MEDIA_MODEL_EFFORT` (`low`, `medium`, `high`, `xhigh`, `max`) sets reasoning effort for
+Anthropic, OpenAI, and LangSmith Gateway models; unset uses the provider's default. Other providers
+refuse it at startup.
+
 For an OpenAI-compatible endpoint, set `PAID_MEDIA_MODEL_BASE_URL` and
 `PAID_MEDIA_MODEL_API_KEY_ENV` to the name of its key environment variable. Native tool search is
 used only for verified models and endpoints; other models use the portable tool selector.

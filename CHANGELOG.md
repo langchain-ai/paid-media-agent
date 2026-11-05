@@ -44,9 +44,15 @@ Live provider writes remain disabled by default and require the documented relea
 - Require Python 3.12 or later. `managed-deepagents` 0.10.0 and 0.10.1 fail to import on 3.11
   (pydantic rejects a `typing.TypedDict` there), and MDA builds the deployment on your local
   interpreter, so a 3.11 checkout could not deploy. CI now tests 3.12 and 3.13.
-- The default model is `anthropic:claude-fable-5-1`, and the console's provider cards start on the
-  newest models: Claude Fable 5.1, GPT-6 Astra, and Gemini 4 Argon. The capability registry adds
-  them, with OpenAI's GPT-6 family on native tool search.
+- The default model is `anthropic:claude-opus-5-5`, and the console's provider cards start on
+  current models: Claude Opus 5.5 (also through the LangSmith Gateway), GPT-6 Astra, and Gemini 4
+  Argon. The capability registry and price table add the Claude 5.5, Fable 5.1, GPT-6, and Gemini
+  4 models, with OpenAI's GPT-6 family on native tool search.
+- `PAID_MEDIA_MODEL_EFFORT` sets reasoning effort for Anthropic, OpenAI, and LangSmith Gateway
+  models.
+- The LangSmith Gateway's tool selector offers its selection with `tool_choice="auto"` instead of
+  forcing it. Models that always think, such as Claude Opus 5.5, refused the forced call, so every
+  Gateway run on them failed.
 - `PAID_MEDIA_SLACK_TRIGGER_MODE` (`thread` by default: one mention, then the thread's replies;
   or `mention`, `all`) replaces `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES`, which MDA 0.10
   deprecated. Set `PAID_MEDIA_SLACK_TRIGGER_MODE=all` if you had the old key set to `true`.

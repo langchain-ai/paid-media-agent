@@ -1074,7 +1074,7 @@
         ? el("select", { class: "input schedule-select", name: key.name }, [el("button", { type: "button" }, [el("selectedcontent")]), ...[["socket_mode", "Socket Mode"], ["http", "HTTP"]].map(([value, text]) => el("option", { value, text, selected: key.value === value ? true : null }))])
         : el("input", { class: "input", name: key.name, type: key.secret ? "password" : "text", placeholder: key.is_set && key.secret ? "Saved. Leave blank to keep." : key.example || "", value: key.secret ? "" : key.value, autocomplete: "off", spellcheck: "false" });
       input.id = `f-${key.name}`; input.dataset.initial = key.secret ? "" : key.value;
-      const help = key.name === "PAID_MEDIA_MODEL" ? "Use provider:model, such as anthropic:claude-fable-5-1."
+      const help = key.name === "PAID_MEDIA_MODEL" ? "Use provider:model, such as anthropic:claude-opus-5-5."
         : key.name === "PAID_MEDIA_TOOL_SELECTOR_MODEL" ? "Optional smaller model that chooses the tools for each request."
         : key.name === "PAID_MEDIA_MODEL_BASE_URL" ? "Optional endpoint for a compatible model provider." : slackTokenHelp(key.name);
       const field = formField(input.id, CONFIG_LABELS[key.name] || key.description, input, help);

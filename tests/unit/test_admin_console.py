@@ -498,7 +498,7 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
     )
     assert presets["anthropic"]["recommended"] is False and presets["custom"]["key"] == ""
     assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
-    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-fable-5-1"
+    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-opus-5-5"
     assert all("models" not in preset for preset in presets.values()), (
         "Availability comes from provider APIs, not the capability registry."
     )

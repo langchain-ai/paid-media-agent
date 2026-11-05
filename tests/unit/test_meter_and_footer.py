@@ -200,10 +200,31 @@ def test_default_and_preset_models_are_priced_and_registered() -> None:
     from paid_media_agent.config import DEFAULT_MODEL_SPEC, ModelConfig
     from paid_media_agent.middleware.tool_selection import CAPABILITY_REGISTRY, capabilities_for
 
-    assert DEFAULT_MODEL_SPEC == "anthropic:claude-fable-5-1"
+    assert DEFAULT_MODEL_SPEC == "anthropic:claude-opus-5-5"
     assert capabilities_for(ModelConfig.parse(DEFAULT_MODEL_SPEC)).native_tool_search
     for preset in MODEL_PRESETS:
         if preset["id"] in ("anthropic", "openai", "google"):
             spec = str(preset["model"])
             assert spec in CAPABILITY_REGISTRY, spec
             assert price_for(spec) is not None, spec
+
+
+def test_effort_reaches_the_chat_model_where_the_provider_takes_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paid_media_agent.assembly import resolve_model
+    from paid_media_agent.config import ModelConfig
+
+    monkeypatch.setenv("PAID_MEDIA_TEST_GATEWAY_KEY", "lsv2-test-not-a-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-not-a-key")
+
+    gateway = resolve_model(
+        ModelConfig.parse("langsmith:anthropic/claude-opus-5-5"),
+        api_key_env="PAID_MEDIA_TEST_GATEWAY_KEY",
+        effort="medium",
+    )
+    assert getattr(gateway, "reasoning_effort", None) == "medium"
+    anthropic = resolve_model(ModelConfig.parse("anthropic:claude-opus-5-5"), effort="medium")
+    assert getattr(anthropic, "reasoning_effort", None) == "medium"
+    with pytest.raises(ValueError, match="not supported"):
+        resolve_model(ModelConfig.parse("groq:llama-3.3-70b-versatile"), effort="medium")
