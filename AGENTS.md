@@ -30,6 +30,22 @@ of the public repository.
 - `src/paid_media_agent/admin/`: optional local connection and deployment console over CLI actions.
 - `tests/`: unit tests, real-graph contracts, offline behavior checks, and opt-in integration tests.
 
+## What people ask you to do here
+
+Most people open this repository to deploy the agent to their team's Slack, connect their ad
+accounts, or make it theirs. Each job has a skill in `.agents/skills/`; open the matching
+`SKILL.md` and follow it.
+
+| The person wants to… | Skill |
+| --- | --- |
+| deploy it to Slack, set it up, connect a model or ad accounts | [paid-media-onboarding](.agents/skills/paid-media-onboarding/SKILL.md), which follows [docs/deploy-mda.md](docs/deploy-mda.md) |
+| add their goals, conversions, and campaign conventions | [paid-media-org-onboarding](.agents/skills/paid-media-org-onboarding/SKILL.md) |
+| make reports match their brand | [paid-media-design](.agents/skills/paid-media-design/SKILL.md) |
+
+Never ask for a key in chat: the person runs `uv run paid-media-agent config set <KEY>` in their
+own terminal, which asks without echoing. Ask before deploying, connecting accounts, or spending
+money, and hand the first deploy to the person's terminal.
+
 ## Onboarding
 
 Follow [.agents/skills/paid-media-onboarding/SKILL.md](.agents/skills/paid-media-onboarding/SKILL.md).

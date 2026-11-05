@@ -659,6 +659,78 @@ def accounts_discover(
     )
 
 
+_ALIAS_PREFIX = {
+    "google_ads": "google",
+    "meta_ads": "meta",
+    "reddit_ads": "reddit",
+    "tiktok_ads": "tiktok",
+    "pinterest_ads": "pinterest",
+    "snap_ads": "snap",
+    "google_analytics": "ga4",
+    "linkedin_ads": "linkedin",
+    "x_ads": "x",
+    "openai_ads": "openai",
+}
+
+
+def _alias_for(row: Mapping[str, str], taken: set[str]) -> str:
+    """`google-acme-search`: the platform, then the account's name, unique and alias-shaped."""
+    import re
+
+    words = re.sub(r"[^a-z0-9]+", "-", str(row.get("name") or "").lower()).strip("-")
+    base = f"{_ALIAS_PREFIX.get(row['platform'], row['platform'])}-{words or 'account'}"[:56]
+    base = base.rstrip("-")
+    alias, n = base, 2
+    while alias in taken:
+        alias, n = f"{base}-{n}", n + 1
+    taken.add(alias)
+    return alias
+
+
+def accounts_add_discovered(root: Path, discovered: ActionResult) -> ActionResult:
+    """Map every live account `accounts discover` found and no alias has yet.
+
+    Fixture rows are never mapped (sample aliases must not join live reads), nor rows whose
+    currency or timezone the platform did not report: those are listed to add by hand.
+    """
+    if discovered.detail.get("source") != "pipeboard":
+        return _result(
+            "accounts_add", "warn", "connect Pipeboard or a direct platform first; nothing mapped"
+        )
+    settings = load_settings(root)
+    taken = set(read_accounts(active_accounts_path(settings, root)).aliases())
+    added: list[str] = []
+    skipped: list[str] = []
+    for row in discovered.detail.get("accounts") or []:
+        if not isinstance(row, dict) or row.get("mapped_alias"):
+            continue
+        if not row.get("currency") or not row.get("timezone"):
+            skipped.append(f"{row.get('platform')} {row.get('name') or 'account'}")
+            continue
+        alias = _alias_for(row, taken)
+        result = accounts_add(
+            root,
+            alias=alias,
+            platform=str(row["platform"]),
+            provider_account_id=str(row["provider_account_id"]),
+            currency=str(row["currency"]),
+            timezone=str(row["timezone"]),
+        )
+        (added if result.ok else skipped).append(
+            alias if result.ok else alias + ": " + result.summary
+        )
+    summary = f"mapped {len(added)} account(s)" + (
+        f"; {len(skipped)} need `accounts add` by hand" if skipped else ""
+    )
+    return _result(
+        "accounts_add",
+        "ok" if added and not skipped else "warn",
+        summary,
+        {"added": list(added), "skipped": list(skipped)},
+        command="paid-media-agent accounts discover --add",
+    )
+
+
 def accounts_list(root: Path) -> ActionResult:
     settings = load_settings(root)
     path = active_accounts_path(settings, root)

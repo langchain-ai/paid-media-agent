@@ -22,8 +22,8 @@ description: Install and configure Paid Media Agent, connect ad platforms, choos
    shipped defaults when no company style is supplied.
 5. Explain the deployment options in `OPERATIONS.md`. MDA manages the runtime, sandbox, and Slack;
    self-hosting uses Docker, Postgres, and an optional Slack app. For Slack on MDA, follow
-   "Deploy to Slack" in `OPERATIONS.md` step by step:
-   - Pipeboard: sign-up and token, then `test pipeboard`, `accounts discover`, `accounts add`.
+   [Deploy with Managed Deep Agents](../../../docs/deploy-mda.md) step by step:
+   - Pipeboard: sign-up and token, then `test pipeboard` and `accounts discover --add`.
    - Run `uv run paid-media-agent mda check` until it reports no blockers, and read its warnings
      to the person (demo data, missing `config/accounts.toml`, local files).
    - Ask before deploying; it is paid and outward-facing. Use

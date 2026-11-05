@@ -184,3 +184,52 @@ def test_a_browser_sign_in_deploy_is_handed_to_a_terminal(
     result = CliRunner().invoke(main, ["mda", "deploy", "--yes"])
     assert result.exit_code == 1 and "in your own terminal" in result.output
     assert not calls, "nothing is deployed"
+
+
+def test_discover_add_maps_every_new_live_account_once(
+    workspace: Path,  # noqa: F811
+) -> None:
+    row = {"platform": "google_ads", "currency": "USD", "timezone": "America/New_York"}
+    discovered = actions.ActionResult(
+        action="accounts_discover",
+        ok=True,
+        status="ok",
+        summary="",
+        detail={
+            "source": "pipeboard",
+            "accounts": [
+                {**row, "provider_account_id": "111", "name": "Acme Search", "mapped_alias": ""},
+                {**row, "provider_account_id": "222", "name": "Acme Search", "mapped_alias": ""},
+                {**row, "provider_account_id": "333", "name": "Old", "mapped_alias": "kept"},
+                {
+                    "platform": "meta_ads",
+                    "provider_account_id": "444",
+                    "name": "No currency",
+                    "currency": "",
+                    "timezone": "UTC",
+                    "mapped_alias": "",
+                },
+            ],
+        },
+    )
+    result = actions.accounts_add_discovered(workspace, discovered)
+    assert result.detail["added"] == ["google-acme-search", "google-acme-search-2"]
+    assert result.detail["skipped"] == ["meta_ads No currency"]
+    mapped = (workspace / "config/accounts.toml").read_text()
+    assert "google-acme-search" in mapped and "111" in mapped and "fixture" not in mapped
+    fixtures = actions.accounts_add_discovered(
+        workspace, discovered.model_copy(update={"detail": {"source": "fixture", "accounts": []}})
+    )
+    assert fixtures.status == "warn" and "nothing mapped" in fixtures.summary
+
+
+def test_the_readme_installer_parses_and_never_takes_a_key(project_root: Path) -> None:
+    import subprocess
+
+    script = project_root / "install.sh"
+    subprocess.run(["bash", "-n", str(script)], check=True)  # noqa: S603, S607
+    text = script.read_text()
+    assert "config set LANGSMITH_API_KEY ANTHROPIC_API_KEY PIPEBOARD_API_TOKEN" in text
+    assert "=sk-" not in text and "=lsv2" not in text, "keys are typed hidden, never inline"
+    readme = (project_root / "README.md").read_text()
+    assert "raw.githubusercontent.com/langchain-ai/paid-media-agent/main/install.sh" in readme
