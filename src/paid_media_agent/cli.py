@@ -228,9 +228,28 @@ def accounts() -> None:
 
 
 @accounts.command("discover")
+@click.option(
+    "--add",
+    "add_all",
+    is_flag=True,
+    help="Map every newly found account to an alias such as google-acme-search.",
+)
 @click.option("--json", "as_json", is_flag=True)
-def accounts_discover(as_json: bool) -> None:
-    result = actions.accounts_discover(project_root())
+def accounts_discover(add_all: bool, as_json: bool) -> None:
+    """List the ad accounts your connections reach, or map them all with --add."""
+    root = project_root()
+    result = actions.accounts_discover(root)
+    if add_all and result.status != "fail":
+        added = actions.accounts_add_discovered(root, result)
+        if as_json:
+            _emit(added, True)
+            return
+        click.echo(f"{added.status.upper()} {added.summary}")
+        for alias in added.detail.get("added") or []:
+            click.echo(f"  mapped   {alias}")
+        for item in added.detail.get("skipped") or []:
+            click.echo(f"  skipped  {item}")
+        return
     if as_json:
         _emit(result, True)
         return
@@ -240,7 +259,8 @@ def accounts_discover(as_json: bool) -> None:
             f"  {row['platform']:<12} {row['provider_account_id']:<24} {row['name']}  {row.get('currency', '')} {row.get('timezone', '')}"
         )
     click.echo(
-        "Map one with: paid-media-agent accounts add <alias> --platform <platform> --id <provider-id> --currency USD --timezone America/New_York"
+        "Map them all with: paid-media-agent accounts discover --add\n"
+        "Or one at a time: paid-media-agent accounts add <alias> --platform <platform> --id <provider-id> --currency USD --timezone America/New_York"
     )
 
 
