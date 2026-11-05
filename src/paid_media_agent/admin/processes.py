@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -68,6 +69,8 @@ class ProcessManager:
         self._started: dict[str, datetime] = {}
         self._log_offsets: dict[str, int] = {}
         self._continued: dict[str, int] = {}
+        #: The staged copy the latest deploy uploaded, removed when the next one starts.
+        self._staged: Path | None = None
 
     def command_for(self, name: str) -> tuple[str, ...]:
         try:
@@ -98,8 +101,11 @@ class ProcessManager:
             from paid_media_agent.deployment import stage_for_deploy
 
             # Local working data stays home (`deployment.LOCAL_DATA_DIRS`).
-            scratch = Path(tempfile.mkdtemp(prefix="paid-media-agent-deploy-"))
-            command = deploy_command(self._root, stage_for_deploy(self._root, scratch / "project"))
+            if self._staged is not None:
+                shutil.rmtree(self._staged, ignore_errors=True)
+            self._staged = Path(tempfile.mkdtemp(prefix="paid-media-agent-deploy-"))
+            staged = stage_for_deploy(self._root, self._staged / "project")
+            command = deploy_command(self._root, staged)
         existing = self._procs.get(name)
         if existing is not None and existing.poll() is None:
             raise ProcessError(f"{name} is already running")

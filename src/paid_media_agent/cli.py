@@ -451,7 +451,12 @@ def mda_dev() -> None:
     default=None,
     help="A new deployment's type. MDA creates serverless ones by default.",
 )
-def mda_deploy(yes: bool, deployment_type: str | None) -> None:
+@click.option(
+    "--name",
+    default=None,
+    help="Deployment name, for a separate copy such as paid-media-agent-test.",
+)
+def mda_deploy(yes: bool, deployment_type: str | None, name: str | None) -> None:
     """Run `mda deploy` after preflight and explicit confirmation.
 
     It deploys a copy of the project without local working data (`deployment.LOCAL_DATA_DIRS`),
@@ -476,6 +481,8 @@ def mda_deploy(yes: bool, deployment_type: str | None) -> None:
         command = deploy_command(root, staged)
         if deployment_type:
             command = (*command, "--deployment-type", deployment_type)
+        if name:
+            command = (*command, "--name", name)
         raise SystemExit(subprocess.call(command, cwd=staged))  # noqa: S603
 
 

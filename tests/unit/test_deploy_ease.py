@@ -133,3 +133,21 @@ def test_a_bare_key_is_typed_hidden_in_a_terminal_and_refused_elsewhere(
     assert read_env(workspace)["ANTHROPIC_API_KEY"] == "sk-ant-typed-not-echoed"
     assert "sk-ant-typed-not-echoed" not in typed.output
     os.environ.pop("ANTHROPIC_API_KEY", None)
+
+
+def test_the_deploy_wrapper_passes_a_name_for_a_separate_copy(
+    workspace: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr("paid_media_agent.cli.project_root", lambda: workspace)
+    monkeypatch.setattr(
+        actions,
+        "mda_check",
+        lambda _root: actions.ActionResult(action="mda_check", ok=True, status="ok", summary="ok"),
+    )
+    monkeypatch.setattr("subprocess.call", lambda command, **_: calls.append(tuple(command)) or 0)
+    result = CliRunner().invoke(main, ["mda", "deploy", "--yes", "--name", "paid-media-agent-test"])
+    assert result.exit_code == 0, result.output
+    assert calls[0][-2:] == ("--name", "paid-media-agent-test")
+    assert "deploy" in calls[0] and "--env-file" not in calls[0], "no .env in the fixture"

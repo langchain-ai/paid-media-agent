@@ -170,7 +170,7 @@ on your providers. These MDA commands cover day-to-day work:
 | Command | Purpose |
 | --- | --- |
 | `uv run mda dev` | Run the agent locally in LangSmith Studio to inspect model calls, tool results, and approvals |
-| `uv run mda deploy --name paid-media-agent-test` | Deploy a separate copy to test changes |
+| `uv run paid-media-agent mda deploy --yes --name paid-media-agent-test` | Deploy a separate copy to test changes |
 | `uv run paid-media-agent mda deploy --yes` | Ship your changes, after the preflight, without local working files |
 | `uv run mda logs` | Tail the deployed agent's logs |
 | `uv run mda channels setup` | Check or finish the Slack setup without deploying |
