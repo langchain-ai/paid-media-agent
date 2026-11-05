@@ -1,4 +1,4 @@
-"""Native Slack streaming for assistant text and generic tool progress."""
+"""Native Slack streaming for assistant text and tool progress in paid-media phrasing."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from paid_media_agent.middleware.redaction import sanitize_exception
+from paid_media_agent.surfaces.progress import phrase
 from paid_media_agent.surfaces.runner import RunEvent
 from paid_media_agent.surfaces.slack.service import SlackApplicationService, SlackReply
 
@@ -24,6 +25,7 @@ class SlackDelivery:
         self.last_text = ""
         self.started = False
         self.tasks: dict[str, str] = {}
+        self.args: dict[str, Any] = {}
 
     async def event(self, event: RunEvent) -> None:
         if event.kind == "start":
@@ -52,11 +54,14 @@ class SlackDelivery:
         elif event.kind == "tool":
             from slack_sdk.models.messages.chunk import TaskUpdateChunk
 
-            title = event.name.replace("_", " ")[:100]
             if event.status == "in_progress":
+                self.args[event.id] = event.args
+                title = phrase(event.name, event.args)[0][:100]
                 self.tasks[event.id] = title
             else:
+                # A finished step is phrased, in the past tense, from the arguments it began with.
                 self.tasks.pop(event.id, None)
+                title = phrase(event.name, self.args.pop(event.id, None))[1][:100]
             await self.stream.append(
                 chunks=[
                     TaskUpdateChunk(
@@ -82,8 +87,14 @@ class SlackDelivery:
             )
             return
         remaining = ""
-        if reply.message.text.strip() != self.last_text.strip():
-            remaining = ("\n\n" if self.last_text else "") + reply.message.text
+        text, streamed = reply.message.text, self.last_text
+        footer = reply.outcome.footer if reply.outcome is not None else ""
+        body = text.removesuffix(footer).strip() if footer else text.strip()
+        if body != streamed.strip():
+            remaining = ("\n\n" if streamed else "") + text
+        elif footer:
+            # The answer is already on screen; the footer is the only new line.
+            remaining = f"\n\n{footer}"
         interrupted = bool(reply.outcome and reply.outcome.interrupted)
         await self.stream.stop(
             markdown_text=remaining,

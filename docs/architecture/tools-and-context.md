@@ -63,6 +63,8 @@ filesystem root. Runtime skills, including curated company context, are read-onl
   LangChain does not validate dict-form schemas.
 - `middleware/authorization.py` hides `task`, `execute`, and `delete` from the model request and
   denies any call outside the assembled surface, so a hallucinated or stale name fails closed.
+  Each background helper gets its own instance with a narrower surface (filesystem reads and its
+  own tools); on MDA the lead's surface also admits the async-task tools.
 - `middleware/tool_selection.py` holds the exact-match capability registry. `PortableToolSelectorMiddleware`
   wraps `LLMToolSelectorMiddleware`; a selection that names an unbound tool degrades to core tools
   for that turn instead of aborting the run.

@@ -67,8 +67,18 @@ class RecordingProviderModel(BaseChatModel):
         messages: list[BaseMessage],  # noqa: ARG002 - fake returns scripted output
         stop: list[str] | None = None,  # noqa: ARG002 - provider signature
         run_manager: CallbackManagerForLLMRun | None = None,  # noqa: ARG002
-        **kwargs: Any,  # noqa: ARG002
+        **kwargs: Any,
     ) -> ChatResult:
+        offered = kwargs.get("tools") or []
+        if self.structured_selection and len(offered) == 1 and "function" in offered[0]:
+            # A selector offered the selection as one function (the gateway path): answer it.
+            call = {
+                "name": offered[0]["function"]["name"],
+                "args": {"tools": list(self.structured_selection)},
+                "id": "selection",
+            }
+            message = AIMessage(content="", tool_calls=[call])
+            return ChatResult(generations=[ChatGeneration(message=message)])
         index = min(self.invocations, len(self.responses) - 1)
         self.invocations += 1
         return ChatResult(generations=[ChatGeneration(message=self.responses[index])])

@@ -15,9 +15,11 @@ from langchain.agents.middleware.types import ModelRequest
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.output_parsers.openai_tools import JsonOutputKeyToolsParser
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import BaseModel, ConfigDict
 
 from paid_media_agent.config import ModelConfig
@@ -96,6 +98,8 @@ CAPABILITY_REGISTRY: dict[str, ModelCapabilities] = {
     "anthropic:claude-opus-5": _ANTHROPIC,
     "anthropic:claude-fable-5": _ANTHROPIC,
     "anthropic:claude-fable-5-1": _ANTHROPIC,
+    "anthropic:claude-opus-5-5": _ANTHROPIC,
+    "anthropic:claude-sonnet-5-5": _ANTHROPIC,
     "anthropic:claude-haiku-4-5-20251001": _ANTHROPIC,
     "anthropic:claude-sonnet-4-5-20250929": _ANTHROPIC,
     "anthropic:claude-opus-4-5-20251101": _ANTHROPIC,
@@ -104,11 +108,20 @@ CAPABILITY_REGISTRY: dict[str, ModelCapabilities] = {
     "openai:gpt-5.5": _OPENAI,
     "openai:gpt-5.5-mini": _OPENAI,
     "openai:gpt-5.6": _OPENAI,
+    "openai:gpt-6-astra": _OPENAI,
+    "openai:gpt-6-sol": _OPENAI,
+    "openai:gpt-6.1-sol": _OPENAI,
+    "openai:gpt-6.1-terra": _OPENAI,
     "google_genai:gemini-3-flash": _GOOGLE,
     "google_genai:gemini-3.6-flash": _GOOGLE,
+    "google_genai:gemini-3.8-flash": _GOOGLE,
+    "google_genai:gemini-4-argon": _GOOGLE,
     "scripted:demo": _SCRIPTED,
     "langsmith:anthropic/claude-sonnet-4-6": _GATEWAY,
     "langsmith:anthropic/claude-opus-5": _GATEWAY,
+    "langsmith:anthropic/claude-opus-5-5": _GATEWAY,
+    "langsmith:anthropic/claude-fable-5-1": _GATEWAY,
+    "langsmith:openai/gpt-6-astra": _GATEWAY,
     "langsmith:openai/gpt-5.5": _GATEWAY,
     "langsmith:openai/gpt-5.4-mini": _GATEWAY,
     "langsmith:moonshotai/kimi-k3": _GATEWAY,
@@ -219,12 +232,15 @@ class PortableToolSelectorMiddleware(LLMToolSelectorMiddleware):
 
 
 class LenientStructuredOutputModel(BaseChatModel):
-    """Delegate to a chat model but run structured output through function calling.
+    """Delegate to a chat model but answer structured output through an offered function.
 
     `LLMToolSelectorMiddleware` asks the selector for a JSON object whose schema has no
     `additionalProperties: false`. OpenAI-format strict schemas (which the LangSmith Gateway
-    applies to `langsmith:` models) reject that, so the selection call uses function calling,
-    which every gateway provider translates.
+    applies to `langsmith:` models) reject that, so the selection is a function the model is
+    offered with `tool_choice="auto"`, which every gateway provider translates. Forcing the call
+    is not an option: models that always think, such as Claude Opus 5.5, refuse a forced
+    `tool_choice`. A reply without the call parses as None, which the selector retries and then
+    treats as a parsing failure.
     """
 
     inner: BaseChatModel
@@ -242,14 +258,15 @@ class LenientStructuredOutputModel(BaseChatModel):
         return self.inner.bind_tools(tools, tool_choice=tool_choice, **kwargs)
 
     def with_structured_output(
-        self, schema: Any, **kwargs: Any
+        self,
+        schema: Any,
+        **kwargs: Any,  # noqa: ARG002 - method and strict do not apply to an offered function
     ) -> Runnable[LanguageModelInput, Any]:
-        kwargs.pop("method", None)
-        kwargs.pop("strict", None)
-        try:
-            return self.inner.with_structured_output(schema, method="function_calling", **kwargs)
-        except TypeError:
-            return self.inner.with_structured_output(schema, **kwargs)
+        function = convert_to_openai_tool(schema)
+        parser = JsonOutputKeyToolsParser(
+            key_name=function["function"]["name"], first_tool_only=True
+        )
+        return self.inner.bind_tools([function], tool_choice="auto") | parser
 
     def _generate(
         self,

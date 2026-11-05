@@ -14,6 +14,16 @@ architecture page when the supported behavior changes.
 - [MDA custom middleware](https://docs.langchain.com/langsmith/python/managed-deep-agents-middleware)
 - [MDA Slack channel](https://docs.langchain.com/langsmith/python/managed-deep-agents-channels-slack)
 - [MDA deployment](https://docs.langchain.com/langsmith/python/managed-deep-agents-deploy)
+- [MDA CLI](https://docs.langchain.com/langsmith/python/managed-deep-agents-cli)
+- [MDA identity](https://docs.langchain.com/langsmith/python/managed-deep-agents-identity)
+- [MDA memory](https://docs.langchain.com/langsmith/python/managed-deep-agents-memory)
+- [MDA schedules](https://docs.langchain.com/langsmith/python/managed-deep-agents-schedules)
+- [MDA sandboxes](https://docs.langchain.com/langsmith/python/managed-deep-agents-sandboxes)
+- [MDA skills](https://docs.langchain.com/langsmith/python/managed-deep-agents-skills)
+- [MDA subagents](https://docs.langchain.com/langsmith/python/managed-deep-agents-subagents)
+- [MDA runtime](https://docs.langchain.com/langsmith/python/managed-deep-agents-runtime)
+- [MDA changelog](https://docs.langchain.com/langsmith/python/managed-deep-agents-changelog)
+- [Deep Agents async subagents](https://docs.langchain.com/oss/python/deepagents/async-subagents)
 
 Check the deployment and Slack documentation for current availability, regions, and channel limits.
 Installed SDK behavior and the project preflight determine whether this checkout can deploy.

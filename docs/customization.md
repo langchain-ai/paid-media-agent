@@ -47,7 +47,8 @@ it when a topic needs detail. The Markdown is the source of truth; there is no p
 interview service, or generated copy to maintain.
 
 Original briefs and exports belong in `workspace/sources/`. Keep them unchanged and put only
-relevant, reviewed facts in the context bundle. This follows OpenWiki's separation of source
+relevant, reviewed facts in the context bundle. They stay on your machine:
+`uv run paid-media-agent mda deploy` leaves `workspace/sources/` out of the upload. This follows OpenWiki's separation of source
 material and linked, synthesized knowledge without requiring OpenWiki to run the agent.
 
 Company context and source files are Git-ignored. The curated context is shared with your deployed
@@ -67,16 +68,19 @@ They are for the coding agent and are not runtime skills.
 Both deployment paths read the runtime bundle at `/skills/`:
 
 - **MDA:** the root `skills` link points to `workspace/skills`. MDA syncs that folder into its
-  managed context. Deploy local changes with `uv run mda deploy .`. MDA's Context Hub can also
+  managed context. Deploy local changes with `uv run paid-media-agent mda deploy --yes`. MDA's Context Hub can also
   manage deployed context; changes there do not update your checkout automatically.
 - **Self-hosted Docker:** the image includes the runtime skills. Docker Compose mounts
   `workspace/skills` read-only, so local context is available without a separate copy. Start a new
   conversation after changing skill metadata. Rebuild the image when deploying without the mount.
 
-Raw sources and local coding-agent skills are not part of the sandbox skill bundle. MDA does
-copy ordinary project files, including Git-ignored `workspace/sources/`, into its deployment
-archive. Keep sensitive originals outside the project directory before deploying. Git ignore
-rules prevent commits; they do not control MDA uploads.
+Raw sources and local coding-agent skills are not part of the sandbox skill bundle. A plain
+`uv run mda deploy` uploads every ordinary project file, whatever `.gitignore` says, including
+`workspace/sources/`, local analysis artifacts, and rendered reports.
+`uv run paid-media-agent mda deploy` deploys a copy without those folders
+(`workspace/analysis`, `in`, `logs`, `out`, `sessions`, and `sources`), and
+`uv run paid-media-agent mda check` lists what a plain deploy would upload. The company context
+in `workspace/skills/company-context/` is deployed on purpose.
 
 ## Memory and reports
 
@@ -115,14 +119,21 @@ Durable learned memory is off by default. To enable MDA's native memory, add `me
 repository root and redeploy:
 
 ```python
-from managed_deepagents import define_memory
+from managed_deepagents import MemoryLayer, define_memory
 
-memory = define_memory(scope="agent")
+memory = define_memory(agent=MemoryLayer())
 ```
 
-This memory is shared by every caller of the deployment, and every caller can influence what the
-agent saves. Use it for shared procedures, never private per-person facts or credentials. Keep it
-off when callers should not influence one another. Tool permissions and approvals remain host-owned.
+This layer, mounted at `/memories/agent/`, is shared by every caller of the deployment, and every
+caller can influence what the agent saves. Use it for shared procedures, never private per-person
+facts or credentials. Keep it off when callers should not influence one another. Tool permissions
+and approvals remain host-owned.
+
+Adding `user=MemoryLayer()` gives each person a private layer at `/memories/user/`, which MDA mounts
+only for a verified person, by default in their Slack DM and in Studio. MDA can also select memory
+per run when `agent.py` exports a factory instead of a definition; this template keeps a static
+definition, so a person's private notes never load in a shared channel thread. Do not use the
+deprecated `allow` callback on a layer.
 
 Keep stable business definitions in the workspace. Self-hosted Postgres persists conversations;
 this template does not add a separate long-term memory service. Learned preferences should not
@@ -154,6 +165,24 @@ run has no Slack delivery destination. Remove a schedule file and redeploy to di
 Self-hosted installations can call the documented report command from their own scheduler.
 Scheduled analysis uses the same skills, accounts, and tools as an interactive run.
 
+### Background helpers, check-ins, and Slack progress
+
+These run on Managed Deep Agents and live in code, so a skill edit cannot widen them:
+
+| Change | Where |
+| --- | --- |
+| A helper's brief, description, or tools | `src/paid_media_agent/subagents.py` |
+| Add a helper | A spec in `subagents.py`, and a literal entry in `agent.py`'s `subagents` list: `{**_components.helper("name"), "name": "name", "async": True}`. `mda build` reads the literal `name` and `"async"` without running code |
+| When the agent hands work off or schedules a check-in | The "Long work and check-ins" section of `workspace/skills/paid-media-analysis/SKILL.md` |
+| Step phrasing in Slack | `src/paid_media_agent/surfaces/progress.py` |
+| Prices behind the footer's estimate | `src/paid_media_agent/middleware/prices.toml` |
+| Housekeeping time | `schedules/housekeeping.py` |
+
+Keep helpers read-only. A helper is a graph of its own that any deployment caller can run, and it
+does not inherit the lead's middleware, so give it reads and deterministic tools only and keep its
+guard stack. `general-purpose` is declared so MDA does not add its default background copy, which
+would carry every lead tool.
+
 ## Optional warehouses and dbt
 
 BigQuery, other warehouses, and dbt are optional extensions. This project does not include a
@@ -177,5 +206,7 @@ it in reports. Never imply a warehouse or CRM is connected until the configured 
 ## References
 
 - [MDA project structure](https://docs.langchain.com/langsmith/python/managed-deep-agents-project-structure)
+- [MDA memory](https://docs.langchain.com/langsmith/python/managed-deep-agents-memory)
+- [MDA changelog](https://docs.langchain.com/langsmith/python/managed-deep-agents-changelog)
 - [OpenWiki](https://github.com/langchain-ai/openwiki)
 - [Agent Skills specification](https://agentskills.io/specification)

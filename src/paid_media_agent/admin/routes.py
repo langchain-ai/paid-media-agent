@@ -96,7 +96,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             Step(
                 id="tooling",
                 title="Install dependencies",
-                description="Install the Python packages this project needs. Requires Python 3.11 or later and uv.",
+                description="Install the Python packages this project needs. Requires Python 3.12 or later and uv.",
                 status="done" if _get(detail, "tooling", "uv") else "todo",
                 cli="uv sync --all-extras --dev",
             ),
@@ -115,7 +115,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 title="Choose a model",
                 description="Choose a model and add its provider key. Use Setup for the guided model picker.",
                 status="done" if model_ready else "todo",
-                cli="uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-sonnet-4-6 ANTHROPIC_API_KEY=...",
+                cli="uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-opus-5-5 ANTHROPIC_API_KEY=...",
                 action=StepAction(
                     kind="form",
                     label="Save model settings",
@@ -407,7 +407,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 title="Deploy your agent",
                 description="Review accounts, report schedules, and Slack settings in Setup, then deploy. The first deployment connects Slack.",
                 status="blocked" if not mda_ready else "todo",
-                cli="uv run mda deploy .",
+                cli="uv run mda deploy",
                 action=StepAction(
                     kind="process", label="Deploy", action="mda-deploy", payload={"confirm": True}
                 ),

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Any, Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from langgraph.types import Command
 from paid_media_agent.domain.common import JsonValue
 from paid_media_agent.domain.presentation import ProposalView, ReceiptView
 from paid_media_agent.domain.proposals import ProposalState
+from paid_media_agent.middleware.footer import FOOTER_KEY
 from paid_media_agent.persistence.interfaces import ReceiptRepository, ThreadOwnershipStore
 from paid_media_agent.tools.artifacts import ArtifactError, ArtifactStore
 from paid_media_agent.tools.reports import RENDER_REPORT_TOOL
@@ -29,6 +30,8 @@ class RunOutcome:
     interrupted: bool
     proposal: ProposalView | None
     receipt: ReceiptView | None
+    footer: str = ""
+    """The run footer at the end of `text`, when the reply has one (`middleware/footer.py`)."""
 
 
 @dataclass(frozen=True)
@@ -38,6 +41,8 @@ class RunEvent:
     id: str = ""
     name: str = ""
     status: Literal["in_progress", "complete", "error"] = "in_progress"
+    args: Mapping[str, Any] = field(default_factory=dict)
+    """A starting tool call's arguments, for its step phrase. Never shown as text."""
 
 
 EventHandler = Callable[[RunEvent], Awaitable[None]]
@@ -68,7 +73,10 @@ def _last_assistant_text(messages: list[Any]) -> str:
 
 
 class AgentRunner:
-    """Runs the graph for a caller-owned thread and exposes proposal actions."""
+    """Runs the graph for a caller-owned thread and exposes proposal actions.
+
+    `surface` names where answers go (`api` or `slack`); the run footer reads it from the config.
+    """
 
     def __init__(
         self,
@@ -77,16 +85,24 @@ class AgentRunner:
         service: ProposalService,
         receipts: ReceiptRepository,
         threads: ThreadOwnershipStore,
+        surface: Literal["api", "slack"] = "api",
     ) -> None:
         self._graph = graph
         self._service = service
         self._receipts = receipts
         self._threads = threads
+        self._surface = surface
 
     def _config(self, thread_id: str, caller_ref: str) -> RunnableConfig:
         if not self._threads.claim(thread_id, caller_ref):
             raise ThreadAccessDenied("thread belongs to another caller")
-        return RunnableConfig(configurable={"thread_id": thread_id, "caller_ref": caller_ref})
+        return RunnableConfig(
+            configurable={
+                "thread_id": thread_id,
+                "caller_ref": caller_ref,
+                "surface": self._surface,
+            }
+        )
 
     def latest_proposal(self, thread_id: str) -> ProposalView | None:
         records = self._service.proposals.list_for_thread(thread_id)
@@ -128,9 +144,11 @@ class AgentRunner:
         snapshot = await self._graph.aget_state(config)
         interrupted = bool(snapshot.interrupts)
         messages = state.get("messages", [])
-        text = ""
+        text = footer = ""
         if messages:
             text = _content_text(messages[-1].content)
+            found = getattr(messages[-1], "additional_kwargs", {}).get(FOOTER_KEY)
+            footer = found if isinstance(found, str) and text.endswith(found) else ""
         proposal = self.latest_proposal(thread_id)
         receipt = None
         if proposal is not None:
@@ -145,6 +163,7 @@ class AgentRunner:
             interrupted=interrupted,
             proposal=proposal,
             receipt=receipt,
+            footer=footer,
         )
 
     async def _run(
@@ -189,7 +208,14 @@ class AgentRunner:
                                 call_id = call.get("id") or ""
                                 if call_id and call_id not in started:
                                     started.add(call_id)
-                                    await on_event(RunEvent("tool", id=call_id, name=call["name"]))
+                                    await on_event(
+                                        RunEvent(
+                                            "tool",
+                                            id=call_id,
+                                            name=call["name"],
+                                            args=call.get("args") or {},
+                                        )
+                                    )
                         elif (
                             isinstance(message, ToolMessage)
                             and message.tool_call_id not in completed

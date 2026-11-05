@@ -31,5 +31,5 @@ Keep credentials, provider account IDs, and access policy out of context. Config
 `.env`, `config/accounts.toml`, and the host's permission settings. Optional warehouses and dbt
 are described in the guide; do not claim a connection exists until a read-only check succeeds.
 
-Before MDA deployment, review the project files that will upload. Git-ignored raw source files
-can still enter the source archive; keep sensitive originals outside the deploy directory.
+Original sources stay local: `uv run paid-media-agent mda deploy` leaves `workspace/sources/` out
+of the upload, while a plain `mda deploy` would include it. The company context is deployed.

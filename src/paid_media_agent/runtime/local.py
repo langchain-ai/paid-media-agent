@@ -67,8 +67,11 @@ def compile_graph(
     checkpointer: BaseCheckpointSaver[Any] | None,
     name: str = "paid-media-agent",
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
-    """Compile the shared components with Deep Agents over the repository filesystem."""
-    return create_deep_agent(
+    """Compile the shared components with Deep Agents over the repository filesystem.
+
+    Root-run metadata is bound the way MDA binds `define_deep_agent(metadata=...)`.
+    """
+    graph = create_deep_agent(
         components.model,
         list(components.tools),
         system_prompt=components.system_prompt,
@@ -80,6 +83,9 @@ def compile_graph(
         checkpointer=checkpointer,
         name=name,
     )
+    if components.run_metadata:
+        return graph.with_config(metadata=dict(components.run_metadata))
+    return graph
 
 
 def build_local_runtime(

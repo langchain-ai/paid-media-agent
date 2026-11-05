@@ -41,7 +41,12 @@ from paid_media_agent.admin.model_presets import (
     model_preset_payloads,
 )
 from paid_media_agent.config import AccountBinding, ModelConfig, Settings
-from paid_media_agent.deployment import SLACK_ICON_FILENAME, DeploymentSettings, schedule_sources
+from paid_media_agent.deployment import (
+    SLACK_ICON_FILENAME,
+    DeploymentSettings,
+    local_data_files,
+    schedule_sources,
+)
 from paid_media_agent.doctor import Check, run_doctor, run_snapshot_checks
 from paid_media_agent.domain.common import (
     FIXTURE_PLATFORMS,
@@ -227,7 +232,14 @@ def status(root: Path) -> ActionResult:
         "pdf": next((c.status == "ok" for c in checks if c.name == "report_pdf"), False),
         "generated_at": datetime.now(UTC).isoformat(),
     }
-    summary = "all checks pass" if not failing else f"failing checks: {', '.join(failing)}"
+    warned = [c.name for c in checks if c.status == "warn"]
+    summary = (
+        f"failing checks: {', '.join(failing)}"
+        if failing
+        else f"ready, with {len(warned)} warning(s)"
+        if warned
+        else "all checks pass"
+    )
     return _result(
         "status",
         "fail" if failing else "ok",
@@ -259,6 +271,9 @@ def config_set(root: Path, updates: Mapping[str, str]) -> ActionResult:
             for name in DeploymentSettings.model_fields
             if f"PAID_MEDIA_{name.upper()}" in updates
         }
+        model = updates.get("PAID_MEDIA_MODEL", "").strip()
+        if model:
+            ModelConfig.parse(model)  # raises with the expected `provider:model` shape
         schedules: dict[Path, str] = {}
         if deployment_updates:
             apply_env_file(root)
@@ -916,14 +931,13 @@ def mda_check(root: Path) -> ActionResult:
         "provider_key_set": not model_error and _provider_key_set(settings, env),
         "import_smoke": _agent_import_smoke(root),
         "report_schedules": schedule_check,
-        "deploy_command": "uv run mda deploy .",
+        "deploy_command": "uv run paid-media-agent mda deploy --yes",
         "dev_command": "uv run mda dev",
     }
     blocking = [
         k
         for k in (
             "cli_installed",
-            "langsmith_key_set",
             "agent_entry",
             "sandbox_declared",
             "sandbox_recipe",
@@ -939,18 +953,101 @@ def mda_check(root: Path) -> ActionResult:
         blocking.append("import_smoke")
     if schedule_check != "ok":
         blocking.append("report_schedules")
-    summary = (
-        "project checks passed; deployment access is checked when deploying"
-        if not blocking
-        else f"blocked by {', '.join(blocking)}"
-    )
-    return _result(
-        "mda_check",
-        "ok" if not blocking else "warn",
-        summary,
-        items,
-        command="paid-media-agent mda check --json",
-    )
+    fixes = _blocking_fixes(blocking, settings, model, items)
+    warnings = _deploy_warnings(root, settings, env)
+    items["blocked_by"] = list(fixes)
+    items["warnings"] = list(warnings)
+    if blocking:
+        status: Status = "fail"
+        summary = "blocked: " + "; ".join(fixes)
+    elif warnings:
+        status = "warn"
+        summary = f"ready to deploy, with {len(warnings)} warning(s) to read first"
+    else:
+        status = "ok"
+        summary = "project checks passed; deployment access is checked when deploying"
+    return _result("mda_check", status, summary, items, command="paid-media-agent mda check --json")
+
+
+def _blocking_fixes(
+    blocking: list[str], settings: Settings, model: ModelConfig, items: Mapping[str, JsonValue]
+) -> list[str]:
+    """What to do about each blocker, naming the variable, never its value."""
+    key = model_key_env(settings) if model.provider else None
+    fixes = {
+        "cli_installed": "run `uv sync` to install managed-deepagents",
+        "agent_entry": "agent.py is missing",
+        "sandbox_declared": "sandbox/__init__.py is missing",
+        "sandbox_recipe": "sandbox/setup.sh is missing",
+        "model_package": f"install the {model.provider or 'model'} provider package "
+        f"(`uv sync --extra {model.provider}`)",
+        "provider_key_set": f"set {key or 'the model provider key'}",
+        "identity": "identity.py is missing; the Slack channel needs it",
+        "import_smoke": f"agent.py does not import: {items.get('import_smoke')}",
+        "report_schedules": str(items.get("report_schedules")),
+    }
+    if items.get("model") != model.spec:
+        fixes["model_package"] = f"fix PAID_MEDIA_MODEL: {items.get('model')}"
+    return [fixes[name] for name in blocking]
+
+
+def _deploy_warnings(root: Path, settings: Settings, env: Mapping[str, str]) -> list[str]:
+    """What would surprise someone after deploying, though nothing stops the deploy."""
+    warnings: list[str] = []
+    langsmith_key = env.get("LANGSMITH_API_KEY") or _os_env("LANGSMITH_API_KEY") or ""
+    if not langsmith_key:
+        warnings.append(
+            "LANGSMITH_API_KEY is not set, so deploy asks you to sign in with your browser: run "
+            "the deploy in your own terminal, or set a personal access token (lsv2_pt_...)."
+        )
+    elif langsmith_key.startswith("lsv2_sk_"):
+        warnings.append(
+            "LANGSMITH_API_KEY is a service key, which cannot set up the Slack channel. Use a "
+            "personal access token (lsv2_pt_...), or remove it and sign in with the browser."
+        )
+    direct = settings.direct_platforms()
+    if settings.paid_media_data_mode == "sample":
+        warnings.append(
+            "PAID_MEDIA_DATA_MODE=sample: the deployed agent answers from synthetic demo data."
+        )
+    elif settings.pipeboard_api_token is None and not direct:
+        warnings.append(
+            "No ad platform is connected, so the deployed agent answers from synthetic demo "
+            "data. Set PIPEBOARD_API_TOKEN (or the X or OpenAI Ads keys) first."
+        )
+    elif settings.pipeboard_api_token is None and settings.paid_media_data_mode == "auto":
+        names = ", ".join(p.value for p in direct)
+        warnings.append(
+            f"Only {names} is connected: answers mix its live data with synthetic demo data for "
+            "the other platforms. Set PIPEBOARD_API_TOKEN, or PAID_MEDIA_DATA_MODE=live."
+        )
+    if settings.paid_media_data_mode != "sample":
+        accounts = settings.paid_media_account_config_path
+        path = accounts if accounts.is_absolute() else root / accounts
+        if path.name == "accounts.example.toml" or not path.is_file():
+            warnings.append(
+                "config/accounts.toml is missing, so the example account aliases are used. Run "
+                "`paid-media-agent accounts discover`, then `accounts add`."
+            )
+    local = local_data_files(root)
+    if local:
+        total = sum(size for _, size in local)
+        shown = ", ".join(f"{name} ({_size(size)})" for name, size in local[:8])
+        more = f", and {len(local) - 8} more" if len(local) > 8 else ""
+        warnings.append(
+            f"{len(local)} local working file(s), {_size(total)}: {shown}{more}. "
+            "`paid-media-agent mda deploy` leaves them out; a plain `mda deploy` uploads them."
+        )
+    return warnings
+
+
+def _size(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB"):
+        if value < 1024:
+            return f"{value:.0f} {unit}"
+        value /= 1024
+    return f"{value:.1f} GB"
 
 
 def _provider_key_set(settings: Settings, env: Mapping[str, str]) -> bool:

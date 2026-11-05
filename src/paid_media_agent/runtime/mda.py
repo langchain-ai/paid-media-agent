@@ -77,6 +77,9 @@ def configured_profile(
 def build_mda_components(
     settings: Settings, *, project_root: Path, loop: Loop = run_coroutine
 ) -> AgentComponents:
-    """Components for `define_deep_agent`. Managed Deep Agents owns everything around them."""
+    """Components for `define_deep_agent`. Managed Deep Agents owns everything around them,
+    including the runtime schedules check-ins use and the Agent Server background helpers run on."""
     profile, loaded = configured_profile(settings, project_root=project_root, loop=loop)
-    return build_agent_components(settings=settings, runtime=profile, catalog=loaded.catalog)
+    return build_agent_components(
+        settings=settings, runtime=profile, catalog=loaded.catalog, managed=True
+    )

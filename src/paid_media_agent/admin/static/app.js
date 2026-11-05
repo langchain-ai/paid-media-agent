@@ -817,11 +817,10 @@
     const current = () => state.processes.find((p) => p.name === name) || {};
     const line = el("div", { class: "status-line", role: "status", "aria-live": "polite" });
     const action = el("button", { class: "btn btn-primary", type: "button" });
-    const resume = el("button", { class: "btn btn-primary", type: "button", text: "Continue deployment" });
     const links = el("div", { class: "actions" });
     const authorization = el("div", { class: "step-stack" }, [
-      el("p", { class: "note", text: "Authorize Slack, then continue to finish deployment." }),
-      el("div", { class: "process-auth-actions" }, [links, resume]),
+      el("p", { class: "note", text: "Finish in Slack. Deployment continues on its own once Slack is done, and waits up to an hour." }),
+      el("div", { class: "process-auth-actions" }, [links]),
     ]);
     const complete = el("div", { class: "form" }, [
       el("p", { class: "name", role: "status", text: "Deployment complete" }),
@@ -844,7 +843,6 @@
         action.classList.toggle("btn-outline", deployment && (p.running || displayState === "completed"));
         action.classList.toggle("btn-primary", !deployment || (!p.running && displayState !== "completed"));
       }
-      resume.disabled = pending;
       complete.hidden = !deployment || displayState !== "completed";
       failed.hidden = !deployment || p.state !== "failed";
       output.hidden = !!line.textContent || !(p.running || (p.state !== "stopped" && p.log_tail));
@@ -874,7 +872,7 @@
       const hadFocus = document.activeElement === button;
       pending = true;
       line.replaceChildren();
-      action.disabled = resume.disabled = true;
+      action.disabled = true;
       try {
         await busy(button, async () => { await task(); await loadStatus({ paint: false }); });
       } finally {
@@ -892,7 +890,6 @@
         await api(`/api/processes/${name}/start`, { method: "POST", body: { confirm: !!confirm } });
       }
     }));
-    resume.addEventListener("click", () => execute(resume, () => api(`/api/processes/${name}/continue`, { method: "POST" })));
     processViews.set(name, update);
     update();
     return wrap;
@@ -1074,7 +1071,7 @@
         ? el("select", { class: "input schedule-select", name: key.name }, [el("button", { type: "button" }, [el("selectedcontent")]), ...[["socket_mode", "Socket Mode"], ["http", "HTTP"]].map(([value, text]) => el("option", { value, text, selected: key.value === value ? true : null }))])
         : el("input", { class: "input", name: key.name, type: key.secret ? "password" : "text", placeholder: key.is_set && key.secret ? "Saved. Leave blank to keep." : key.example || "", value: key.secret ? "" : key.value, autocomplete: "off", spellcheck: "false" });
       input.id = `f-${key.name}`; input.dataset.initial = key.secret ? "" : key.value;
-      const help = key.name === "PAID_MEDIA_MODEL" ? "Use provider:model, such as anthropic:claude-sonnet-4-6."
+      const help = key.name === "PAID_MEDIA_MODEL" ? "Use provider:model, such as anthropic:claude-opus-5-5."
         : key.name === "PAID_MEDIA_TOOL_SELECTOR_MODEL" ? "Optional smaller model that chooses the tools for each request."
         : key.name === "PAID_MEDIA_MODEL_BASE_URL" ? "Optional endpoint for a compatible model provider." : slackTokenHelp(key.name);
       const field = formField(input.id, CONFIG_LABELS[key.name] || key.description, input, help);

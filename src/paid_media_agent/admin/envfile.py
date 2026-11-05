@@ -29,8 +29,8 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         name="PAID_MEDIA_MODEL",
         group="model",
         secret=False,
-        description="provider:model, e.g. anthropic:claude-sonnet-4-6",
-        example="anthropic:claude-sonnet-4-6",
+        description="provider:model, e.g. anthropic:claude-opus-5-5",
+        example="anthropic:claude-opus-5-5",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_BASE_URL",
@@ -72,6 +72,13 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         secret=False,
         description="Log level",
         example="INFO",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_TEMPLATE_TELEMETRY",
+        group="runtime",
+        secret=False,
+        description="Traces name the template and its version; false leaves it off",
+        example="true",
     ),
     EnvKeySpec(
         name="PIPEBOARD_API_TOKEN",
@@ -281,10 +288,23 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="LangSmith key for mda dev, mda deploy, sandbox snapshots, and the LLM Gateway",
     ),
     EnvKeySpec(
+        name="LANGSMITH_WORKSPACE_ID",
+        group="mda",
+        secret=False,
+        description="LangSmith workspace to deploy into, when your key reaches more than one",
+    ),
+    EnvKeySpec(
         name="LANGSMITH_GATEWAY_API_KEY",
         group="model",
         secret=True,
         description="Second LangSmith key for the gateway; point PAID_MEDIA_MODEL_API_KEY_ENV at it",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_MODEL_EFFORT",
+        group="model",
+        secret=False,
+        description="Reasoning effort for Anthropic, OpenAI, or Gateway models: low, medium, high",
+        example="medium",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_TIMEOUT_SECONDS",

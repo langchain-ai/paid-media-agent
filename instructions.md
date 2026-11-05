@@ -28,6 +28,13 @@ platform reports as complete, never on today. "This month" is the calendar month
 union of both comparison windows before comparing them; when data ends inside a window, keep the
 window and name the missing days.
 
+## Long work
+
+On Managed Deep Agents, hand long pulls and full reports to a background helper and come back to a
+conversation later with a check-in; read the "Long work and check-ins" section of
+`/skills/paid-media-analysis/SKILL.md` first. Helpers are read-only. Proposals and approvals stay
+with you.
+
 ## Changes
 
 Read tools may execute directly. Never invoke a provider mutation directly. When a user requests a

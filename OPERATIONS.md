@@ -2,7 +2,7 @@
 
 ## Setup
 
-Use Python 3.11+ and [uv](https://docs.astral.sh/uv/):
+Use Python 3.12+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
@@ -26,7 +26,8 @@ Add `--help` for options and `--json` where supported for machine-readable outpu
 | --- | --- |
 | `uv run paid-media-agent setup` | Optional browser setup for connections and deployment |
 | `uv run paid-media-agent config show` | Inspect masked configuration |
-| `uv run paid-media-agent config set KEY=VALUE` | Save local configuration |
+| `uv run paid-media-agent config set KEY` | Type a key's value without echoing it; Enter keeps the current one |
+| `uv run paid-media-agent config set KEY=VALUE` | Save local configuration that is not secret |
 | `uv run paid-media-agent config generate KEY` | Generate an API token or approval signing key |
 | `uv run paid-media-agent models --provider langsmith --json` | Read the provider's current model list |
 | `uv run paid-media-agent test model` | Send a short request to the configured model |
@@ -51,21 +52,72 @@ Requires a LangSmith organization with MDA access, a deployment API key, and a m
 MDA is available in US LangSmith Cloud. See the current
 [quickstart](https://docs.langchain.com/langsmith/python/managed-deep-agents-quickstart).
 
-```bash
-uv run paid-media-agent mda check
-uv run mda deploy .
-```
+### Deploy to Slack
 
-MDA builds the project, syncs instructions and runtime skills to Context Hub, provisions the
-sandbox, and configures the native Slack channel. If prompted, open the Slack authorization link,
-authorize your workspace, and return to the terminal. The console offers **Continue deployment**
-for the same handoff. After success, open the printed LangSmith deployment URL or the agent's Slack DM.
+1. **Model key.** Save it with `uv run paid-media-agent config set ANTHROPIC_API_KEY` (or the
+   key your `PAID_MEDIA_MODEL` needs). Naming a key without `=VALUE` asks for it in your terminal
+   without echoing it; never paste a key into a chat. The setup console works too.
+2. **LangSmith key.** `uv run paid-media-agent config set LANGSMITH_API_KEY`, with a personal
+   access token (`lsv2_pt_...`) from LangSmith's API Keys page. A service key (`lsv2_sk_...`)
+   cannot set up the Slack channel. Without a key, deploy asks you to sign in with your browser,
+   which needs your own terminal. Set `LANGSMITH_WORKSPACE_ID` when the key reaches more than one
+   workspace.
+3. **Ad accounts.** Sign up at [Pipeboard](https://pipeboard.co/pricing): the free plan covers
+   2 ad accounts and 30 tool runs a week, paid plans start at US$29.90 a month. Connect your ad
+   platforms there, then create a token under **Settings → API Tokens → Generate Token** and save
+   it with `config set PIPEBOARD_API_TOKEN`. In this order, run `uv run paid-media-agent test
+   pipeboard`, `accounts discover`, and `accounts add <alias> --platform <platform> --id <id>` for
+   each account the agent may read (with `--currency` and `--timezone` when not USD and UTC). X Ads and OpenAI Ads keys work the same way; see [Direct platforms](#direct-platforms).
+4. **Preflight.** `uv run paid-media-agent mda check` exits non-zero while anything blocks the
+   deploy and names the variable to set. Read its warnings: it says when the deployed agent would
+   answer from synthetic demo data (no platform connected), when only X or OpenAI Ads is connected
+   (live data mixed with demo data), when `config/accounts.toml` is missing, and which local files
+   a plain `mda deploy` would upload.
+5. **Deploy.** `uv run paid-media-agent mda deploy --yes` runs the preflight, then `mda deploy` on
+   a copy of the project without `workspace/analysis`, `out`, `in`, `logs`, and `sources`. A plain
+   `uv run mda deploy` uploads those folders too, since MDA does not read `.gitignore`. Add
+   `--deployment-type dedicated` before enabling live writes (see below). Expect several minutes:
+   the image build, and on a first deploy or a changed `sandbox/setup.sh`, the sandbox bake.
+6. **Answer its questions.** Deploy may ask, in order: for a LangSmith key or a browser sign-in;
+   on the first deploy, which Slack app to use (one LangSmith creates and manages in a workspace you
+   authorized, a new one from a manifest, or your own); and to authorize LangSmith in Slack or
+   install the app, by printing a link and waiting until Slack reports it done. A workspace admin
+   may have to approve the app. Deploy waits up to an hour for Slack; nothing needs typing back.
+   **Run the first deploy in your own terminal** unless LangSmith is already authorized in your
+   Slack workspace. Without a terminal, deploy can only use a LangSmith-managed app in a workspace
+   you authorized before; otherwise it stops before uploading and says to run it in a terminal
+   once. A coding agent should hand this step to you. `uv run mda channels setup` in a terminal
+   checks or finishes the Slack setup later, without deploying.
+7. **First question.** In Slack, find the app under **Apps** (it has the name in
+   `PAID_MEDIA_SLACK_NAME`) and send it a direct message, or `/invite` it to a channel and mention
+   it. Try: "How did spend and conversions change last week across my accounts?" If nothing comes
+   back, read `uv run mda logs --no-follow`, and the trace in the LangSmith deployment it printed.
+
+**What ships as deployment secrets.** `mda deploy` turns every set value in `.env` into a
+deployment secret. Leave the self-hosted values blank for an MDA deploy: `SLACK_BOT_TOKEN`,
+`SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `DATABASE_URL`, and `PAID_MEDIA_API_TOKENS`. Leave out
+keys for providers you do not use. `MDA_SLACK_BOT_TOKEN` and `MDA_SLACK_SIGNING_SECRET` (bring your
+own Slack app) are read by the CLI only and never uploaded.
+
+Requires `managed-deepagents` 0.10.1 or later (`uv sync` installs it). MDA builds the project,
+syncs instructions and runtime skills to Context Hub, provisions the sandbox, and configures the
+native Slack channel. The console offers **Continue deployment** for the Slack handoff. After
+success, open the printed LangSmith deployment URL or message the app in Slack.
+
+`mda deploy` creates a **serverless** deployment by default, which can scale to zero. Proposals,
+approvals, receipts, and analysis artifacts in the MDA profile are process-local (see
+[Writes](#writes)), so a scale-down between a proposal and its approval loses the proposal and the
+approval is refused. That fails closed, but the change has to be proposed again. Before enabling live
+writes, deploy with `uv run paid-media-agent mda deploy --yes --deployment-type dedicated`. Existing deployments keep
+their type. In 0.10, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, and `LANGSMITH_WORKSPACE_ID` come
+from your shell first and the project `.env` second; unset a stale shell value if deploy targets the
+wrong workspace.
 
 MDA's deployment status and a successful agent response establish readiness. Local preflight does
 not verify your cloud permissions. [Hosting is paid](https://www.langchain.com/pricing).
 `uv run mda delete` removes the deployment and its managed sandboxes and snapshots.
 
-For development, `uv run mda dev .` opens the managed runtime in LangSmith Studio. Inspect model
+For development, `uv run mda dev` opens the managed runtime in LangSmith Studio. Inspect model
 calls, tool results, and approval interrupts there.
 
 ### Identity and memory
@@ -75,8 +127,38 @@ agent. For end-user private conversations, configure MDA's
 [Supabase identity](https://docs.langchain.com/langsmith/python/managed-deep-agents-identity).
 Approval authority remains a separate host-owned configuration.
 
-Durable memory is off by default. Enable MDA's native `memory.py` declaration only when all callers
-may share learned knowledge. See [Customization](docs/customization.md#memory-and-reports).
+Every run's trace names the template and its version (`ls_template: langchain-ai/paid-media-agent`)
+on both deployment paths, so LangChain can count adopters; nothing about you or your people goes
+with it. `PAID_MEDIA_TEMPLATE_TELEMETRY=false` turns it off.
+
+Durable memory is off by default. Enable the shared layer in MDA's native `memory.py` only when all
+callers may share learned knowledge. A personal layer mounts only for a verified person. See
+[Customization](docs/customization.md#memory-and-scheduling).
+
+### Background helpers and check-ins
+
+On MDA the agent can hand long work to a background helper and answer later in the same thread.
+Three helpers are declared in `agent.py` as async subagents: `account-puller` for pulls and
+comparisons across many accounts or long windows, `report-builder` for a full rendered report, and
+`general-purpose` for other read-only research. `mda build` turns each into a graph of its own
+(`paid-media-agent--account-puller`, ...) on the same deployment, sharing the lead's sandbox and
+trace. When a helper finishes, it wakes the lead on its thread and MDA posts the answer to the
+Slack thread the request came from. Every helper is read-only: its tools are reads, comparisons,
+and report rendering, with the lead's invocation guard, redaction, and call limits. Proposals and
+approvals stay with the lead.
+
+Any caller allowed to start runs on the deployment can run a helper graph directly, as themselves.
+It can only read.
+
+`schedule_check_in` lets the agent come back to a conversation later, for example two days after
+an approved budget change. A check-in is a one-time MDA runtime schedule on the thread; it survives
+redeploys and answers in the same conversation. It reads and reports like any run, and any change
+it suggests needs a new approval. Each owner holds at most 20 runtime schedules
+(`MDA_MAX_AGENT_SCHEDULES` raises it). `schedules/housekeeping.py` runs daily at 05:30 UTC,
+deletes expired check-ins in code, and ends without a model call or a post.
+
+The self-hosted server has neither: no Agent Server to launch helpers on and no durable scheduler.
+There the agent does long pulls in its own turn.
 
 ### Slack settings
 
@@ -87,12 +169,22 @@ Edit `channels/slack.py` or save these optional values with `config set`, then r
 | `PAID_MEDIA_SLACK_NAME` | Paid Media Agent |
 | `PAID_MEDIA_SLACK_DESCRIPTION` | Cross-account campaign analysis description |
 | `PAID_MEDIA_SLACK_BACKGROUND_COLOR` | Platform default |
-| `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES` | `false`: mentions, direct messages, and active-thread replies |
+| `PAID_MEDIA_SLACK_TRIGGER_MODE` | `thread`: a mention, then every reply in that thread. `mention`: only mentions. `all`: every message in joined channels. Direct messages always start runs |
 | `PAID_MEDIA_SLACK_ALLOW_BOT_TRIGGERS` | `false` |
 
+`PAID_MEDIA_SLACK_TRIGGER_MODE` replaces `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES`, which MDA 0.10
+deprecated. If your `.env` set the old key to `true`, set `PAID_MEDIA_SLACK_TRIGGER_MODE=all`.
+
 A custom icon is `channels/slack-icon.png`: a 512 × 512 PNG under 1 MB. The console can upload it.
-MDA supplies Slack rendering and approve/reject interactions. This project does not add custom
-paid-media cards to the managed channel.
+MDA supplies Slack rendering, the Stop button, and approve/reject interactions. While a run works,
+the channel's `status` shows its steps as Slack's plan, in paid-media phrasing ("Reading Google
+Ads campaign performance", "Comparing the two periods"; `src/paid_media_agent/surfaces/progress.py`).
+A phrase never carries text the model chose: no account aliases, paths, or anyone's words, and an
+unknown skill, wiki page, or tool reads generically ("a guide", "a tool"). `status` is experimental in MDA 0.10.
+A reply to a turn that did work ends with one line: helpers still running, minutes since the
+request, and an estimated cost for the lead and its helpers, such as
+`_2 helpers · 6 min · ~$0.41_`. Prices come from `src/paid_media_agent/middleware/prices.toml`; a
+model it does not list shows no cost. This project adds no custom cards to the managed channel.
 
 ### Reports and schedules
 
@@ -106,7 +198,7 @@ Edit the static cron, timezone, prompt, and destination in those files. The cons
 time/day changes through `PAID_MEDIA_REPORT_TIME`, `PAID_MEDIA_REPORT_TIMEZONE`,
 `PAID_MEDIA_WEEKLY_REPORT_DAY` (0 Monday to 6 Sunday), and `PAID_MEDIA_MONTHLY_REPORT_DAY` (1–28).
 Use `config set` for these environment settings so their schedule declarations stay synchronized.
-A waited `mda deploy .` reconciles schedules; `--no-wait` skips that step.
+A waited `mda deploy` reconciles schedules; `--no-wait` skips that step.
 
 The local `report` command uses known campaign-performance adapters. Other provider schemas can
 be explored through `ask`; they need a normalization mapping before inclusion in typed reports.
@@ -122,7 +214,8 @@ existing thread sandboxes retain their files until expiry. MDA owns provisioning
 
 The model reads synced skills under `/skills` and uses `/workspace` for thread scratch files.
 Host-created analysis artifacts stay on the host and are accessed through analysis tools. The
-current tool policy exposes filesystem operations but no arbitrary shell or subagent execution.
+current tool policy exposes filesystem operations but no arbitrary shell and no blocking `task`
+subagent; background helpers are read-only async subagents that share the lead's sandbox.
 
 Optional standalone snapshot tools:
 
@@ -142,8 +235,9 @@ Compose includes PDF libraries and persists checkpoints and local artifacts. You
 the report command; MDA cron declarations are not a self-hosted scheduler.
 
 The API and Slack share the same model, catalog, analysis, reports, and approval rules as MDA.
-Slack uses native status and streaming with generic tool progress. Keep any customization in the
-shared tools and skills, not tool-specific message renderers.
+Slack uses native status and streaming, with each tool call shown as a task in the same phrasing as
+MDA's plan and the same footer on replies. Keep any customization in the shared tools, skills, and
+phrasebook, not tool-specific message renderers.
 
 ## Direct platforms
 
@@ -162,6 +256,10 @@ Do not infer a connection from a saved key. Check the catalog and one real read 
 `PAID_MEDIA_MODEL` accepts `provider:model`. Anthropic and OpenAI ship with the base install.
 The LangSmith Gateway uses `langsmith:provider/model`. Other providers have optional extras:
 `google`, `groq`, `xai`, `mistral`, and `deepseek`.
+
+`PAID_MEDIA_MODEL_EFFORT` (`low`, `medium`, `high`, `xhigh`, `max`) sets reasoning effort for
+Anthropic, OpenAI, and LangSmith Gateway models; unset uses the provider's default. Other providers
+refuse it at startup.
 
 For an OpenAI-compatible endpoint, set `PAID_MEDIA_MODEL_BASE_URL` and
 `PAID_MEDIA_MODEL_API_KEY_ENV` to the name of its key environment variable. Native tool search is

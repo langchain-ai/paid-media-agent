@@ -54,9 +54,13 @@ window.PMA_CUSTOMIZATION = ({ el, logo, check, formField, disclose, api, saveCon
   };
   const responses = el("div", { class: "customization-section" }, [
     el("h3", { class: "customization-section-title", text: "When the agent responds" }),
-    el("p", { class: "note", text: "By default, mentions and direct messages start runs. Replies continue active threads." }),
+    el("p", { class: "note", text: "Direct messages always start runs. More channel messages mean more model usage." }),
+    reportSelect("slack_trigger_mode", "In channels", [
+      ["thread", "A mention, then every reply in that thread"],
+      ["mention", "Only messages that mention the agent"],
+      ["all", "Every message in channels the app has joined"],
+    ], String),
     el("div", { class: "customization-options" }, [
-      toggle("slack_trigger_on_all_messages", "Every channel message", "In channels the app has joined. More messages mean more model usage."),
       toggle("slack_allow_bot_triggers", "Messages from other bots", "Can create repeated runs when bots reply to one another."),
     ]),
   ]);

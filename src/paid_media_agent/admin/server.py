@@ -367,7 +367,7 @@ def create_console_app(
                 if not confirmed:
                     raise ProcessError("mda-deploy requires explicit confirmation")
                 check = actions.mda_check(console.root)
-                if check.status != "ok":
+                if check.status == "fail":
                     raise ProcessError(check.summary)
             view = console.processes.start(name, confirmed=confirmed)
         except ProcessError as exc:
@@ -382,15 +382,6 @@ def create_console_app(
             return console.processes.stop(name).model_dump(mode="json")
         except ProcessError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
-
-    @app.post("/api/processes/{name}/continue")
-    def continue_process(
-        name: str, console: ConsoleState = Depends(_authorized)
-    ) -> dict[str, JsonValue]:
-        try:
-            return console.processes.continue_authorization(name).model_dump(mode="json")
-        except ProcessError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from None
 
     @app.get("/api/processes/{name}/log")
     def process_log(

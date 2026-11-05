@@ -35,7 +35,7 @@ def test_customization_reaches_channels_and_compiled_schedules(
         "PAID_MEDIA_SLACK_NAME": "Campaign Analyst",
         "PAID_MEDIA_SLACK_DESCRIPTION": "Tracks campaign spend and conversions.",
         "PAID_MEDIA_SLACK_BACKGROUND_COLOR": "#123456",
-        "PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES": "true",
+        "PAID_MEDIA_SLACK_TRIGGER_MODE": "all",
         "PAID_MEDIA_SLACK_ALLOW_BOT_TRIGGERS": "true",
         "PAID_MEDIA_REPORT_TIME": "09:30",
         "PAID_MEDIA_REPORT_TIMEZONE": "America/Los_Angeles",
@@ -52,7 +52,7 @@ def test_customization_reaches_channels_and_compiled_schedules(
     assert provider["app"]["name"] == "Campaign Analyst"
     assert provider["app"]["icon"] == "slack-icon.png"
     assert provider["app"]["backgroundColor"] == "#123456"
-    assert provider["triggerOnAllMessages"] and provider["allowBotTriggers"]
+    assert channel.trigger_mode == "all" and provider["allowBotTriggers"]
     assert runpy.run_path(str(weekly))["schedule"].config["prompt"] == before_prompt
     assert runpy.run_path(str(weekly))["schedule"].config["cron"] == "30 9 * * WED"
     assert (

@@ -5,19 +5,32 @@ from __future__ import annotations
 import tomllib
 from collections.abc import Mapping
 from datetime import date
+from importlib import metadata as package_metadata
 from pathlib import Path
 from typing import Literal
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from paid_media_agent import __version__
 from paid_media_agent.domain.common import Platform
 
 RuntimeName = Literal["local", "mda", "self_hosted"]
 """Which path the setup console guides you through. Managed Deep Agents is the recommended one."""
 SlackTransport = Literal["socket_mode", "http"]
 
-DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
+DEFAULT_MODEL_SPEC = "anthropic:claude-opus-5-5"
+TEMPLATE = "langchain-ai/paid-media-agent"
+
+
+def template_marker() -> dict[str, str]:
+    """The template and its version, so LangChain can count adopters. Nothing about the deployment
+    or its people goes in it."""
+    try:
+        version = package_metadata.version("paid-media-agent")
+    except package_metadata.PackageNotFoundError:
+        version = __version__
+    return {"ls_template": TEMPLATE, "ls_template_version": version}
 
 
 class ModelConfig(BaseModel):
@@ -115,6 +128,9 @@ class Settings(BaseSettings):
     paid_media_tool_selector_model: str | None = None
     paid_media_model_api_key_env: str | None = None
     """Env var holding the model API key when the provider does not read its default one."""
+    paid_media_model_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    """Reasoning effort for Anthropic, OpenAI, and LangSmith Gateway models; unset is the
+    provider's default. Passed as LangChain's `reasoning_effort`."""
     paid_media_model_timeout_seconds: int = Field(default=120, ge=10)
     """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_max_model_calls: int = Field(default=40, ge=5)
@@ -128,6 +144,8 @@ class Settings(BaseSettings):
     paid_media_sandbox_idle_ttl_seconds: int = Field(default=1800, ge=60)
     """Idle seconds before MDA deletes a thread's sandbox; written into sandbox/__init__.py."""
     paid_media_log_level: str = "INFO"
+    paid_media_template_telemetry: bool = True
+    """Every run's root trace names the template and its version (`template_marker`)."""
     paid_media_workspace_root: Path = Path("workspace")
     paid_media_fixture_anchor: date | None = None
     """Last complete day of the synthetic data. Unset means two days ago, so the demo never ages
@@ -180,6 +198,7 @@ class Settings(BaseSettings):
         "paid_media_model_base_url",
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
+        "paid_media_model_effort",
         "paid_media_live_write_catalog_revision",
         mode="before",
     )

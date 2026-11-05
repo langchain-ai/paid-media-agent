@@ -92,11 +92,11 @@ try {
   const controls = page.locator(".process-controls").filter({ has: page.getByRole("button", { name: "Cancel deployment", exact: true }) });
   await controls.locator("summary").click();
   await page.getByRole("button", { name: "Cancel deployment", exact: true }).focus();
-  processState = { ...processState, state: "waiting_for_authorization", log_tail: "Authorize at https://slack.com/fixture" };
-  await page.getByRole("button", { name: "Continue deployment", exact: true }).waitFor();
+  processState = { ...processState, state: "waiting_for_authorization", log_tail: "Open this link in a browser signed in to Slack. https://slack.com/fixture" };
+  await page.getByRole("link", { name: "Authorize Slack ↗", exact: true }).waitFor();
   assert.equal(await page.locator(":focus").textContent(), "Cancel deployment");
   assert.equal(await controls.locator("details").getAttribute("open"), "");
-  await page.getByRole("button", { name: "Continue deployment", exact: true }).click();
+  processState = { ...processState, running: false, state: "completed", returncode: 0, log_tail: "Deployed" };
   await page.getByRole("button", { name: "Deploy again", exact: true }).waitFor();
   assert.equal(await page.locator(":focus").textContent(), "Deploy again");
   await page.getByText("Slack appearance", { exact: true }).click();
@@ -116,7 +116,7 @@ try {
   assert.equal(savedCustomization.request().postDataJSON().updates.PAID_MEDIA_REPORT_TIME, "09:15");
   await page.getByRole("button", { name: "Retry deployment", exact: true }).waitFor();
   assert.equal(await page.locator("#deployment-mda-action").getByText("Deployment complete", { exact: true }).isVisible(), false);
-  assert.deepEqual(processRequests, ["/api/processes/mda-deploy/continue", "/api/processes/mda-deploy/start"]);
+  assert.deepEqual(processRequests, ["/api/processes/mda-deploy/start"]);
 
   // Equal provider IDs on different platforms must remain independent rows.
   const discovered = [

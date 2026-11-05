@@ -10,6 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from paid_media_agent.admin.model_presets import model_key_env
 from paid_media_agent.config import Settings
 from paid_media_agent.middleware.tool_selection import (
     PROVIDER_DISTRIBUTIONS,
@@ -19,17 +20,15 @@ from paid_media_agent.middleware.tool_selection import (
 from paid_media_agent.runtime.profiles import load_accounts, load_write_policy_file
 from paid_media_agent.tools.fixtures import build_fixture_catalog
 
-SECRET_ENV_NAMES = (
-    "PIPEBOARD_API_TOKEN",
-    "ANTHROPIC_API_KEY",
-    "OPENAI_API_KEY",
-    "GOOGLE_API_KEY",
+SECRET_ENV_NAMES = ("PIPEBOARD_API_TOKEN", "LANGSMITH_API_KEY")
+#: Read only by the self-hosted server and its Slack adapter. MDA brings its own Slack app and
+#: thread store, so these are checked only when self-hosting is the chosen path.
+SELF_HOSTED_ENV_NAMES = (
     "SLACK_BOT_TOKEN",
     "SLACK_APP_TOKEN",
     "SLACK_SIGNING_SECRET",
     "PAID_MEDIA_APPROVAL_SIGNING_KEY",
     "DATABASE_URL",
-    "LANGSMITH_API_KEY",
 )
 
 
@@ -87,7 +86,14 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
     except ValueError as exc:
         checks.append(Check("model", "fail", str(exc)))
 
-    for name in SECRET_ENV_NAMES:
+    try:
+        model_key = model_key_env(settings)
+    except ValueError:
+        model_key = None
+    names = [*([model_key] if model_key else []), *SECRET_ENV_NAMES]
+    if settings.paid_media_runtime == "self_hosted":
+        names += SELF_HOSTED_ENV_NAMES
+    for name in names:
         present = bool(os.environ.get(name))
         checks.append(
             Check(f"env:{name}", "ok" if present else "warn", "set" if present else "not set")
@@ -100,7 +106,7 @@ def run_doctor(settings: Settings, *, project_root: Path) -> list[Check]:
             "ok" if direct else "warn",
             ", ".join(p.value for p in direct)
             if direct
-            else "none configured (LinkedIn, X, OpenAI Ads are direct adapters)",
+            else "none configured (X Ads and OpenAI Ads; LinkedIn connects through Pipeboard)",
         )
     )
     gateway = os.environ.get("LANGSMITH_GATEWAY", "")

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -17,15 +19,26 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
     "mda-dev": (sys.executable, "-m", "managed_deepagents", "dev"),
-    "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy", "."),
+    "mda-deploy": (sys.executable, "-m", "managed_deepagents", "deploy"),
     "serve": (sys.executable, "-m", "paid_media_agent.cli", "serve"),
     "slack": (sys.executable, "-m", "paid_media_agent.cli", "slack"),
 }
 CONFIRM_REQUIRED: frozenset[str] = frozenset({"mda-deploy"})
+
+
+def deploy_command(root: Path, staged: Path) -> tuple[str, ...]:
+    """`mda deploy` for a staged copy (`deployment.stage_for_deploy`), reading and saving the
+    project's own `.env`, so credentials deploy prompts for are kept."""
+    env_file = ("--env-file", str(root / ".env")) if (root / ".env").is_file() else ()
+    return (*PROCESS_TEMPLATES["mda-deploy"], str(staged), *env_file)
+
+
 """Outward-facing processes that need an explicit confirmation before they start."""
+#: What `mda deploy` 0.10 prints while Slack needs the person. It then waits up to an hour on its
+#: own; there is nothing to type back.
 AUTH_PROMPTS = (
-    "Press Enter once authorization is complete",
-    "Press Enter once workspace approval is complete",
+    "Open this link in a browser signed in to Slack",
+    "Waiting for a Slack workspace admin to approve the Slack app",
 )
 
 
@@ -58,6 +71,8 @@ class ProcessManager:
         self._started: dict[str, datetime] = {}
         self._log_offsets: dict[str, int] = {}
         self._continued: dict[str, int] = {}
+        #: The staged copy the latest deploy uploaded, removed when the next one starts.
+        self._staged: Path | None = None
 
     def command_for(self, name: str) -> tuple[str, ...]:
         try:
@@ -70,7 +85,7 @@ class ProcessManager:
             "serve": "uv run paid-media-agent serve",
             "slack": "uv run paid-media-agent slack",
             "mda-dev": "uv run mda dev",
-            "mda-deploy": "uv run mda deploy .",
+            "mda-deploy": "uv run paid-media-agent mda deploy --yes",
             "studio": "uv run langgraph dev",
         }
         return friendly.get(name, " ".join(self.command_for(name)))
@@ -84,6 +99,15 @@ class ProcessManager:
         command = self.command_for(name)
         if name in CONFIRM_REQUIRED and not confirmed:
             raise ProcessError(f"{name} requires explicit confirmation")
+        if name == "mda-deploy":
+            from paid_media_agent.deployment import stage_for_deploy
+
+            # Local working data stays home (`deployment.LOCAL_DATA_DIRS`).
+            if self._staged is not None:
+                shutil.rmtree(self._staged, ignore_errors=True)
+            self._staged = Path(tempfile.mkdtemp(prefix="paid-media-agent-deploy-"))
+            staged = stage_for_deploy(self._root, self._staged / "project")
+            command = deploy_command(self._root, staged)
         existing = self._procs.get(name)
         if existing is not None and existing.poll() is None:
             raise ProcessError(f"{name} is already running")
@@ -99,30 +123,12 @@ class ProcessManager:
                 cwd=self._root,
                 stdout=handle,
                 stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE if name == "mda-deploy" else subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
                 start_new_session=True,
                 env={**os.environ, **(env or {})},
             )
         self._procs[name] = proc
         self._started[name] = datetime.now(UTC)
-        return self.view(name)
-
-    def continue_authorization(self, name: str) -> ProcessView:
-        """Send only Enter to the fixed MDA grant prompt. Never accept arbitrary stdin."""
-        proc = self._procs.get(name)
-        if (
-            name != "mda-deploy"
-            or self.view(name).state != "waiting_for_authorization"
-            or proc is None
-            or proc.stdin is None
-        ):
-            raise ProcessError("No deployment is waiting for authorization.")
-        try:
-            self._continued[name] = self._log_path(name).stat().st_size
-            proc.stdin.write(b"\n")
-            proc.stdin.flush()
-        except (BrokenPipeError, OSError):
-            raise ProcessError("The deployment ended. Check the output before retrying.") from None
         return self.view(name)
 
     def stop(self, name: str) -> ProcessView:

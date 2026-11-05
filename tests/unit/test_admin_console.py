@@ -150,7 +150,7 @@ def test_invalid_model_spec_is_reported_not_raised(
     routes = {r.id: r for r in build_routes(result.detail)}
     assert {s.id: s.status for s in routes["local"].steps}["model"] == "todo"
     check = actions.mda_check(workspace)
-    assert check.status == "warn" and "model_package" in check.summary
+    assert check.status == "fail" and "fix PAID_MEDIA_MODEL" in check.summary
     write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
     gateway = actions.status(workspace)
     assert gateway.detail["model"]["spec"] == "langsmith:anthropic/claude-sonnet-4-6"
@@ -410,7 +410,10 @@ def test_mda_check_runs_import_smoke(workspace: Path, monkeypatch: pytest.Monkey
     result = actions.mda_check(workspace)
     assert result.detail["cli_installed"] is True and result.detail["agent_entry"] is True
     assert result.detail["import_smoke"] == "ok", result.detail
-    assert "langsmith_key_set" in result.summary
+    assert result.status == "fail"
+    assert "set ANTHROPIC_API_KEY" in result.summary
+    assert "provider_key_set" not in result.summary, "a blocker names the variable to set"
+    assert any("sign in with your browser" in w for w in result.detail["warnings"])
 
 
 def test_process_manager_uses_fixed_templates(
@@ -436,35 +439,34 @@ def test_process_manager_uses_fixed_templates(
     manager.stop_all()
 
 
-def test_deployment_continues_only_at_its_authorization_prompt(
+def test_deployment_shows_the_slack_handoff_and_finishes_on_its_own(
     workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MDA's Enter prompt has a real continuation, with no arbitrary process input."""
+    """`mda deploy` 0.10 prints a Slack link and waits for Slack itself; nothing is typed back."""
     import time
 
+    prompt = "Open this link in a browser signed in to Slack. Deploy waits up to an hour for it to finish."
     monkeypatch.setitem(
         PROCESS_TEMPLATES,
         "mda-deploy",
         (
             sys.executable,
             "-c",
-            "print('Press Enter once authorization is complete', flush=True); input(); print('continued', flush=True)",
+            f"import time; print({prompt!r}, flush=True); time.sleep(0.5); print('deployed', flush=True)",
         ),
     )
     manager = ProcessManager(workspace)
     try:
-        with pytest.raises(ProcessError):
-            manager.continue_authorization("mda-deploy")
         manager.start("mda-deploy", confirmed=True)
         for _ in range(100):
             if manager.view("mda-deploy").state == "waiting_for_authorization":
                 break
             time.sleep(0.01)
         assert manager.view("mda-deploy").state == "waiting_for_authorization"
-        manager.continue_authorization("mda-deploy")
         manager._procs["mda-deploy"].wait(timeout=5)
         assert manager.view("mda-deploy").state == "completed"
-        assert "continued" in manager.tail("mda-deploy")
+        assert "deployed" in manager.tail("mda-deploy")
+        assert manager.view("mda-deploy").command == "uv run paid-media-agent mda deploy --yes"
     finally:
         manager.stop_all()
 
@@ -498,7 +500,7 @@ def test_custom_provider_keys_and_key_env(workspace: Path, monkeypatch: pytest.M
     )
     assert presets["anthropic"]["recommended"] is False and presets["custom"]["key"] == ""
     assert {"groq", "xai", "mistral", "deepseek", "openrouter", "moonshot", "zhipu"} <= set(presets)
-    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-sonnet-4-6"
+    assert presets["langsmith"]["model"] == "langsmith:anthropic/claude-opus-5-5"
     assert all("models" not in preset for preset in presets.values()), (
         "Availability comes from provider APIs, not the capability registry."
     )
