@@ -62,7 +62,7 @@ Approval applies to the exact proposal reviewed; editing it requires a new appro
 
 ## Quick start
 
-Requires **Python 3.11+** and [uv](https://docs.astral.sh/uv/).
+Requires **Python 3.12+** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/langchain-ai/paid-media-agent.git

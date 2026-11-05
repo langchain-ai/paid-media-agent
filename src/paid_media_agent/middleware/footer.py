@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+from typing import Any
 
 from langchain.agents.middleware import AgentMiddleware, AgentState
 from langchain.agents.middleware.types import ModelRequest
@@ -36,7 +36,6 @@ FOOTER_KEY = "paid_media_footer"
 NOTIFICATION_KEY = "deepagents_notification"
 QUIET = "[quiet]"
 _RUNNING = frozenset({"pending", "running"})
-_M = TypeVar("_M", bound=BaseMessage)
 
 
 def _count(n: int, noun: str) -> str:
@@ -109,7 +108,7 @@ def _with_footer(message: AIMessage, line: str) -> AIMessage:
     )
 
 
-def without_footer(message: _M) -> _M:
+def without_footer[M: BaseMessage](message: M) -> M:
     """The reply as the model wrote it."""
     line = message.additional_kwargs.get(FOOTER_KEY)
     if not isinstance(message, AIMessage) or not isinstance(line, str):

@@ -40,6 +40,9 @@ Live provider writes remain disabled by default and require the documented relea
 - Require `managed-deepagents` 0.10.1 or later (and `deepagents` 0.7.30 or later). Document MDA's
   agent and personal memory layers and the day-to-day `mda` commands, including
   `mda channels setup`.
+- Require Python 3.12 or later. `managed-deepagents` 0.10.0 and 0.10.1 fail to import on 3.11
+  (pydantic rejects a `typing.TypedDict` there), and MDA builds the deployment on your local
+  interpreter, so a 3.11 checkout could not deploy. CI now tests 3.12 and 3.13.
 - `PAID_MEDIA_SLACK_TRIGGER_MODE` (`thread` by default: one mention, then the thread's replies;
   or `mention`, `all`) replaces `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES`, which MDA 0.10
   deprecated. Set `PAID_MEDIA_SLACK_TRIGGER_MODE=all` if you had the old key set to `true`.

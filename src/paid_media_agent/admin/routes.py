@@ -96,7 +96,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
             Step(
                 id="tooling",
                 title="Install dependencies",
-                description="Install the Python packages this project needs. Requires Python 3.11 or later and uv.",
+                description="Install the Python packages this project needs. Requires Python 3.12 or later and uv.",
                 status="done" if _get(detail, "tooling", "uv") else "todo",
                 cli="uv sync --all-extras --dev",
             ),

@@ -2,7 +2,7 @@
 
 ## Setup
 
-Use Python 3.11+ and [uv](https://docs.astral.sh/uv/):
+Use Python 3.12+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
