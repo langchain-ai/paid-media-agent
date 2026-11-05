@@ -7,6 +7,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -22,6 +23,15 @@ PROCESS_TEMPLATES: dict[str, tuple[str, ...]] = {
     "slack": (sys.executable, "-m", "paid_media_agent.cli", "slack"),
 }
 CONFIRM_REQUIRED: frozenset[str] = frozenset({"mda-deploy"})
+
+
+def deploy_command(root: Path, staged: Path) -> tuple[str, ...]:
+    """`mda deploy` for a staged copy (`deployment.stage_for_deploy`), reading and saving the
+    project's own `.env`, so credentials deploy prompts for are kept."""
+    env_file = ("--env-file", str(root / ".env")) if (root / ".env").is_file() else ()
+    return (*PROCESS_TEMPLATES["mda-deploy"], str(staged), *env_file)
+
+
 """Outward-facing processes that need an explicit confirmation before they start."""
 AUTH_PROMPTS = (
     "Press Enter once authorization is complete",
@@ -84,6 +94,12 @@ class ProcessManager:
         command = self.command_for(name)
         if name in CONFIRM_REQUIRED and not confirmed:
             raise ProcessError(f"{name} requires explicit confirmation")
+        if name == "mda-deploy":
+            from paid_media_agent.deployment import stage_for_deploy
+
+            # Local working data stays home (`deployment.LOCAL_DATA_DIRS`).
+            scratch = Path(tempfile.mkdtemp(prefix="paid-media-agent-deploy-"))
+            command = deploy_command(self._root, stage_for_deploy(self._root, scratch / "project"))
         existing = self._procs.get(name)
         if existing is not None and existing.poll() is None:
             raise ProcessError(f"{name} is already running")

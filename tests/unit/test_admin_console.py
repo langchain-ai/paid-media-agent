@@ -150,7 +150,7 @@ def test_invalid_model_spec_is_reported_not_raised(
     routes = {r.id: r for r in build_routes(result.detail)}
     assert {s.id: s.status for s in routes["local"].steps}["model"] == "todo"
     check = actions.mda_check(workspace)
-    assert check.status == "warn" and "model_package" in check.summary
+    assert check.status == "fail" and "fix PAID_MEDIA_MODEL" in check.summary
     write_env(workspace, {"PAID_MEDIA_MODEL": "anthropic/claude-sonnet-4-6"})
     gateway = actions.status(workspace)
     assert gateway.detail["model"]["spec"] == "langsmith:anthropic/claude-sonnet-4-6"
@@ -410,7 +410,9 @@ def test_mda_check_runs_import_smoke(workspace: Path, monkeypatch: pytest.Monkey
     result = actions.mda_check(workspace)
     assert result.detail["cli_installed"] is True and result.detail["agent_entry"] is True
     assert result.detail["import_smoke"] == "ok", result.detail
-    assert "langsmith_key_set" in result.summary
+    assert result.status == "fail"
+    assert "set LANGSMITH_API_KEY" in result.summary and "set ANTHROPIC_API_KEY" in result.summary
+    assert "langsmith_key_set" not in result.summary, "a blocker names the variable to set"
 
 
 def test_process_manager_uses_fixed_templates(

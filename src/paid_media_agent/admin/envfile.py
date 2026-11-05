@@ -288,6 +288,12 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         description="LangSmith key for mda dev, mda deploy, sandbox snapshots, and the LLM Gateway",
     ),
     EnvKeySpec(
+        name="LANGSMITH_WORKSPACE_ID",
+        group="mda",
+        secret=False,
+        description="LangSmith workspace to deploy into, when your key reaches more than one",
+    ),
+    EnvKeySpec(
         name="LANGSMITH_GATEWAY_API_KEY",
         group="model",
         secret=True,

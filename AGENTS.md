@@ -33,7 +33,7 @@ of the public repository.
 ## Onboarding
 
 Follow [.agents/skills/paid-media-onboarding/SKILL.md](.agents/skills/paid-media-onboarding/SKILL.md).
-Run the offline demo, configure a model and accounts, then use the business-context skill in this
+Run the offline demo, configure a model and accounts, then use the `paid-media-org-onboarding` skill in this
 chat. Ask for existing briefs and only the facts still missing. Write reviewed Markdown to the
 runtime workspace. Users can edit the same files manually; no interview service or UI form is
 required.

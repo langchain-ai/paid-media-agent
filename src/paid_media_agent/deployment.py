@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import shutil
 from datetime import time
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,60 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 SLACK_ICON_FILENAME = "slack-icon.png"
+
+#: Local working folders. Git ignores them, and a deployment never needs what is in them: raw
+#: source briefs, local analysis artifacts, rendered reports, inputs, and logs. `mda deploy`
+#: uploads every ordinary project file whatever `.gitignore` says, so `stage_for_deploy` leaves
+#: their contents out.
+LOCAL_DATA_DIRS: tuple[str, ...] = (
+    "workspace/analysis",
+    "workspace/in",
+    "workspace/logs",
+    "workspace/out",
+    "workspace/sessions",
+    "workspace/sources",
+)
+#: Never copied for a deploy: version control, environments, caches, MDA's own build output, and
+#: `.env` files (deploy reads the project's `.env` through `--env-file`, so credentials it prompts
+#: for are saved there, not in a throwaway copy).
+_NOT_STAGED = frozenset(
+    {".git", ".venv", ".mda", "__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache"}
+)
+
+
+def local_data_files(root: Path) -> list[tuple[str, int]]:
+    """Files in the local working folders, with their sizes in bytes."""
+    found: list[tuple[str, int]] = []
+    for folder in LOCAL_DATA_DIRS:
+        base = root / folder
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if path.is_file() and path.name != ".gitkeep":
+                found.append((path.relative_to(root).as_posix(), path.stat().st_size))
+    return found
+
+
+def stage_for_deploy(root: Path, dest: Path) -> Path:
+    """Copy the project to `dest` for `mda deploy`, without local working data.
+
+    Host-owned files Git ignores but the deployment needs (`config/accounts.toml`, the write
+    policy, the company context, the Slack icon) are kept. Symlinks stay links, so `skills`
+    still points at `workspace/skills`.
+    """
+    local = set(LOCAL_DATA_DIRS)
+
+    def ignore(directory: str, names: list[str]) -> set[str]:
+        relative = Path(directory).relative_to(root).as_posix()
+        skipped = {
+            n for n in names if n in _NOT_STAGED or (n.startswith(".env") and n != ".env.example")
+        }
+        if relative in local:
+            skipped |= {n for n in names if n != ".gitkeep"}
+        return skipped
+
+    shutil.copytree(root, dest, symlinks=True, ignore=ignore)
+    return dest
 
 
 class DeploymentSettings(BaseSettings):

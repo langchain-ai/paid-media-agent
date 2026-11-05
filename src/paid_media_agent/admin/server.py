@@ -367,7 +367,7 @@ def create_console_app(
                 if not confirmed:
                     raise ProcessError("mda-deploy requires explicit confirmation")
                 check = actions.mda_check(console.root)
-                if check.status != "ok":
+                if check.status == "fail":
                     raise ProcessError(check.summary)
             view = console.processes.start(name, confirmed=confirmed)
         except ProcessError as exc:

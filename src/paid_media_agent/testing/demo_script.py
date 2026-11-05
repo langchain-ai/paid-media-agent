@@ -190,7 +190,8 @@ def _report_receipt(messages: Sequence[BaseMessage]) -> AIMessage:
     verified = ", ".join(f"{fv['field']}={fv['value']}" for fv in view["verified_state"])
     return AIMessage(
         content=(
-            f"Receipt for proposal {view['proposal_id']} revision {view['revision']}: status={view['status']}, "
+            "Simulated receipt (synthetic account, no platform was called) for proposal "
+            f"{view['proposal_id']} revision {view['revision']}: status={view['status']}, "
             f"mutation_attempted={view['mutation_attempted']}, readback_attempts={view['readback_attempts']}, "
             f"verified_state=[{verified}], reason={view['reason']}"
         )

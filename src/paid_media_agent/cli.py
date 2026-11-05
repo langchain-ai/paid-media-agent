@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 
 import click
@@ -164,17 +165,34 @@ def config_show(as_json: bool) -> None:
         click.echo(f"{key['name']:<40} {mark:<6} {shown}")
 
 
+def _stdin_is_terminal() -> bool:
+    return sys.stdin.isatty()
+
+
 @config.command("set")
 @click.argument("pairs", nargs=-1, required=True)
 @click.option("--json", "as_json", is_flag=True)
 def config_set(pairs: tuple[str, ...], as_json: bool) -> None:
-    """Set KEY=VALUE pairs in .env. Keys are validated against the settings schema."""
+    """Set KEY=VALUE pairs in .env, or name a KEY alone to type its value without echoing it.
+
+    Keys are validated against the settings schema. A bare KEY asks in this terminal with hidden
+    input, so a secret never passes through a chat or shell history.
+    """
+    from paid_media_agent.admin.envfile import key_spec
+
     updates: dict[str, str] = {}
     for pair in pairs:
         key, sep, value = pair.partition("=")
+        key = key.strip()
         if not sep:
-            raise click.UsageError(f"expected KEY=VALUE, got {pair}")
-        updates[key.strip()] = value
+            if not _stdin_is_terminal():
+                raise click.UsageError(
+                    f"run `uv run paid-media-agent config set {key}` in your own terminal; it "
+                    "asks for the value without showing it. Never paste a key into a chat."
+                )
+            spec = key_spec(key)
+            value = click.prompt(key, hide_input=spec is None or spec.secret, default="")
+        updates[key] = value
     _emit(actions.config_set(project_root(), updates), as_json)
 
 
@@ -395,7 +413,22 @@ def mda() -> None:
 @mda.command("check")
 @click.option("--json", "as_json", is_flag=True)
 def mda_check(as_json: bool) -> None:
-    _emit(actions.mda_check(project_root()), as_json)
+    """Check the project before `mda deploy`. Exits non-zero while anything blocks the deploy."""
+    result = actions.mda_check(project_root())
+    if as_json:
+        _emit(result, as_json)
+        return
+    _preflight_lines(result)
+    if result.status == "fail":
+        sys.exit(1)
+
+
+def _preflight_lines(result: actions.ActionResult) -> None:
+    click.echo(f"{result.status.upper()} preflight: {result.summary}")
+    for fix in result.detail.get("blocked_by") or []:
+        click.echo(f"  BLOCKED  {fix}")
+    for warning in result.detail.get("warnings") or []:
+        click.echo(f"  WARNING  {warning}")
 
 
 @mda.command("dev")
@@ -412,21 +445,38 @@ def mda_dev() -> None:
 @click.option(
     "--yes", is_flag=True, help="Confirm the deployment. Deploying is an outward-facing action."
 )
-def mda_deploy(yes: bool) -> None:
-    """Run `mda deploy` after preflight and explicit confirmation."""
-    import subprocess
+@click.option(
+    "--deployment-type",
+    type=click.Choice(["serverless", "dedicated"]),
+    default=None,
+    help="A new deployment's type. MDA creates serverless ones by default.",
+)
+def mda_deploy(yes: bool, deployment_type: str | None) -> None:
+    """Run `mda deploy` after preflight and explicit confirmation.
 
-    from paid_media_agent.admin.processes import PROCESS_TEMPLATES
+    It deploys a copy of the project without local working data (`deployment.LOCAL_DATA_DIRS`),
+    which a plain `mda deploy` would upload, and keeps reading and saving the project's `.env`.
+    """
+    import subprocess
+    import tempfile
+
+    from paid_media_agent.admin.processes import deploy_command
+    from paid_media_agent.deployment import stage_for_deploy
 
     root = project_root()
     check = actions.mda_check(root)
-    click.echo(f"{check.status.upper()} preflight: {check.summary}")
-    if check.status != "ok":
+    _preflight_lines(check)
+    if check.status == "fail":
         sys.exit(1)
     if not yes:
         click.echo("Re-run with --yes to deploy.")
         sys.exit(2)
-    raise SystemExit(subprocess.call(PROCESS_TEMPLATES["mda-deploy"], cwd=root))  # noqa: S603
+    with tempfile.TemporaryDirectory(prefix="paid-media-agent-deploy-") as scratch:
+        staged = stage_for_deploy(root, Path(scratch) / "project")
+        command = deploy_command(root, staged)
+        if deployment_type:
+            command = (*command, "--deployment-type", deployment_type)
+        raise SystemExit(subprocess.call(command, cwd=staged))  # noqa: S603
 
 
 @main.group()

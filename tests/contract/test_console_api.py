@@ -215,8 +215,8 @@ def test_deploy_click_checks_project_and_blocks_failed_preflight(
         return actions.ActionResult(
             action="mda_check",
             ok=ready,
-            status="ok" if ready else "warn",
-            summary="ready" if ready else "blocked by langsmith_key_set",
+            status="ok" if ready else "fail",
+            summary="ready" if ready else "blocked: set LANGSMITH_API_KEY",
         )
 
     monkeypatch.setattr(actions, "mda_check", preflight)
@@ -228,7 +228,7 @@ def test_deploy_click_checks_project_and_blocks_failed_preflight(
     assert client.post(endpoint, headers=headers, json={}).status_code == 409
     assert not checks
     blocked = client.post(endpoint, headers=headers, json={"confirm": True})
-    assert blocked.status_code == 409 and "langsmith_key_set" in blocked.json()["detail"]
+    assert blocked.status_code == 409 and "LANGSMITH_API_KEY" in blocked.json()["detail"]
     assert manager.view("mda-deploy").state == "stopped"
     ready = True
     try:

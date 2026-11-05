@@ -32,6 +32,21 @@
   estimated cost for the lead and its helpers, from dated list prices in
   `src/paid_media_agent/middleware/prices.toml`. The model never sees it.
 
+- Easier deploys from a fresh checkout:
+  - `config set KEY` with no value asks in your terminal without echoing, and refuses outside a
+    terminal, so keys never pass through a chat.
+  - `mda check` exits non-zero while blocked and names the variable to set. It warns when the
+    deployed agent would answer from demo data or mixed data, when `config/accounts.toml` is
+    missing, about a LangSmith service key, and about local files a plain deploy would upload.
+  - `paid-media-agent mda deploy --yes` deploys a copy without `workspace/analysis`, `in`, `logs`,
+    `out`, `sessions`, and `sources`. A plain `mda deploy` uploads them, since MDA ignores
+    `.gitignore`. The setup console deploys the same copy.
+  - `doctor` checks the configured model's key, and the self-hosted Slack and database variables
+    only for self-hosting.
+  - `config set` accepts `LANGSMITH_WORKSPACE_ID` and checks `PAID_MEDIA_MODEL`'s shape.
+  - The demo labels its receipt as simulated.
+  - OPERATIONS gains a step-by-step "Deploy to Slack" guide, which the onboarding skill follows.
+
 Live provider writes remain disabled by default and require the documented release gates.
 
 ### Changed

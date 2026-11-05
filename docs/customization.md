@@ -47,7 +47,8 @@ it when a topic needs detail. The Markdown is the source of truth; there is no p
 interview service, or generated copy to maintain.
 
 Original briefs and exports belong in `workspace/sources/`. Keep them unchanged and put only
-relevant, reviewed facts in the context bundle. This follows OpenWiki's separation of source
+relevant, reviewed facts in the context bundle. They stay on your machine:
+`uv run paid-media-agent mda deploy` leaves `workspace/sources/` out of the upload. This follows OpenWiki's separation of source
 material and linked, synthesized knowledge without requiring OpenWiki to run the agent.
 
 Company context and source files are Git-ignored. The curated context is shared with your deployed
@@ -67,16 +68,19 @@ They are for the coding agent and are not runtime skills.
 Both deployment paths read the runtime bundle at `/skills/`:
 
 - **MDA:** the root `skills` link points to `workspace/skills`. MDA syncs that folder into its
-  managed context. Deploy local changes with `uv run mda deploy`. MDA's Context Hub can also
+  managed context. Deploy local changes with `uv run paid-media-agent mda deploy --yes`. MDA's Context Hub can also
   manage deployed context; changes there do not update your checkout automatically.
 - **Self-hosted Docker:** the image includes the runtime skills. Docker Compose mounts
   `workspace/skills` read-only, so local context is available without a separate copy. Start a new
   conversation after changing skill metadata. Rebuild the image when deploying without the mount.
 
-Raw sources and local coding-agent skills are not part of the sandbox skill bundle. MDA does
-copy ordinary project files, including Git-ignored `workspace/sources/`, into its deployment
-archive. Keep sensitive originals outside the project directory before deploying. Git ignore
-rules prevent commits; they do not control MDA uploads.
+Raw sources and local coding-agent skills are not part of the sandbox skill bundle. A plain
+`uv run mda deploy` uploads every ordinary project file, whatever `.gitignore` says, including
+`workspace/sources/`, local analysis artifacts, and rendered reports.
+`uv run paid-media-agent mda deploy` deploys a copy without those folders
+(`workspace/analysis`, `in`, `logs`, `out`, `sessions`, and `sources`), and
+`uv run paid-media-agent mda check` lists what a plain deploy would upload. The company context
+in `workspace/skills/company-context/` is deployed on purpose.
 
 ## Memory and reports
 

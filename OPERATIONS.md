@@ -51,25 +51,58 @@ Requires a LangSmith organization with MDA access, a deployment API key, and a m
 MDA is available in US LangSmith Cloud. See the current
 [quickstart](https://docs.langchain.com/langsmith/python/managed-deep-agents-quickstart).
 
-```bash
-uv run paid-media-agent mda check
-uv run mda deploy
-```
+### Deploy to Slack
+
+1. **Model key.** Save it with `uv run paid-media-agent config set ANTHROPIC_API_KEY` (or the
+   key your `PAID_MEDIA_MODEL` needs). Naming a key without `=VALUE` asks for it in your terminal
+   without echoing it; never paste a key into a chat. The setup console works too.
+2. **LangSmith key.** `uv run paid-media-agent config set LANGSMITH_API_KEY`, with a personal
+   access token (`lsv2_pt_...`) from LangSmith's API Keys page. A service key (`lsv2_sk_...`)
+   cannot set up the Slack channel. Leave it unset to sign in with your browser during deploy.
+   Set `LANGSMITH_WORKSPACE_ID` when the key reaches more than one workspace.
+3. **Ad accounts.** Sign up at [Pipeboard](https://pipeboard.co/pricing): the free plan covers
+   2 ad accounts and 30 tool runs a week, paid plans start at US$29.90 a month. Connect your ad
+   platforms there, then create a token under **Settings → API Tokens → Generate Token** and save
+   it with `config set PIPEBOARD_API_TOKEN`. In this order, run `uv run paid-media-agent test
+   pipeboard`, `accounts discover`, and `accounts add <alias> --platform <platform> --id <id>` for
+   each account the agent may read (with `--currency` and `--timezone` when not USD and UTC). X Ads and OpenAI Ads keys work the same way; see [Direct platforms](#direct-platforms).
+4. **Preflight.** `uv run paid-media-agent mda check` exits non-zero while anything blocks the
+   deploy and names the variable to set. Read its warnings: it says when the deployed agent would
+   answer from synthetic demo data (no platform connected), when only X or OpenAI Ads is connected
+   (live data mixed with demo data), when `config/accounts.toml` is missing, and which local files
+   a plain `mda deploy` would upload.
+5. **Deploy.** `uv run paid-media-agent mda deploy --yes` runs the preflight, then `mda deploy` on
+   a copy of the project without `workspace/analysis`, `out`, `in`, `logs`, and `sources`. A plain
+   `uv run mda deploy` uploads those folders too, since MDA does not read `.gitignore`. Add
+   `--deployment-type dedicated` before enabling live writes (see below). Expect several minutes:
+   the image build, and on a first deploy or a changed `sandbox/setup.sh`, the sandbox bake.
+6. **Answer its questions.** Deploy may ask, in order: for a LangSmith key or a browser sign-in;
+   on the first deploy, which Slack app to use (one LangSmith creates and manages in a workspace you
+   authorized, a new one from a manifest, or your own); and to authorize LangSmith in Slack or
+   install the app, by printing a link and waiting until Slack reports it done. A workspace admin
+   may have to approve the app. Without a terminal, deploy uses a LangSmith-managed app in a
+   workspace you already authorized. `uv run mda channels setup` checks or finishes Slack later.
+7. **First question.** In Slack, find the app under **Apps** (it has the name in
+   `PAID_MEDIA_SLACK_NAME`) and send it a direct message, or `/invite` it to a channel and mention
+   it. Try: "How did spend and conversions change last week across my accounts?" If nothing comes
+   back, read `uv run mda logs --no-follow`, and the trace in the LangSmith deployment it printed.
+
+**What ships as deployment secrets.** `mda deploy` turns every set value in `.env` into a
+deployment secret. Leave the self-hosted values blank for an MDA deploy: `SLACK_BOT_TOKEN`,
+`SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `DATABASE_URL`, and `PAID_MEDIA_API_TOKENS`. Leave out
+keys for providers you do not use. `MDA_SLACK_BOT_TOKEN` and `MDA_SLACK_SIGNING_SECRET` (bring your
+own Slack app) are read by the CLI only and never uploaded.
 
 Requires `managed-deepagents` 0.10.1 or later (`uv sync` installs it). MDA builds the project,
 syncs instructions and runtime skills to Context Hub, provisions the sandbox, and configures the
-native Slack channel. A first deploy asks which Slack app to use: one LangSmith creates and manages,
-a new one from a manifest, or one you already have. When Slack still needs you (authorizing
-LangSmith, installing or approving the app), deploy prints the link and waits until Slack reports it
-done. The console offers **Continue deployment** for the same handoff. After success, open the
-printed LangSmith deployment URL or the agent's Slack DM. `uv run mda channels setup` checks or
-finishes the Slack setup later without deploying.
+native Slack channel. The console offers **Continue deployment** for the Slack handoff. After
+success, open the printed LangSmith deployment URL or message the app in Slack.
 
 `mda deploy` creates a **serverless** deployment by default, which can scale to zero. Proposals,
 approvals, receipts, and analysis artifacts in the MDA profile are process-local (see
 [Writes](#writes)), so a scale-down between a proposal and its approval loses the proposal and the
 approval is refused. That fails closed, but the change has to be proposed again. Before enabling live
-writes, deploy with `uv run mda deploy --deployment-type dedicated`. Existing deployments keep
+writes, deploy with `uv run paid-media-agent mda deploy --yes --deployment-type dedicated`. Existing deployments keep
 their type. In 0.10, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, and `LANGSMITH_WORKSPACE_ID` come
 from your shell first and the project `.env` second; unset a stale shell value if deploy targets the
 wrong workspace.

@@ -117,7 +117,7 @@ differences, and budget decisions. Your company context gives the agent the goal
 definitions, and campaign briefs it needs to interpret your performance.
 
 Ask your coding agent to follow the
-[business-context skill](.agents/skills/paid-media-org-onboarding/SKILL.md), or create
+[`paid-media-org-onboarding` skill](.agents/skills/paid-media-org-onboarding/SKILL.md), or create
 `workspace/skills/company-context/` yourself using the
 [template](docs/customization.md#business-context). Add this context before the first real analysis.
 
@@ -140,7 +140,7 @@ For **Managed Deep Agents**, choose **Deploy agent** in setup, or validate and d
 
 ```bash
 uv run paid-media-agent mda check
-uv run mda deploy
+uv run paid-media-agent mda deploy --yes
 ```
 
 You'll need a LangSmith organization with MDA access, an API key with deployment permissions,
@@ -171,7 +171,7 @@ on your providers. These MDA commands cover day-to-day work:
 | --- | --- |
 | `uv run mda dev` | Run the agent locally in LangSmith Studio to inspect model calls, tool results, and approvals |
 | `uv run mda deploy --name paid-media-agent-test` | Deploy a separate copy to test changes |
-| `uv run mda deploy` | Ship your changes |
+| `uv run paid-media-agent mda deploy --yes` | Ship your changes, after the preflight, without local working files |
 | `uv run mda logs` | Tail the deployed agent's logs |
 | `uv run mda channels setup` | Check or finish the Slack setup without deploying |
 | `uv run mda build` | Compile what would ship into `.mda/build/` without deploying |
