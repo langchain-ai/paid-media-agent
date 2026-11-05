@@ -115,7 +115,7 @@ def build_routes(detail: dict[str, JsonValue]) -> list[Route]:
                 title="Choose a model",
                 description="Choose a model and add its provider key. Use Setup for the guided model picker.",
                 status="done" if model_ready else "todo",
-                cli="uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-sonnet-4-6 ANTHROPIC_API_KEY=...",
+                cli="uv run paid-media-agent config set PAID_MEDIA_MODEL=anthropic:claude-fable-5-1 ANTHROPIC_API_KEY=...",
                 action=StepAction(
                     kind="form",
                     label="Save model settings",

@@ -193,3 +193,17 @@ async def test_footer_counts_helpers_running_on_an_mda_slack_thread() -> None:
         ),
     )
     assert await middleware.aafter_agent(state, elsewhere) is None  # type: ignore[arg-type]
+
+
+def test_default_and_preset_models_are_priced_and_registered() -> None:
+    from paid_media_agent.admin.model_presets import MODEL_PRESETS
+    from paid_media_agent.config import DEFAULT_MODEL_SPEC, ModelConfig
+    from paid_media_agent.middleware.tool_selection import CAPABILITY_REGISTRY, capabilities_for
+
+    assert DEFAULT_MODEL_SPEC == "anthropic:claude-fable-5-1"
+    assert capabilities_for(ModelConfig.parse(DEFAULT_MODEL_SPEC)).native_tool_search
+    for preset in MODEL_PRESETS:
+        if preset["id"] in ("anthropic", "openai", "google"):
+            spec = str(preset["model"])
+            assert spec in CAPABILITY_REGISTRY, spec
+            assert price_for(spec) is not None, spec

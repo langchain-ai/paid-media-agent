@@ -29,8 +29,8 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         name="PAID_MEDIA_MODEL",
         group="model",
         secret=False,
-        description="provider:model, e.g. anthropic:claude-sonnet-4-6",
-        example="anthropic:claude-sonnet-4-6",
+        description="provider:model, e.g. anthropic:claude-fable-5-1",
+        example="anthropic:claude-fable-5-1",
     ),
     EnvKeySpec(
         name="PAID_MEDIA_MODEL_BASE_URL",

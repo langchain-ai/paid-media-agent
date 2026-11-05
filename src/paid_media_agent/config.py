@@ -19,7 +19,7 @@ RuntimeName = Literal["local", "mda", "self_hosted"]
 """Which path the setup console guides you through. Managed Deep Agents is the recommended one."""
 SlackTransport = Literal["socket_mode", "http"]
 
-DEFAULT_MODEL_SPEC = "anthropic:claude-sonnet-4-6"
+DEFAULT_MODEL_SPEC = "anthropic:claude-fable-5-1"
 TEMPLATE = "langchain-ai/paid-media-agent"
 
 
