@@ -232,7 +232,14 @@ def status(root: Path) -> ActionResult:
         "pdf": next((c.status == "ok" for c in checks if c.name == "report_pdf"), False),
         "generated_at": datetime.now(UTC).isoformat(),
     }
-    summary = "all checks pass" if not failing else f"failing checks: {', '.join(failing)}"
+    warned = [c.name for c in checks if c.status == "warn"]
+    summary = (
+        f"failing checks: {', '.join(failing)}"
+        if failing
+        else f"ready, with {len(warned)} warning(s)"
+        if warned
+        else "all checks pass"
+    )
     return _result(
         "status",
         "fail" if failing else "ok",
@@ -924,14 +931,13 @@ def mda_check(root: Path) -> ActionResult:
         "provider_key_set": not model_error and _provider_key_set(settings, env),
         "import_smoke": _agent_import_smoke(root),
         "report_schedules": schedule_check,
-        "deploy_command": "uv run mda deploy",
+        "deploy_command": "uv run paid-media-agent mda deploy --yes",
         "dev_command": "uv run mda dev",
     }
     blocking = [
         k
         for k in (
             "cli_installed",
-            "langsmith_key_set",
             "agent_entry",
             "sandbox_declared",
             "sandbox_recipe",
@@ -970,7 +976,6 @@ def _blocking_fixes(
     key = model_key_env(settings) if model.provider else None
     fixes = {
         "cli_installed": "run `uv sync` to install managed-deepagents",
-        "langsmith_key_set": "set LANGSMITH_API_KEY (a personal access token)",
         "agent_entry": "agent.py is missing",
         "sandbox_declared": "sandbox/__init__.py is missing",
         "sandbox_recipe": "sandbox/setup.sh is missing",
@@ -990,7 +995,12 @@ def _deploy_warnings(root: Path, settings: Settings, env: Mapping[str, str]) -> 
     """What would surprise someone after deploying, though nothing stops the deploy."""
     warnings: list[str] = []
     langsmith_key = env.get("LANGSMITH_API_KEY") or _os_env("LANGSMITH_API_KEY") or ""
-    if langsmith_key.startswith("lsv2_sk_"):
+    if not langsmith_key:
+        warnings.append(
+            "LANGSMITH_API_KEY is not set, so deploy asks you to sign in with your browser: run "
+            "the deploy in your own terminal, or set a personal access token (lsv2_pt_...)."
+        )
+    elif langsmith_key.startswith("lsv2_sk_"):
         warnings.append(
             "LANGSMITH_API_KEY is a service key, which cannot set up the Slack channel. Use a "
             "personal access token (lsv2_pt_...), or remove it and sign in with the browser."

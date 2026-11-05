@@ -74,10 +74,8 @@ def test_preflight_names_what_to_set_and_warns_before_a_surprising_deploy(
     shutil.copy(project_root / "identity.py", workspace / "identity.py")
     blocked = actions.mda_check(workspace)
     assert blocked.status == "fail"
-    assert blocked.detail["blocked_by"][:2] == [
-        "set LANGSMITH_API_KEY (a personal access token)",
-        "set ANTHROPIC_API_KEY",
-    ]
+    assert blocked.detail["blocked_by"] == ["set ANTHROPIC_API_KEY"]
+    assert any("sign in with your browser" in w for w in blocked.detail["warnings"])
 
     (workspace / "workspace/sources").mkdir(parents=True)
     (workspace / "workspace/sources/brief.md").write_text("x" * 2048)
@@ -103,11 +101,11 @@ def test_cli_preflight_exits_non_zero_while_blocked(
     workspace: Path,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr("paid_media_agent.cli.project_root", lambda: workspace)
     result = CliRunner().invoke(main, ["mda", "check"])
     assert result.exit_code == 1
-    assert "BLOCKED  set LANGSMITH_API_KEY" in result.output
+    assert "BLOCKED  set ANTHROPIC_API_KEY" in result.output
 
 
 def test_a_bare_key_is_typed_hidden_in_a_terminal_and_refused_elsewhere(
@@ -120,18 +118,24 @@ def test_a_bare_key_is_typed_hidden_in_a_terminal_and_refused_elsewhere(
     assert "ANTHROPIC_API_KEY" not in read_env(workspace)
 
     prompts: list[tuple[str, bool]] = []
+    answers = iter(["sk-ant-typed-not-echoed", ""])
 
-    def prompt(text: str, *, hide_input: bool, default: str) -> str:
+    def prompt(text: str, *, hide_input: bool, **_: object) -> str:
         prompts.append((text, hide_input))
-        return "sk-ant-typed-not-echoed"
+        return next(answers)
 
     monkeypatch.setattr("paid_media_agent.cli._stdin_is_terminal", lambda: True)
     monkeypatch.setattr("click.prompt", prompt)
     typed = CliRunner().invoke(main, ["config", "set", "ANTHROPIC_API_KEY"])
     assert typed.exit_code == 0, typed.output
-    assert prompts == [("ANTHROPIC_API_KEY", True)]
+    assert prompts == [("ANTHROPIC_API_KEY (input hidden; Enter keeps the current value)", True)]
     assert read_env(workspace)["ANTHROPIC_API_KEY"] == "sk-ant-typed-not-echoed"
     assert "sk-ant-typed-not-echoed" not in typed.output
+    kept = CliRunner().invoke(main, ["config", "set", "ANTHROPIC_API_KEY"])
+    assert kept.exit_code == 0 and "ANTHROPIC_API_KEY unchanged" in kept.output
+    assert read_env(workspace)["ANTHROPIC_API_KEY"] == "sk-ant-typed-not-echoed", (
+        "Enter never wipes"
+    )
     os.environ.pop("ANTHROPIC_API_KEY", None)
 
 
@@ -144,10 +148,39 @@ def test_the_deploy_wrapper_passes_a_name_for_a_separate_copy(
     monkeypatch.setattr(
         actions,
         "mda_check",
-        lambda _root: actions.ActionResult(action="mda_check", ok=True, status="ok", summary="ok"),
+        lambda _root: actions.ActionResult(
+            action="mda_check",
+            ok=True,
+            status="ok",
+            summary="ok",
+            detail={"langsmith_key_set": True},
+        ),
     )
     monkeypatch.setattr("subprocess.call", lambda command, **_: calls.append(tuple(command)) or 0)
     result = CliRunner().invoke(main, ["mda", "deploy", "--yes", "--name", "paid-media-agent-test"])
     assert result.exit_code == 0, result.output
     assert calls[0][-2:] == ("--name", "paid-media-agent-test")
     assert "deploy" in calls[0] and "--env-file" not in calls[0], "no .env in the fixture"
+
+
+def test_a_browser_sign_in_deploy_is_handed_to_a_terminal(
+    workspace: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[object] = []
+    monkeypatch.setattr("paid_media_agent.cli.project_root", lambda: workspace)
+    monkeypatch.setattr(
+        actions,
+        "mda_check",
+        lambda _root: actions.ActionResult(
+            action="mda_check",
+            ok=True,
+            status="warn",
+            summary="ready",
+            detail={"langsmith_key_set": False},
+        ),
+    )
+    monkeypatch.setattr("subprocess.call", lambda *a, **_: calls.append(a) or 0)
+    result = CliRunner().invoke(main, ["mda", "deploy", "--yes"])
+    assert result.exit_code == 1 and "in your own terminal" in result.output
+    assert not calls, "nothing is deployed"

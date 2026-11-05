@@ -26,11 +26,13 @@ description: Install and configure Paid Media Agent, connect ad platforms, choos
    - Pipeboard: sign-up and token, then `test pipeboard`, `accounts discover`, `accounts add`.
    - Run `uv run paid-media-agent mda check` until it reports no blockers, and read its warnings
      to the person (demo data, missing `config/accounts.toml`, local files).
-   - Ask before deploying; it is paid and outward-facing. Then run
+   - Ask before deploying; it is paid and outward-facing. Use
      `uv run paid-media-agent mda deploy --yes`, never a plain `mda deploy`, which uploads local
      working files.
-   - Tell the person what deploy may ask mid-run: a LangSmith sign-in, which Slack app to use, and
-     a Slack authorization link that a workspace admin may need to approve.
+   - Hand the first deploy to the person to run in their own terminal: it may ask for a LangSmith
+     sign-in and which Slack app to use, which it cannot ask without a terminal, and it prints a
+     Slack authorization link that a workspace admin may need to approve. Deploy waits for Slack on
+     its own. Later deploys you may run yourself once the person asks.
 6. When it is live, have the person message the app in Slack (under **Apps**) or `/invite` it to
    a channel and mention it, with a first question about last week's spend. If nothing comes back,
    read `uv run mda logs --no-follow`. Provide the deployment URL. A local preflight alone does

@@ -34,9 +34,11 @@ def deploy_command(root: Path, staged: Path) -> tuple[str, ...]:
 
 
 """Outward-facing processes that need an explicit confirmation before they start."""
+#: What `mda deploy` 0.10 prints while Slack needs the person. It then waits up to an hour on its
+#: own; there is nothing to type back.
 AUTH_PROMPTS = (
-    "Press Enter once authorization is complete",
-    "Press Enter once workspace approval is complete",
+    "Open this link in a browser signed in to Slack",
+    "Waiting for a Slack workspace admin to approve the Slack app",
 )
 
 
@@ -83,7 +85,7 @@ class ProcessManager:
             "serve": "uv run paid-media-agent serve",
             "slack": "uv run paid-media-agent slack",
             "mda-dev": "uv run mda dev",
-            "mda-deploy": "uv run mda deploy",
+            "mda-deploy": "uv run paid-media-agent mda deploy --yes",
             "studio": "uv run langgraph dev",
         }
         return friendly.get(name, " ".join(self.command_for(name)))
@@ -121,30 +123,12 @@ class ProcessManager:
                 cwd=self._root,
                 stdout=handle,
                 stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE if name == "mda-deploy" else subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
                 start_new_session=True,
                 env={**os.environ, **(env or {})},
             )
         self._procs[name] = proc
         self._started[name] = datetime.now(UTC)
-        return self.view(name)
-
-    def continue_authorization(self, name: str) -> ProcessView:
-        """Send only Enter to the fixed MDA grant prompt. Never accept arbitrary stdin."""
-        proc = self._procs.get(name)
-        if (
-            name != "mda-deploy"
-            or self.view(name).state != "waiting_for_authorization"
-            or proc is None
-            or proc.stdin is None
-        ):
-            raise ProcessError("No deployment is waiting for authorization.")
-        try:
-            self._continued[name] = self._log_path(name).stat().st_size
-            proc.stdin.write(b"\n")
-            proc.stdin.flush()
-        except (BrokenPipeError, OSError):
-            raise ProcessError("The deployment ended. Check the output before retrying.") from None
         return self.view(name)
 
     def stop(self, name: str) -> ProcessView:

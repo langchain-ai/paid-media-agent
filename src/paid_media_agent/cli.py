@@ -191,8 +191,17 @@ def config_set(pairs: tuple[str, ...], as_json: bool) -> None:
                     "asks for the value without showing it. Never paste a key into a chat."
                 )
             spec = key_spec(key)
-            value = click.prompt(key, hide_input=spec is None or spec.secret, default="")
+            hidden = spec is None or spec.secret
+            hint = "input hidden; Enter keeps the current value" if hidden else "Enter keeps it"
+            value = click.prompt(
+                f"{key} ({hint})", hide_input=hidden, default="", show_default=False
+            )
+            if not value:
+                click.echo(f"{key} unchanged.")
+                continue
         updates[key] = value
+    if not updates:
+        return
     _emit(actions.config_set(project_root(), updates), as_json)
 
 
@@ -476,6 +485,13 @@ def mda_deploy(yes: bool, deployment_type: str | None, name: str | None) -> None
     if not yes:
         click.echo("Re-run with --yes to deploy.")
         sys.exit(2)
+    if not _stdin_is_terminal() and not check.detail.get("langsmith_key_set"):
+        click.echo(
+            "Deploy would ask for a LangSmith sign-in, which needs a terminal. Run "
+            "`uv run paid-media-agent mda deploy --yes` in your own terminal, or set "
+            "LANGSMITH_API_KEY to a personal access token first."
+        )
+        sys.exit(1)
     with tempfile.TemporaryDirectory(prefix="paid-media-agent-deploy-") as scratch:
         staged = stage_for_deploy(root, Path(scratch) / "project")
         command = deploy_command(root, staged)

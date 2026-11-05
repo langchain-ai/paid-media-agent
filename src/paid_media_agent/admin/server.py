@@ -383,15 +383,6 @@ def create_console_app(
         except ProcessError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 
-    @app.post("/api/processes/{name}/continue")
-    def continue_process(
-        name: str, console: ConsoleState = Depends(_authorized)
-    ) -> dict[str, JsonValue]:
-        try:
-            return console.processes.continue_authorization(name).model_dump(mode="json")
-        except ProcessError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from None
-
     @app.get("/api/processes/{name}/log")
     def process_log(
         name: str, console: ConsoleState = Depends(_authorized)

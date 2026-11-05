@@ -26,7 +26,8 @@ Add `--help` for options and `--json` where supported for machine-readable outpu
 | --- | --- |
 | `uv run paid-media-agent setup` | Optional browser setup for connections and deployment |
 | `uv run paid-media-agent config show` | Inspect masked configuration |
-| `uv run paid-media-agent config set KEY=VALUE` | Save local configuration |
+| `uv run paid-media-agent config set KEY` | Type a key's value without echoing it; Enter keeps the current one |
+| `uv run paid-media-agent config set KEY=VALUE` | Save local configuration that is not secret |
 | `uv run paid-media-agent config generate KEY` | Generate an API token or approval signing key |
 | `uv run paid-media-agent models --provider langsmith --json` | Read the provider's current model list |
 | `uv run paid-media-agent test model` | Send a short request to the configured model |
@@ -58,8 +59,9 @@ MDA is available in US LangSmith Cloud. See the current
    without echoing it; never paste a key into a chat. The setup console works too.
 2. **LangSmith key.** `uv run paid-media-agent config set LANGSMITH_API_KEY`, with a personal
    access token (`lsv2_pt_...`) from LangSmith's API Keys page. A service key (`lsv2_sk_...`)
-   cannot set up the Slack channel. Leave it unset to sign in with your browser during deploy.
-   Set `LANGSMITH_WORKSPACE_ID` when the key reaches more than one workspace.
+   cannot set up the Slack channel. Without a key, deploy asks you to sign in with your browser,
+   which needs your own terminal. Set `LANGSMITH_WORKSPACE_ID` when the key reaches more than one
+   workspace.
 3. **Ad accounts.** Sign up at [Pipeboard](https://pipeboard.co/pricing): the free plan covers
    2 ad accounts and 30 tool runs a week, paid plans start at US$29.90 a month. Connect your ad
    platforms there, then create a token under **Settings → API Tokens → Generate Token** and save
@@ -80,8 +82,12 @@ MDA is available in US LangSmith Cloud. See the current
    on the first deploy, which Slack app to use (one LangSmith creates and manages in a workspace you
    authorized, a new one from a manifest, or your own); and to authorize LangSmith in Slack or
    install the app, by printing a link and waiting until Slack reports it done. A workspace admin
-   may have to approve the app. Without a terminal, deploy uses a LangSmith-managed app in a
-   workspace you already authorized. `uv run mda channels setup` checks or finishes Slack later.
+   may have to approve the app. Deploy waits up to an hour for Slack; nothing needs typing back.
+   **Run the first deploy in your own terminal** unless LangSmith is already authorized in your
+   Slack workspace. Without a terminal, deploy can only use a LangSmith-managed app in a workspace
+   you authorized before; otherwise it stops before uploading and says to run it in a terminal
+   once. A coding agent should hand this step to you. `uv run mda channels setup` in a terminal
+   checks or finishes the Slack setup later, without deploying.
 7. **First question.** In Slack, find the app under **Apps** (it has the name in
    `PAID_MEDIA_SLACK_NAME`) and send it a direct message, or `/invite` it to a channel and mention
    it. Try: "How did spend and conversions change last week across my accounts?" If nothing comes
