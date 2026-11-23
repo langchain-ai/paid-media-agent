@@ -25,6 +25,7 @@ from langchain.agents.middleware.types import ModelRequest
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langgraph.config import get_config
 
+from paid_media_agent.middleware.async_helpers import NOTES_KEY
 from paid_media_agent.middleware.housekeeping import MARK
 from paid_media_agent.middleware.meter import Meter
 
@@ -73,10 +74,11 @@ def slack_run(runtime: Any) -> bool:
 
 
 def person_turn(messages: Sequence[BaseMessage]) -> bool:
-    """Whether the run was started by a person, not a helper's notification or housekeeping."""
+    """Whether the run was started by a person, not a helper's notification or note, or
+    housekeeping."""
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
-            return NOTIFICATION_KEY not in message.additional_kwargs and (
+            return not {NOTIFICATION_KEY, NOTES_KEY} & message.additional_kwargs.keys() and (
                 not isinstance(message.content, str) or message.content.strip() != MARK
             )
     return False
@@ -129,8 +131,11 @@ def without_footer[M: BaseMessage](message: M) -> M:
 
 
 def _turn(messages: Sequence[BaseMessage]) -> Sequence[BaseMessage]:
+    """This turn's messages: after the latest input, not counting helper notes handed in
+    between model calls."""
     for index in range(len(messages) - 1, -1, -1):
-        if isinstance(messages[index], HumanMessage):
+        message = messages[index]
+        if isinstance(message, HumanMessage) and NOTES_KEY not in message.additional_kwargs:
             return messages[index + 1 :]
     return messages
 

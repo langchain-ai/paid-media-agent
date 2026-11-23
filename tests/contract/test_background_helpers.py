@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from paid_media_agent.assembly import build_agent_components
 from paid_media_agent.config import Settings
+from paid_media_agent.middleware.async_helpers import AsyncHelpersMiddleware, WorkerModelMiddleware
 from paid_media_agent.middleware.authorization import InvocationGuardMiddleware
 from paid_media_agent.middleware.redaction import RedactionMiddleware
 from paid_media_agent.runtime.profiles import fixture_profile
@@ -71,6 +72,9 @@ def test_only_managed_builds_get_helpers_check_ins_and_async_task_tools(
     assert set(CHECK_IN_TOOLS) <= {t.name for t in managed.tools}
     lead = _guard(list(managed.middleware))._surface
     assert all(lead.allows(n) for n in ASYNC_TASK_TOOLS)
+    assert any(isinstance(m, AsyncHelpersMiddleware) for m in managed.middleware)
+    assert not any(isinstance(m, AsyncHelpersMiddleware) for m in local.middleware)
+    assert not lead.allows("report_progress"), "only a helper reports progress"
     assert not lead.allows("task"), "the blocking subagent tier stays hidden"
 
 
@@ -88,8 +92,8 @@ def test_every_helper_is_read_only_with_its_own_guard_stack(
             assert not surface.allows(blocked), (name, blocked)
         assert any(isinstance(m, RedactionMiddleware) for m in spec["middleware"])
         assert spec["skills"] == ["/skills/"]
-    assert "render_report" not in {t.name for t in managed.helpers["account-puller"]["tools"]}
-    assert "render_report" in {t.name for t in managed.helpers["report-builder"]["tools"]}
+        assert surface.allows("report_progress") and surface.allows("render_report"), name
+        assert isinstance(spec["middleware"][1], WorkerModelMiddleware), "the swap comes first"
 
 
 async def test_a_helper_graph_reads_and_cannot_reach_a_write(
@@ -113,7 +117,7 @@ async def test_a_helper_graph_reads_and_cannot_reach_a_write(
         lambda _m: AIMessage(content="Pulled demo-google."),
     ]
     managed = _components(settings, project_root, steps, managed=True)
-    spec = managed.helpers["account-puller"]
+    spec = managed.helpers["worker"]
     # Compiled the way MDA compiles an async subagent: its own tools, prompt and middleware.
     graph = create_deep_agent(
         managed.model,

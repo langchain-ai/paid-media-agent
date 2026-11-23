@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 
-from paid_media_agent.config import Settings
+from paid_media_agent.config import PROVIDER_DEFAULT_KEYS, Settings
 from paid_media_agent.domain.common import JsonValue
 
 MODEL_PRESETS: tuple[dict[str, JsonValue], ...] = (
@@ -168,18 +168,6 @@ PROVIDER_IMPORT_MODULES: dict[str, str] = {
     "deepseek": "langchain_deepseek",
     "langsmith": "langchain_openai",
     "scripted": "paid_media_agent",
-}
-
-
-PROVIDER_DEFAULT_KEYS: dict[str, str] = {
-    "langsmith": "LANGSMITH_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google_genai": "GOOGLE_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "xai": "XAI_API_KEY",
-    "mistralai": "MISTRAL_API_KEY",
-    "deepseek": "DEEPSEEK_API_KEY",
 }
 
 

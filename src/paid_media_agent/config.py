@@ -20,6 +20,21 @@ RuntimeName = Literal["local", "mda", "self_hosted"]
 SlackTransport = Literal["socket_mode", "http"]
 
 DEFAULT_MODEL_SPEC = "anthropic:claude-opus-5-5"
+#: Providers whose LangChain chat model takes `reasoning_effort` (the gateway is ChatOpenAI).
+EFFORT_PROVIDERS = frozenset({"anthropic", "openai", "langsmith"})
+#: Reasoning efforts, least thinking first.
+EFFORTS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")
+#: The env var each provider's LangChain chat model reads its key from.
+PROVIDER_DEFAULT_KEYS: dict[str, str] = {
+    "langsmith": "LANGSMITH_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google_genai": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "xai": "XAI_API_KEY",
+    "mistralai": "MISTRAL_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
 TEMPLATE = "langchain-ai/paid-media-agent"
 
 
@@ -131,6 +146,11 @@ class Settings(BaseSettings):
     paid_media_model_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
     """Reasoning effort for Anthropic, OpenAI, and LangSmith Gateway models; unset is the
     provider's default. Passed as LangChain's `reasoning_effort`."""
+    paid_media_helper_model: str | None = None
+    """A background helper's model when the lead names none (`provider:model`); unset is the
+    lead's. On Managed Deep Agents the lead can pick any model per task."""
+    paid_media_helper_effort_cap: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    """The most effort a background helper may run at, for cost; unset leaves it to the lead."""
     paid_media_model_timeout_seconds: int = Field(default=120, ge=10)
     """Per-request model timeout. A stalled gateway call otherwise blocks a run indefinitely."""
     paid_media_max_model_calls: int = Field(default=40, ge=5)
@@ -199,6 +219,8 @@ class Settings(BaseSettings):
         "paid_media_tool_selector_model",
         "paid_media_model_api_key_env",
         "paid_media_model_effort",
+        "paid_media_helper_model",
+        "paid_media_helper_effort_cap",
         "paid_media_live_write_catalog_revision",
         mode="before",
     )

@@ -47,8 +47,8 @@ from paid_media_agent.tools.fixtures import build_fixture_catalog
         ),
         (
             "start_async_task",
-            {"subagent_type": "account-puller", "description": "Pull acme for 90 days"},
-            ("Handing the account pull to a helper", "Handed the account pull to a helper"),
+            {"description": "Pull acme for 90 days", "name": "Acme CPA up 40%"},
+            ("Putting a helper on it", "Put a helper on it"),
         ),
         ("mystery_tool", {}, ("Using a tool", "Used a tool")),
         (

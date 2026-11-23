@@ -16,11 +16,18 @@
   and `ls_template_version` metadata on the root run, on MDA and the local and self-hosted paths.
   Nothing about the deployment or its people; `PAID_MEDIA_TEMPLATE_TELEMETRY=false` turns it off.
 
-- Background helpers on Managed Deep Agents: `account-puller`, `report-builder`, and
-  `general-purpose` are async subagents for long multi-account pulls and full reports. The lead
-  hands work off with `start_async_task` and ends its turn; when a helper finishes it wakes the lead,
-  and the answer posts to the same Slack thread. Every helper is read-only by its tool list and runs
-  its own copy of the invocation guard, redaction, offload, and call limits.
+- Background helpers on Managed Deep Agents: async subagents for long multi-account pulls and full
+  reports. The lead hands work off with `start_async_task` and ends its turn; when a helper finishes
+  it wakes the lead, and the answer posts to the same Slack thread. Every helper is read-only by its
+  tool list and runs its own copy of the invocation guard, redaction, offload, and call limits.
+- Every helper task runs on one `worker` async subagent, on the model and effort the lead picks for
+  it: any LangChain `provider:model`, checked before the task starts, with
+  `PAID_MEDIA_HELPER_MODEL` as the default and `PAID_MEDIA_HELPER_EFFORT_CAP` as a ceiling. Tool
+  selection follows the model each call runs on. The lead names each task with a short role.
+  `account-puller` and `report-builder` are gone; `general-purpose` stays declared, read-only, so
+  MDA adds no copy with the lead's tools.
+- Helpers send the lead progress notes with `report_progress`; the lead reads them before its next
+  model call, and an urgent note wakes an idle lead.
 - Check-ins: `schedule_check_in` and `cancel_check_in` let the agent come back to a conversation
   later, for example two days after an approved budget change, on MDA runtime schedules. A daily
   `schedules/housekeeping.py` run deletes expired check-ins in code, with no model call.

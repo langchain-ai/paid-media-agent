@@ -1,7 +1,7 @@
 """What each step is called in Slack: an analyst's phrase per tool call, in both tenses.
 
 A step reads like a paid-media analyst at work ("Reading Google Ads campaign performance",
-"Comparing the two periods", "Handing the account pull to a helper") rather than a tool name.
+"Comparing the two periods", "Putting a helper on it") rather than a tool name.
 Every phrase is a pair: what the step is doing while it runs, and what it did.
 
 The phrasebook is deterministic and grows without an entry per platform tool:
@@ -52,12 +52,6 @@ PLATFORM_NAMES: Mapping[str, str] = {
     Platform.OPENAI_ADS: "OpenAI Ads",
 }
 
-#: Helper types (`subagents.py`) as a person would say them.
-HELPER_WORK: Mapping[str, str] = {
-    "account-puller": "the account pull",
-    "report-builder": "the report",
-}
-
 TOOL_PHRASES: Mapping[str, Phrase] = {
     "list_accounts": ("Checking connected accounts", "Checked connected accounts"),
     "discover_tools": (
@@ -77,6 +71,7 @@ TOOL_PHRASES: Mapping[str, Phrase] = {
     "schedule_check_in": ("Scheduling a check-in", "Scheduled a check-in"),
     "cancel_check_in": ("Cancelling a check-in", "Cancelled a check-in"),
     "write_todos": ("Planning the analysis", "Planned the analysis"),
+    "start_async_task": ("Putting a helper on it", "Put a helper on it"),
     "check_async_task": ("Checking on a helper", "Checked on a helper"),
     "list_async_tasks": ("Checking on the helpers", "Checked on the helpers"),
     "update_async_task": ("Updating a helper's brief", "Updated a helper's brief"),
@@ -225,11 +220,6 @@ def _platform_phrase(name: str) -> Phrase | None:
 def phrase(name: str, args: Mapping[str, object] | None = None) -> Phrase:
     """A tool call's step, while it runs and once it is done."""
     args = args or {}
-    if name == "start_async_task":
-        work = HELPER_WORK.get(str(args.get("subagent_type") or ""))
-        if work:
-            return f"Handing {work} to a helper", f"Handed {work} to a helper"
-        return "Starting a background helper", "Started a background helper"
     known = TOOL_PHRASES.get(name) or _file_phrase(name, args) or _platform_phrase(name)
     return known or ("Using a tool", "Used a tool")
 

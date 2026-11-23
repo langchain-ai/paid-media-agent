@@ -89,8 +89,8 @@ you to paste a key into the chat.
   tables, and recommendations, as HTML or PDF.
 - **Prepares changes for review.** It drafts a budget or status change with the reason, the risk,
   and how to measure and reverse it, and waits for an authorized person to approve.
-- **Works in the background.** Long multi-account pulls and full reports go to read-only helpers,
-  and it answers in the same thread when they finish.
+- **Works in the background.** Long multi-account pulls and full reports go to read-only helpers
+  on the model it picks for each task, and it answers in the same thread when they finish.
 - **Comes back later.** Ask it to check how an approved change did in two days, and it schedules
   its own check-in.
 

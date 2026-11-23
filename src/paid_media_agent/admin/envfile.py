@@ -307,6 +307,18 @@ ENV_KEYS: tuple[EnvKeySpec, ...] = (
         example="medium",
     ),
     EnvKeySpec(
+        name="PAID_MEDIA_HELPER_MODEL",
+        group="model",
+        secret=False,
+        description="Default model for background helpers on MDA; unset uses the lead's",
+    ),
+    EnvKeySpec(
+        name="PAID_MEDIA_HELPER_EFFORT_CAP",
+        group="model",
+        secret=False,
+        description="Most effort a background helper may run at: low, medium, high, xhigh, max",
+    ),
+    EnvKeySpec(
         name="PAID_MEDIA_MODEL_TIMEOUT_SECONDS",
         group="model",
         secret=False,

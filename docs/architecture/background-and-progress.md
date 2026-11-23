@@ -1,26 +1,64 @@
 # Background work and progress
 
 Long work should not hold a person's Slack thread, and a person should see what the agent is doing
-while it works. Both use public Managed Deep Agents 0.10 APIs. Nothing here adds a write path.
+while it works. Both use public Managed Deep Agents 0.10.5 APIs. Nothing here adds a write path.
 
 ## Background helpers
 
-`src/paid_media_agent/subagents.py` defines three helper specs. `agent.py` declares each as an
-async subagent, with the literal `name` and `"async": True` after the spread so `mda build` reads
-them without running code:
+`src/paid_media_agent/subagents.py` defines the helper spec. `agent.py` declares two async
+subagents with it, with the literal `name` and `"async": True` after the spread so `mda build`
+reads them without running code:
 
 | Helper | For | Tools |
 | --- | --- | --- |
-| `account-puller` | pulls and comparisons across many accounts or long windows | `list_accounts`, `discover_tools`, platform reads, `compare_periods`, `summarize_window` |
-| `report-builder` | a full rendered report | the same, plus `render_report` |
-| `general-purpose` | other read-only research | the same as `report-builder` |
+| `worker` | every task the lead starts: pulls and comparisons across many accounts or long windows, a full rendered report, other read-only research | `list_accounts`, `discover_tools`, platform reads, `compare_periods`, `summarize_window`, `render_report`, `report_progress` |
+| `general-purpose` | nothing the lead starts: declared so MDA adds no default copy with every lead tool | the same |
 
-MDA builds each as its own graph on the deployment (`paid-media-agent--account-puller`, ...). The
-lead starts one with `start_async_task` and ends its turn. The helper runs in the lead's sandbox and
+MDA builds each as its own graph on the deployment (`paid-media-agent--worker`, ...). The lead
+starts a task with `start_async_task` and ends its turn. The helper runs in the lead's sandbox and
 trace. When it finishes, deepagents' `notify_parent` starts a run on the lead's thread if the thread
 is idle (never on a thread waiting for an approval), and MDA posts that run's answer to the thread's
 origin, the Slack thread the request came from. A helper's run is an Agent Server run with its own
 checkpointed thread, so it outlives the lead's turn without a hand-built waker or transcript store.
+
+### A model per task
+
+MDA builds an async subagent's graph from a static spec, so its model is fixed at deploy. The
+choice travels on the run context instead (`middleware/async_helpers.py`):
+
+- The lead's `AsyncHelpersMiddleware` shows `start_async_task` with `model`, `effort`, and `name`
+  in place of `subagent_type`, and runs every task on `worker`. It checks the choice: a
+  `provider:model` LangChain can build here; an effort from `low` to `max` (the lead's when unnamed
+  and the provider is the lead's, never above `PAID_MEDIA_HELPER_EFFORT_CAP`, which also applies
+  when no effort is named, `xhigh` for OpenAI's `max`, none for a provider that takes none); and its
+  key. The lead's endpoint and key variable go only to the lead's own model, or to another model
+  of its provider when the lead uses the provider's own endpoint, so a proxy's key never reaches
+  another host. A refusal comes back to the lead as the tool's error and starts nothing. The choice
+  is stamped on the run context deepagents forwards to the task and on the task's record, so
+  `update_async_task` continues on the same model. This middleware sits last in the lead's stack,
+  so the invocation guard checks its calls and redaction cleans its replies.
+- The worker's `WorkerModelMiddleware`, first after its meter, checks the stamp again (run context
+  is something a caller can write) and swaps that model in on every call, and
+  `WorkerSelectionMiddleware` picks tool selection for the same resolved model: provider tool
+  search on Anthropic and OpenAI models that have it, the portable selector elsewhere. An
+  unstamped, refused, or unbuildable stamp runs on the lead's model with the lead's selection.
+- The meter prices each call by the model that answered, so the footer counts a cheaper helper at
+  its own price.
+
+### Progress notes and urgent wake-ups
+
+The worker has `report_progress`. A note is kept in the deployment's store under the lead's thread
+(`("paid_media_agent", "helper_notes", <lead thread>)`), found from the task thread's
+`parent_thread_id` metadata, which the Agent Server copies into every run on that thread.
+Before each model call the lead's middleware hands it the notes that came in, as one message marked
+as not from a person, and deletes them. An urgent note also wakes an idle lead, the way
+`notify_parent` does: a run on the lead's thread through the Agent Server's own client, with
+`multitask_strategy="reject"`, only while the thread is idle or errored. A busy or paused lead reads
+it before its next model call instead. A note and a role name are model text: they reach the lead's
+model, never a Slack status step. The footer treats a notes message as neither a person's request
+nor the start of a turn.
+
+### Read-only by construction
 
 Read-only is enforced in code:
 
@@ -56,7 +94,7 @@ deletes expired check-ins that carry the metadata key, and ends the run before a
 `surfaces/progress.py` is a deterministic phrasebook: every tool call reads as an analyst's step
 in two tenses ("Reading Google Ads campaign performance" / "Read Google Ads campaign performance").
 Platform reads are parsed from `<platform>__<operation>`, file tools from their path (a wiki page is
-"the wiki on bidding and budget"), and a helper launch from its type. A tool call is model output,
+"the wiki on bidding and budget"); a helper launch reads "Putting a helper on it", never its role name. A tool call is model output,
 so a phrase never carries text the model chose: no argument, and only names the repository ships
 (its tools, skills, and wiki pages, and a fixed vocabulary for what a platform read covers).
 Anything else reads generically: "a guide", "the paid-media wiki", "Google Ads data", "a tool".

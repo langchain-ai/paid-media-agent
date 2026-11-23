@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -16,7 +16,18 @@ from langchain.agents.middleware import (
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from paid_media_agent.config import ModelConfig, Settings, template_marker
+from paid_media_agent.config import EFFORT_PROVIDERS, ModelConfig, Settings, template_marker
+from paid_media_agent.middleware.async_helpers import (
+    AsyncHelpersMiddleware,
+    HelperChoice,
+    HelperModels,
+    WorkerModelMiddleware,
+    WorkerNotesMiddleware,
+    WorkerSelectionMiddleware,
+    choose_helper_model,
+    helper_config,
+    lead_choice,
+)
 from paid_media_agent.middleware.authorization import (
     HIDDEN_BUILTIN_TOOLS,
     InvocationGuardMiddleware,
@@ -37,7 +48,12 @@ from paid_media_agent.middleware.tool_selection import (
     plan_selection,
 )
 from paid_media_agent.runtime.profiles import RuntimeProfile
-from paid_media_agent.subagents import ASYNC_TASK_TOOLS, HELPER_FILESYSTEM_TOOLS, helper_specs
+from paid_media_agent.subagents import (
+    ASYNC_TASK_TOOLS,
+    HELPER_FILESYSTEM_TOOLS,
+    REPORT_PROGRESS_TOOL,
+    helper_specs,
+)
 from paid_media_agent.tools.catalog import AuthorizedToolCatalog
 from paid_media_agent.tools.check_ins import build_check_in_tools
 from paid_media_agent.tools.compare_periods import COMPARE_PERIODS_TOOL, build_compare_periods_tool
@@ -76,8 +92,6 @@ WRITE_TOOLS: tuple[str, ...] = (
     GET_PROPOSAL_TOOL,
 )
 MODEL_RETRY_ATTEMPTS = 2
-#: Providers whose LangChain chat model takes `reasoning_effort` (the gateway is ChatOpenAI).
-EFFORT_PROVIDERS = frozenset({"anthropic", "openai", "langsmith"})
 
 
 @dataclass(frozen=True)
@@ -196,6 +210,28 @@ def resolve_model(
     return resolved
 
 
+def _selector_model(
+    settings: Settings,
+    plan: SelectionPlan,
+    config: ModelConfig,
+    model: Callable[[], BaseChatModel | None],
+) -> BaseChatModel | None:
+    """The portable selector's model: the operator's selector, else the agent's own (wrapped for
+    the gateway), else None to let the middleware use the model each call runs on."""
+    if plan.strategy is not SelectionStrategy.PORTABLE_SELECTOR:
+        return None
+    if plan.selector_model:
+        selector_config = ModelConfig.parse(plan.selector_model)
+        selected = resolve_model(
+            selector_config, timeout_seconds=settings.paid_media_model_timeout_seconds
+        )
+        return lenient_selector(selected, selector_config) or selected
+    if config.provider != "langsmith":
+        return None
+    own = model()
+    return lenient_selector(own, config) if own is not None else None
+
+
 def load_system_prompt(project_root: Path) -> str:
     return (project_root / "instructions.md").read_text(encoding="utf-8")
 
@@ -242,24 +278,28 @@ def build_agent_components(
     tools: tuple[BaseTool, ...] = (*core_tools, *write_tools, *platform_tools)
 
     plan = plan_selection(model_config, max_tools=settings.paid_media_max_selected_tools)
-    selection_model = selector_model
-    if selection_model is None and plan.strategy is SelectionStrategy.PORTABLE_SELECTOR:
-        if plan.selector_model:
-            selector_config = ModelConfig.parse(plan.selector_model)
-            selected = resolve_model(
-                selector_config, timeout_seconds=settings.paid_media_model_timeout_seconds
-            )
-            selection_model = lenient_selector(selected, selector_config) or selected
-        else:
-            selection_model = lenient_selector(resolved_model, model_config)
+    selection_model = selector_model or _selector_model(
+        settings, plan, model_config, lambda: resolved_model
+    )
     secrets = tuple(s for s in (*_secret_values(settings), *runtime.extra_secrets) if s)
     platform_names = [t.name for t in platform_tools]
 
     def guards(
-        visible: Sequence[str], always: Sequence[str]
+        visible: Sequence[str],
+        always: Sequence[str],
+        *,
+        selection: Sequence[AgentMiddleware[Any, Any, Any]] | None = None,
     ) -> list[AgentMiddleware[Any, Any, Any]]:
         """The stack every agent runs with, lead or helper: bounded model calls, today's date, tool
-        selection, the invocation guard, result offload, and redaction."""
+        selection (the lead's plan unless `selection` says otherwise), the invocation guard, result
+        offload, and redaction."""
+        if selection is None:
+            selection = build_selection_middleware(
+                plan,
+                searchable_tool_names=platform_names,
+                always_include=list(always),
+                selector_model=selection_model,
+            )
         bounded: list[AgentMiddleware[Any, Any, Any]] = []
         if model_config.provider != "scripted":
             # Transient model failures should not kill a run; bounded, and tool effects never
@@ -277,12 +317,7 @@ def build_agent_components(
         return [
             *bounded,
             CurrentDateMiddleware(),
-            *build_selection_middleware(
-                plan,
-                searchable_tool_names=platform_names,
-                always_include=list(always),
-                selector_model=selection_model,
-            ),
+            *selection,
             InvocationGuardMiddleware(surface=surface, catalog_provider=runtime.catalog_provider),
             ResultOffloadMiddleware(
                 runtime.artifacts, max_chars=settings.paid_media_result_offload_chars
@@ -298,29 +333,76 @@ def build_agent_components(
         *background,
     ]
     meter = Meter(default_model=model_config.model)
-    # Housekeeping first: its run ends in `before_agent`, before anything else does work.
+    lead_helpers: tuple[AgentMiddleware[Any, Any, Any], ...] = ()
+    helpers: dict[str, dict[str, Any]] = {}
+    if managed:
+        default = lead_choice(settings)
+
+        def build_helper(choice: HelperChoice) -> BaseChatModel:
+            """A helper's model, built as the lead's is, with the endpoint and key variable
+            `helper_config` allows."""
+            config, key_env = helper_config(settings, choice.model)
+            return resolve_model(
+                config,
+                api_key_env=key_env,
+                timeout_seconds=settings.paid_media_model_timeout_seconds,
+                effort=choice.effort,
+            )
+
+        def check_helper(model: str, effort: str) -> HelperChoice | str:
+            return choose_helper_model(settings, model, effort, build=build_helper)
+
+        helper_models = HelperModels(
+            build_helper, lambda stamp: check_helper(stamp.model, stamp.effort or ""), default
+        )
+        helper_tools = [*analysis_tools, render_tool, *platform_tools]
+        helper_names = [t.name for t in helper_tools]
+        helper_visible = [*HELPER_FILESYSTEM_TOOLS, REPORT_PROGRESS_TOOL, *helper_names]
+        helper_always = [n for n in helper_visible if n not in platform_names]
+
+        def selection_for(choice: HelperChoice | None) -> Sequence[AgentMiddleware[Any, Any, Any]]:
+            if choice is None:
+                config, model_plan = model_config, plan
+                selector: BaseChatModel | None = selection_model
+            else:
+                config, _ = helper_config(settings, choice.model)
+                model_plan = plan_selection(
+                    config, max_tools=settings.paid_media_max_selected_tools
+                )
+                selector = _selector_model(
+                    settings, model_plan, config, lambda: build_helper(choice)
+                )
+            return build_selection_middleware(
+                model_plan,
+                searchable_tool_names=platform_names,
+                always_include=helper_always,
+                selector_model=selector,
+            )
+
+        def helper_middleware(_tools: Sequence[BaseTool]) -> list[AgentMiddleware[Any, Any, Any]]:
+            return [
+                MeterMiddleware(meter),
+                WorkerModelMiddleware(helper_models),
+                *guards(
+                    helper_visible,
+                    helper_always,
+                    selection=[WorkerSelectionMiddleware(selection_for, helper_models)],
+                ),
+                WorkerNotesMiddleware(),
+            ]
+
+        helpers = helper_specs(tools=helper_tools, middleware=helper_middleware)
+        lead_helpers = (AsyncHelpersMiddleware(settings, check_helper),)
+
+    # Housekeeping first: its run ends in `before_agent`, before anything else does work. The
+    # helper middleware goes last, so the guards check its calls and redaction cleans its replies.
     middleware: tuple[AgentMiddleware[Any, Any, Any], ...] = (
         HousekeepingMiddleware(),
         RunFooterMiddleware(meter),
         MeterMiddleware(meter),
         *guards([*lead_always, *platform_names], lead_always),
+        *lead_helpers,
     )
-
-    helpers: dict[str, dict[str, Any]] = {}
-    if managed:
-
-        def helper_middleware(
-            helper_tools: Sequence[BaseTool],
-        ) -> list[AgentMiddleware[Any, Any, Any]]:
-            names = [t.name for t in helper_tools]
-            always = [*HELPER_FILESYSTEM_TOOLS, *(n for n in names if n not in platform_names)]
-            return [MeterMiddleware(meter), *guards([*HELPER_FILESYSTEM_TOOLS, *names], always)]
-
-        helpers = helper_specs(
-            analysis_tools=[*analysis_tools, *platform_tools],
-            render_tool=render_tool,
-            middleware=helper_middleware,
-        )
 
     interrupt_on: dict[str, InterruptOnConfig] = {}
     if write_tools:
