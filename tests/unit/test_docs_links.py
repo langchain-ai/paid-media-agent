@@ -100,3 +100,25 @@ def test_company_design_tokens_match_renderer(project_root: Path) -> None:
         if names and values:
             documented.update(zip(names, values, strict=True))
     assert documented == theme.tokens
+
+
+def _deploy_prompt(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    match = re.search(
+        r"```text\n(Deploy LangChain's open-source paid media agent.*?)```", text, re.S
+    )
+    assert match, f"{path.name} has no one-paste deploy prompt"
+    return match.group(1)
+
+
+def test_the_one_paste_deploy_prompt_is_the_same_everywhere(project_root: Path) -> None:
+    """The README and the deploy guide hand coding agents one prompt; it names real commands."""
+    prompt = _deploy_prompt(project_root / "README.md")
+    assert prompt == _deploy_prompt(project_root / "docs" / "deploy-mda.md")
+    assert "never ask me to paste a key" in prompt
+    for skill in re.findall(r"the `([a-z-]+)` skill", prompt):
+        assert (project_root / ".agents" / "skills" / skill / "SKILL.md").is_file(), skill
+    runner = CliRunner()
+    for command in re.findall(r"`uv run paid-media-agent ([a-z ]+?)(?: --| <|`)", prompt):
+        result = runner.invoke(main, [*command.split(), "--help"])
+        assert result.exit_code == 0, (command, result.output)
