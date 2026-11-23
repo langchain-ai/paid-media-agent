@@ -5,6 +5,14 @@ description: Install and configure Paid Media Agent, connect ad platforms, choos
 
 # Set up Paid Media Agent
 
+**Ask first, in one message:** whether they have a LangSmith Cloud account with Managed Deep Agents
+(US region) and a personal access token; which model (Claude Opus 5.5 by default, or the LangSmith
+Gateway); whether they have a Pipeboard account and which ad platforms it connects, or want to start
+on the sample accounts; whether to deploy a separate test copy first; and who will approve the Slack
+app (a workspace admin may have to). Say what bills: LangSmith hosting, including the sandbox bake on
+the first deploy ([pricing](https://www.langchain.com/pricing)); model spend; and Pipeboard beyond
+its free plan (2 ad accounts, 30 tool runs a week).
+
 1. Read `README.md`, install with `uv sync`, then run
    `uv run paid-media-agent demo --with-proposal` to verify the fixture path without credentials.
 2. Configure the model and its key through `uv run paid-media-agent setup` or
@@ -32,7 +40,12 @@ description: Install and configure Paid Media Agent, connect ad platforms, choos
    - Hand the first deploy to the person to run in their own terminal: it may ask for a LangSmith
      sign-in and which Slack app to use, which it cannot ask without a terminal, and it prints a
      Slack authorization link that a workspace admin may need to approve. Deploy waits for Slack on
-     its own. Later deploys you may run yourself once the person asks.
+     its own. Later deploys you may run yourself once the person asks; run them in the background
+     and relay any link they print.
+   - On MDA the Slack app is LangSmith-managed by default: there is no manifest to create and no
+     `SLACK_*` key to set, whatever a generic MDA skill says. `config/slack-manifest.example.yaml`
+     and the `SLACK_*` keys are for self-hosting only.
+   - For a test copy, add `--name paid-media-agent-test`; the team's deployment is untouched.
 6. When it is live, have the person message the app in Slack (under **Apps**) or `/invite` it to
    a channel and mention it, with a first question about last week's spend. If nothing comes back,
    read `uv run mda logs --no-follow`. Provide the deployment URL. A local preflight alone does

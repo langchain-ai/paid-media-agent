@@ -54,6 +54,10 @@
   - The demo labels its receipt as simulated.
   - A step-by-step deploy guide, [docs/deploy-mda.md](docs/deploy-mda.md), which the onboarding
     skill follows.
+- A one-paste deploy prompt for Claude Code, Codex or Cursor in the README and the deploy guide,
+  kept identical by a test. The onboarding skill asks its setup questions in one message (account,
+  model, Pipeboard or sample accounts, a test copy, who approves the Slack app) and says what bills.
+  It and `AGENTS.md` say the MDA Slack app needs no manifest or `SLACK_*` keys.
 - MDA-first README, like the design agent's: an `install.sh` one-liner, then three commands to
   enter keys, map accounts, and deploy; a "say this to your coding agent" table; and a questions
   section. `accounts discover --add` maps every newly found ad account to an alias in one step.

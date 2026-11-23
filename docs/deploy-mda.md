@@ -17,6 +17,19 @@ and installs its dependencies; `git clone` and `uv sync` do the same. `uv run` u
 pinned in `uv.lock`, so the CLI matches the SDK the agent is built on. The steps below explain each
 command.
 
+Or paste this into Claude Code, Codex or Cursor, from any folder:
+
+```text
+Deploy LangChain's open-source paid media agent to my Slack workspace with Managed Deep Agents.
+
+1. Install it with `curl -fsSL https://raw.githubusercontent.com/langchain-ai/paid-media-agent/main/install.sh | bash`, then work in the `paid-media-agent` folder it creates.
+2. Read `AGENTS.md` and follow the `paid-media-onboarding` skill. Ask me its setup questions in one message.
+3. Tell me which keys you need. I'll type them myself with `uv run paid-media-agent config set <KEY>` in my terminal; never ask me to paste a key in chat.
+4. Run `uv run paid-media-agent demo --with-proposal`, then `uv run paid-media-agent mda check`, and fix what it flags. Read me its warnings.
+5. Have me run the first deploy, `uv run paid-media-agent mda deploy --yes`, in my own terminal: it bills, builds the agent's sandbox and sets up the Slack app. Ask me before later deploys.
+6. When it's live, walk me through messaging the agent in Slack and asking a first question about last week's spend.
+```
+
 ## What you need
 
 - A LangSmith Cloud account with Managed Deep Agents (US region) and a personal access token.

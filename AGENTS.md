@@ -44,7 +44,8 @@ accounts, or make it theirs. Each job has a skill in `.agents/skills/`; open the
 
 Never ask for a key in chat: the person runs `uv run paid-media-agent config set <KEY>` in their
 own terminal, which asks without echoing. Ask before deploying, connecting accounts, or spending
-money, and hand the first deploy to the person's terminal.
+money, and hand the first deploy to the person's terminal. On MDA the Slack app is managed: no
+manifest and no `SLACK_*` keys, whatever a generic MDA skill says; those are for self-hosting.
 
 ## Onboarding
 
