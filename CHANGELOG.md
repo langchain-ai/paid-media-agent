@@ -58,9 +58,9 @@ Live provider writes remain disabled by default and require the documented relea
 
 - Clarify the README's capabilities, setup, deployment, and company customization guidance.
 - Use the LangChain company logo in the README, with light and dark variants.
-- Require `managed-deepagents` 0.10.1 or later (and `deepagents` 0.7.30 or later). Document MDA's
-  agent and personal memory layers and the day-to-day `mda` commands, including
-  `mda channels setup`.
+- Require `managed-deepagents` 0.10.5 or later (and `deepagents` 0.7.30 and `langgraph` 1.2.19 or
+  later). Document MDA's agent and personal memory layers and the day-to-day `mda` commands,
+  including `mda channels setup`.
 - Pipeboard loads through `langchain.mcp` (FastMCP, MCP 2.x) instead of `langchain-mcp-adapters`.
   `mda build` 0.10 adds `langchain[mcp]` and `fastmcp` to the deployed image, which need MCP 2, so
   the old `mcp<2` pin made every MDA 0.10 deploy fail to build. Tools are listed and called with no
@@ -81,4 +81,5 @@ Live provider writes remain disabled by default and require the documented relea
   or `mention`, `all`) replaces `PAID_MEDIA_SLACK_TRIGGER_ON_ALL_MESSAGES`, which MDA 0.10
   deprecated. Set `PAID_MEDIA_SLACK_TRIGGER_MODE=all` if you had the old key set to `true`.
 - `mda deploy` now creates serverless deployments by default. The operations guide explains why
-  live-write deployments should pass `--deployment-type dedicated`.
+  live-write deployments should pass `--agent-server-type dedicated`, MDA 0.10.5's name for the
+  flag; `paid-media-agent mda deploy` passes it through and still accepts `--deployment-type`.

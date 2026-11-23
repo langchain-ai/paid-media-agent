@@ -28,6 +28,14 @@ architecture page when the supported behavior changes.
 Check the deployment and Slack documentation for current availability, regions, and channel limits.
 Installed SDK behavior and the project preflight determine whether this checkout can deploy.
 
+[`managed-deepagents` on PyPI](https://pypi.org/project/managed-deepagents/): this project pins
+0.10.5. Never pin a `.devN` build; those are cut from feature branches. The 0.10 line reads a run's
+channel from `runtime.thread.origin.channel` (`runtime.channel` goes in 0.11), replaced
+`trigger_on_all_messages` with `trigger_mode`, skips a reply of exactly `[quiet]`, hands a running
+turn the channel's follow-ups at its next model call, and adds an async general-purpose subagent
+unless one is declared. 0.10.5 renames `mda deploy --deployment-type` to `--agent-server-type` and traces an
+async subagent's run as a subagent of its lead.
+
 ## Models and tool disclosure
 
 - [LangChain prebuilt middleware](https://docs.langchain.com/oss/python/langchain/middleware/built-in)

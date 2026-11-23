@@ -142,9 +142,9 @@ Ads keys, and `PAID_MEDIA_*` settings. Leave the self-hosted values blank: `SLAC
 approvals in the MDA profile are process-local ([Writes](../OPERATIONS.md#writes)), so a scale-down
 between a proposal and its approval loses the proposal and the approval is refused. That fails
 closed, but the change has to be proposed again. Before enabling live writes, deploy with
-`--deployment-type dedicated`. Existing deployments keep their type.
+`--agent-server-type dedicated`. Existing deployments keep their type.
 
-In MDA 0.10, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, and `LANGSMITH_WORKSPACE_ID` come from
+Since MDA 0.10, `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, and `LANGSMITH_WORKSPACE_ID` come from
 your shell first and the project `.env` second; unset a stale shell value if deploy targets the
 wrong workspace. A local check does not prove your cloud permissions; the deployment status and a
 real answer in Slack do.

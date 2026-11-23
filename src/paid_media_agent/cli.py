@@ -475,17 +475,19 @@ def mda_dev() -> None:
     "--yes", is_flag=True, help="Confirm the deployment. Deploying is an outward-facing action."
 )
 @click.option(
+    "--agent-server-type",
     "--deployment-type",
+    "agent_server_type",
     type=click.Choice(["serverless", "dedicated"]),
     default=None,
-    help="A new deployment's type. MDA creates serverless ones by default.",
+    help="A new deployment's Agent Server type. MDA creates serverless ones by default.",
 )
 @click.option(
     "--name",
     default=None,
     help="Deployment name, for a separate copy such as paid-media-agent-test.",
 )
-def mda_deploy(yes: bool, deployment_type: str | None, name: str | None) -> None:
+def mda_deploy(yes: bool, agent_server_type: str | None, name: str | None) -> None:
     """Run `mda deploy` after preflight and explicit confirmation.
 
     It deploys a copy of the project without local working data (`deployment.LOCAL_DATA_DIRS`),
@@ -515,8 +517,8 @@ def mda_deploy(yes: bool, deployment_type: str | None, name: str | None) -> None
     with tempfile.TemporaryDirectory(prefix="paid-media-agent-deploy-") as scratch:
         staged = stage_for_deploy(root, Path(scratch) / "project")
         command = deploy_command(root, staged)
-        if deployment_type:
-            command = (*command, "--deployment-type", deployment_type)
+        if agent_server_type:
+            command = (*command, "--agent-server-type", agent_server_type)
         if name:
             command = (*command, "--name", name)
         raise SystemExit(subprocess.call(command, cwd=staged))  # noqa: S603

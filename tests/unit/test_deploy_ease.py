@@ -163,6 +163,32 @@ def test_the_deploy_wrapper_passes_a_name_for_a_separate_copy(
     assert "deploy" in calls[0] and "--env-file" not in calls[0], "no .env in the fixture"
 
 
+@pytest.mark.parametrize("flag", ["--agent-server-type", "--deployment-type"])
+def test_the_deploy_wrapper_passes_mdas_agent_server_type(
+    workspace: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    flag: str,
+) -> None:
+    """MDA 0.10.5 names the flag `--agent-server-type`; the wrapper keeps the old spelling."""
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr("paid_media_agent.cli.project_root", lambda: workspace)
+    monkeypatch.setattr(
+        actions,
+        "mda_check",
+        lambda _root: actions.ActionResult(
+            action="mda_check",
+            ok=True,
+            status="ok",
+            summary="ok",
+            detail={"langsmith_key_set": True},
+        ),
+    )
+    monkeypatch.setattr("subprocess.call", lambda command, **_: calls.append(tuple(command)) or 0)
+    result = CliRunner().invoke(main, ["mda", "deploy", "--yes", flag, "dedicated"])
+    assert result.exit_code == 0, result.output
+    assert calls[0][-2:] == ("--agent-server-type", "dedicated")
+
+
 def test_a_browser_sign_in_deploy_is_handed_to_a_terminal(
     workspace: Path,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
