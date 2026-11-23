@@ -106,6 +106,11 @@ class DeploymentSettings(BaseSettings):
     monthly_report_day: int = Field(
         default=1, ge=1, le=28, description="Monthly report day: 1 through 28"
     )
+    report_slack_channel: str = Field(
+        default="",
+        pattern=r"^$|^[CG][A-Z0-9]{6,20}$",
+        description="Slack channel ID the weekly and monthly reports post to, e.g. C0123456789",
+    )
 
     @field_validator("report_time")
     @classmethod
@@ -133,8 +138,22 @@ class DeploymentSettings(BaseSettings):
         return f"{self.report_time.minute} {self.report_time.hour} {self.monthly_report_day} * *"
 
 
+def report_delivery(channel: str) -> dict[str, object]:
+    """MDA's `deliver_to` for a report: a new thread in the Slack channel, which replies continue."""
+    return {"channel": "slack", "to": {"type": "provider_conversation", "conversation_id": channel}}
+
+
+def _deliver_to_source(channel: str, indent: int) -> str:
+    """`report_delivery` as the multi-line literal `ruff format` keeps."""
+    pad, inner = " " * indent, " " * (indent + 4)
+    to = f'{{"type": "provider_conversation", "conversation_id": "{channel}"}}'
+    return f'deliver_to={{\n{inner}"channel": "slack",\n{inner}"to": {to},\n{pad}}}'
+
+
 def schedule_sources(root: Path, settings: DeploymentSettings) -> dict[Path, str]:
-    """Change only cron/timezone literals. MDA statically parses schedules; prompts stay authored."""
+    """Change only the cron, timezone, and report channel literals. MDA statically parses
+    schedules; prompts stay authored. An empty channel removes the `deliver_to` this writes and
+    leaves any other one as written. A result that is not valid Python is refused, never saved."""
     sources: dict[Path, str] = {}
     for cadence, cron in (("weekly", settings.weekly_cron), ("monthly", settings.monthly_cron)):
         path = root / "schedules" / f"{cadence}_report.py"
@@ -180,7 +199,60 @@ def schedule_sources(root: Path, settings: DeploymentSettings) -> dict[Path, str
             start = sum(map(len, lines[: node.lineno - 1])) + node.col_offset
             end = sum(map(len, lines[: node.end_lineno - 1])) + node.end_col_offset
             changes.append((start, end, f'"{value}"'.encode()))
+        changes.extend(_delivery_change(path, definition, lines, settings.report_slack_channel))
         for start, end, value_bytes in sorted(changes, reverse=True):
             source = source[:start] + value_bytes + source[end:]
+        try:
+            ast.parse(source)
+        except SyntaxError as exc:
+            raise ValueError(
+                f"{path.name}: the edit would break the file; change it by hand"
+            ) from exc
         sources[path] = source.decode()
     return sources
+
+
+def _delivery_change(
+    path: Path, definition: ast.Call, lines: list[bytes], channel: str
+) -> list[tuple[int, int, bytes]]:
+    """Point the schedule's `deliver_to` at the report channel: replace it, add it last, or, for
+    an empty channel, remove one this function wrote."""
+
+    def offset(line: int, column: int) -> int:
+        return sum(map(len, lines[: line - 1])) + column
+
+    index, found = next(
+        ((i, kw) for i, kw in enumerate(definition.keywords) if kw.arg == "deliver_to"),
+        (-1, None),
+    )
+    if found is not None:
+        try:
+            current = ast.literal_eval(found.value)
+        except ValueError as exc:
+            raise ValueError(
+                f"{path.name}: deliver_to must be a literal to edit it in setup"
+            ) from exc
+        if found.end_lineno is None or found.end_col_offset is None:
+            return []
+        start = offset(found.lineno, found.col_offset)
+        end = offset(found.end_lineno, found.end_col_offset)
+        if not channel:
+            written = isinstance(current, dict) and current == report_delivery(
+                str((current.get("to") or {}).get("conversation_id", ""))
+            )
+            previous = definition.keywords[index - 1] if index > 0 else None
+            if not written or previous is None or previous.end_lineno is None:
+                return []
+            cut = offset(previous.end_lineno, previous.end_col_offset or 0)
+            return [(cut, end, b"")]
+        if current == report_delivery(channel):
+            return []
+        return [(start, end, _deliver_to_source(channel, found.col_offset).encode())]
+    if not channel:
+        return []
+    last = definition.keywords[-1] if definition.keywords else None
+    if last is None or last.end_lineno is None or last.end_col_offset is None:
+        raise ValueError(f"{path.name}: expected keyword arguments in define_schedule(...)")
+    insert = offset(last.end_lineno, last.end_col_offset)
+    added = f",\n{' ' * last.col_offset}{_deliver_to_source(channel, last.col_offset)}"
+    return [(insert, insert, added.encode())]
