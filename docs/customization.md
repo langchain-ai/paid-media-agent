@@ -171,8 +171,9 @@ These run on Managed Deep Agents and live in code, so a skill edit cannot widen 
 
 | Change | Where |
 | --- | --- |
-| A helper's brief, description, or tools | `src/paid_media_agent/subagents.py` |
-| Add a helper | A spec in `subagents.py`, and a literal entry in `agent.py`'s `subagents` list: `{**_components.helper("name"), "name": "name", "async": True}`. `mda build` reads the literal `name` and `"async"` without running code |
+| The helper's prompt, description, or tools | `src/paid_media_agent/subagents.py` |
+| A helper's default model, and the most effort it may use | `PAID_MEDIA_HELPER_MODEL`, `PAID_MEDIA_HELPER_EFFORT_CAP` |
+| What the lead is told about choosing a helper's model | `listing` in `src/paid_media_agent/middleware/async_helpers.py` |
 | When the agent hands work off or schedules a check-in | The "Long work and check-ins" section of `workspace/skills/paid-media-analysis/SKILL.md` |
 | Step phrasing in Slack | `src/paid_media_agent/surfaces/progress.py` |
 | Prices behind the footer's estimate | `src/paid_media_agent/middleware/prices.toml` |
@@ -180,7 +181,8 @@ These run on Managed Deep Agents and live in code, so a skill edit cannot widen 
 
 Keep helpers read-only. A helper is a graph of its own that any deployment caller can run, and it
 does not inherit the lead's middleware, so give it reads and deterministic tools only and keep its
-guard stack. `general-purpose` is declared so MDA does not add its default background copy, which
+guard stack. Every task runs on `worker` whatever model it picks, so a new kind of work needs a
+line in the analysis skill, not a new subagent. `general-purpose` is declared so MDA does not add its default background copy, which
 would carry every lead tool.
 
 ## Optional warehouses and dbt

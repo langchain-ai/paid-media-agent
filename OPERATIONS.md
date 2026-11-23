@@ -86,15 +86,28 @@ callers may share learned knowledge. A personal layer mounts only for a verified
 
 ### Background helpers and check-ins
 
-On MDA the agent can hand long work to a background helper and answer later in the same thread.
-Three helpers are declared in `agent.py` as async subagents: `account-puller` for pulls and
-comparisons across many accounts or long windows, `report-builder` for a full rendered report, and
-`general-purpose` for other read-only research. `mda build` turns each into a graph of its own
-(`paid-media-agent--account-puller`, ...) on the same deployment, sharing the lead's sandbox and
-trace. When a helper finishes, it wakes the lead on its thread and MDA posts the answer to the
-Slack thread the request came from. Every helper is read-only: its tools are reads, comparisons,
-and report rendering, with the lead's invocation guard, redaction, and call limits. Proposals and
-approvals stay with the lead.
+On MDA the agent can hand long work to a background helper and answer later in the same thread:
+pulls and comparisons across many accounts or long windows, a full rendered report, or other
+read-only research. Every task runs on `worker`, declared in `agent.py` as an async subagent, which
+`mda build` turns into a graph of its own (`paid-media-agent--worker`) on the same deployment,
+sharing the lead's sandbox and trace. `general-purpose` is declared read-only beside it so MDA adds
+no default copy with the lead's tools; the lead never starts it.
+
+The lead picks each task's model and effort: any LangChain `provider:model`, so a plain pull can
+run on a smaller model while a report keeps the lead's. `PAID_MEDIA_HELPER_MODEL` sets the model a
+task gets when the lead names none (the lead's when unset), and `PAID_MEDIA_HELPER_EFFORT_CAP` caps
+the effort. A model that does not share the lead's endpoint needs its provider's key in `.env`
+(`PAID_MEDIA_MODEL_BASE_URL` and `PAID_MEDIA_MODEL_API_KEY_ENV` reach only the lead's own model, or
+its provider's other models when the lead uses the provider's endpoint); the lead is told when the
+key is missing and the task does not start. The footer's cost estimate counts each helper at
+its own model's price.
+
+A helper sends the lead short progress notes with `report_progress`. The lead reads them before its
+next step; an urgent one, such as data missing for a whole platform, wakes an idle lead, which
+answers in the thread. When a helper finishes, it wakes the lead on its thread and MDA posts the
+answer to the Slack thread the request came from. Every helper is read-only: its tools are reads,
+comparisons, and report rendering, with the lead's invocation guard, redaction, and call limits.
+Proposals and approvals stay with the lead.
 
 Any caller allowed to start runs on the deployment can run a helper graph directly, as themselves.
 It can only read.
