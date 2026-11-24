@@ -111,9 +111,11 @@ sandbox itself; there is no separate publish step.
    Slack to report it done. A workspace admin may have to approve the app.
 
 Without a terminal, deploy can only use a LangSmith-managed app in a Slack workspace you have
-authorized before; otherwise it stops before uploading and says to run it in a terminal once. Later
-deploys ask nothing. `uv run mda channels setup` in a terminal checks or finishes the Slack setup
-without deploying.
+authorized before; otherwise it stops before uploading and says to run it in a terminal once. Each
+deployment gets its own Slack app, so a new one, a test copy included, may wait for a workspace
+admin's approval even in an authorized workspace. The Agent Server is live meanwhile; after an hour
+deploy stops waiting, and `uv run mda channels setup` (or the next deploy) finishes the Slack step
+once the app is approved. Later deploys ask nothing.
 
 ## 5. First question
 
