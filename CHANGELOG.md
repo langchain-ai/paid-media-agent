@@ -71,6 +71,11 @@ Live provider writes remain disabled by default and require the documented relea
 
 ### Changed
 
+- The README and operations guide say what a live MDA deploy showed: reports render as HTML (the
+  managed build has no PDF libraries; the self-hosted image does), a scheduled report posts its
+  summary rather than a file, and every deployment, a test copy included, gets its own Slack app
+  that a workspace admin may have to approve.
+
 - Clarify the README's capabilities, setup, deployment, and company customization guidance.
 - Use the LangChain company logo in the README, with light and dark variants.
 - Require `managed-deepagents` 0.10.5 or later (and `deepagents` 0.7.30 and `langgraph` 1.2.19 or

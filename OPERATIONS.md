@@ -177,8 +177,11 @@ Use `config set` for these environment settings so their schedule declarations s
 The local `report` command uses known campaign-performance adapters. Other provider schemas can
 be explored through `ask`; they need a normalization mapping before inclusion in typed reports.
 HTML reports render on the host. PDF rendering requires WeasyPrint and its native libraries in the
-host process. A sandbox snapshot does not install libraries into that process. Automatic Slack
-PDF uploads are not included. Use the self-hosted artifact API or local output files for downloads.
+host process. The MDA build installs core dependencies only, so a deployed agent renders HTML and
+says the PDF is unavailable; a sandbox snapshot does not install libraries into the host process
+either. The self-hosted Docker image includes them. Report files are not uploaded to Slack: a
+scheduled report posts its summary. Use the self-hosted artifact API or local output files for
+downloads.
 
 ### Sandbox
 
