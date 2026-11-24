@@ -156,7 +156,7 @@ deployment, in your browser.
 | --- | --- | --- |
 | Your goals, conversions, and naming | `workspace/skills/company-context/` | [`paid-media-org-onboarding` skill](.agents/skills/paid-media-org-onboarding/SKILL.md) |
 | Your report style | `DESIGN.md` and the renderer tokens | [Report design](docs/customization.md#report-design) |
-| Report timing and delivery | `PAID_MEDIA_REPORT_*`, or `deliver_to` in `schedules/` | [Customization](docs/customization.md#memory-and-scheduling) |
+| Report timing and delivery | `PAID_MEDIA_REPORT_*` (`PAID_MEDIA_REPORT_SLACK_CHANNEL` for the channel), or `schedules/` | [Customization](docs/customization.md#memory-and-scheduling) |
 | Another model | `PAID_MEDIA_MODEL` and its key, or the LangSmith Gateway | [Models](OPERATIONS.md#models) |
 | Warehouse or CRM data | a read-only tool in the shared assembly | [Optional data sources](docs/customization.md#optional-warehouses-and-dbt) |
 | Live changes | a write policy and the release gates | [Live-write runbook](docs/operations/live-write-runbook.md) |

@@ -14,7 +14,7 @@ from PIL import Image
 from paid_media_agent.admin import actions
 from paid_media_agent.admin.actions import config_set
 from paid_media_agent.admin.envfile import read_env
-from paid_media_agent.deployment import DeploymentSettings
+from paid_media_agent.deployment import DeploymentSettings, report_delivery
 
 
 def test_customization_reaches_channels_and_compiled_schedules(
@@ -41,6 +41,7 @@ def test_customization_reaches_channels_and_compiled_schedules(
         "PAID_MEDIA_REPORT_TIMEZONE": "America/Los_Angeles",
         "PAID_MEDIA_WEEKLY_REPORT_DAY": "2",
         "PAID_MEDIA_MONTHLY_REPORT_DAY": "5",
+        "PAID_MEDIA_REPORT_SLACK_CHANNEL": "C0123456789",
     }
     for name in updates:
         monkeypatch.delenv(name, raising=False)
@@ -70,10 +71,10 @@ def test_customization_reaches_channels_and_compiled_schedules(
     assert build.returncode == 0, build.stderr
     compiled = tmp_path / ".mda/build"
     assert (compiled / "channels/slack-icon.png").is_file()
-    assert (
-        runpy.run_path(str(compiled / "schedules/weekly_report.py"))["schedule"].config["timezone"]
-        == "America/Los_Angeles"
-    )
+    compiled_weekly = runpy.run_path(str(compiled / "schedules/weekly_report.py"))["schedule"]
+    assert compiled_weekly.config["timezone"] == "America/Los_Angeles"
+    assert compiled_weekly.config["deliver_to"] == report_delivery("C0123456789")
+    assert runpy.run_path(str(weekly))["schedule"].config["prompt"] == before_prompt
 
     monkeypatch.setattr(actions, "_agent_import_smoke", lambda _: "ok")
     assert actions.mda_check(tmp_path).detail["report_schedules"] == "ok"
@@ -96,6 +97,7 @@ def test_invalid_customization_does_not_change_files(
         {"PAID_MEDIA_MONTHLY_REPORT_DAY": "31"},
         {"PAID_MEDIA_WEEKLY_REPORT_DAY": "7"},
         {"PAID_MEDIA_REPORT_TIME": "09:30:30"},
+        {"PAID_MEDIA_REPORT_SLACK_CHANNEL": "#paid-media"},
     ):
         result = config_set(tmp_path, updates)
         assert not result.ok
@@ -135,3 +137,74 @@ def test_removed_schedule_stays_disabled_when_updating_settings(
         runpy.run_path(str(tmp_path / "schedules/monthly_report.py"))["schedule"].config["cron"]
         == "30 9 1 * *"
     )
+
+
+def test_the_report_channel_is_a_literal_that_moves_and_stays_formatted(
+    tmp_path: Path, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MDA reads `deliver_to` statically, so `config set` writes it as a literal, and moving the
+    reports to another channel rewrites it in place."""
+    shutil.copytree(project_root / "schedules", tmp_path / "schedules")
+    for name in DeploymentSettings.model_fields:
+        monkeypatch.delenv(f"PAID_MEDIA_{name.upper()}", raising=False)
+    housekeeping = (tmp_path / "schedules/housekeeping.py").read_text()
+    for channel in ("C0123456789", "G0987654321"):
+        assert config_set(tmp_path, {"PAID_MEDIA_REPORT_SLACK_CHANNEL": channel}).ok
+        for cadence in ("weekly", "monthly"):
+            path = tmp_path / f"schedules/{cadence}_report.py"
+            config = runpy.run_path(str(path))["schedule"].config
+            assert config["deliver_to"] == report_delivery(channel), cadence
+            assert path.read_text().count("deliver_to=") == 1
+    assert (tmp_path / "schedules/housekeeping.py").read_text() == housekeeping, "it posts nothing"
+    formatted = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "ruff", "format", "--check", str(tmp_path / "schedules")],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert formatted.returncode == 0, formatted.stdout
+
+
+def test_clearing_the_report_channel_stops_posting_and_keeps_hand_written_destinations(
+    tmp_path: Path, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shutil.copytree(project_root / "schedules", tmp_path / "schedules")
+    for name in DeploymentSettings.model_fields:
+        monkeypatch.delenv(f"PAID_MEDIA_{name.upper()}", raising=False)
+    weekly, monthly = (tmp_path / f"schedules/{c}_report.py" for c in ("weekly", "monthly"))
+    original = weekly.read_text()
+    assert config_set(tmp_path, {"PAID_MEDIA_REPORT_SLACK_CHANNEL": "C0123456789"}).ok
+    # A hand-written destination (another shape) is the operator's, not the setting's.
+    by_hand = monthly.read_text().replace(
+        '"to": {"type": "provider_conversation", "conversation_id": "C0123456789"},',
+        '"to": {"type": "provider_thread", "conversation_id": "C1", "thread_id": "171.1"},',
+    )
+    monthly.write_text(by_hand)
+    assert config_set(tmp_path, {"PAID_MEDIA_REPORT_SLACK_CHANNEL": ""}).ok
+    assert weekly.read_text() == original
+    assert "deliver_to" not in runpy.run_path(str(weekly))["schedule"].config
+    assert monthly.read_text() == by_hand
+
+
+def test_a_parenthesized_destination_is_replaced_whole(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in DeploymentSettings.model_fields:
+        monkeypatch.delenv(f"PAID_MEDIA_{name.upper()}", raising=False)
+    (tmp_path / "schedules").mkdir()
+    weekly = tmp_path / "schedules/weekly_report.py"
+    weekly.write_text(
+        "from managed_deepagents import define_schedule\n\n"
+        "schedule = define_schedule(\n"
+        '    cron="0 13 * * MON",\n'
+        '    timezone="UTC",\n'
+        '    prompt="Run the weekly report.",\n'
+        "    deliver_to=(\n"
+        '        {"channel": "slack", "to": {"type": "provider_conversation", "conversation_id": "C1111111"}}\n'
+        "    ),\n"
+        ")\n"
+    )
+    assert config_set(tmp_path, {"PAID_MEDIA_REPORT_SLACK_CHANNEL": "C2222222"}).ok
+    config = runpy.run_path(str(weekly))["schedule"].config
+    assert config["deliver_to"] == report_delivery("C2222222")
+    assert config["prompt"] == "Run the weekly report."

@@ -54,6 +54,10 @@
   - The demo labels its receipt as simulated.
   - A step-by-step deploy guide, [docs/deploy-mda.md](docs/deploy-mda.md), which the onboarding
     skill follows.
+- `PAID_MEDIA_REPORT_SLACK_CHANNEL` posts the weekly and monthly reports to a Slack channel:
+  `config set` writes it into both schedules as the literal `deliver_to` MDA reads statically, and
+  `mda check` flags a mismatch. The report prompts keep the work in the scheduled run, since MDA
+  posts only that run's answer.
 - A one-paste deploy prompt for Claude Code, Codex or Cursor in the README and the deploy guide,
   kept identical by a test. The onboarding skill asks its setup questions in one message (account,
   model, Pipeboard or sample accounts, a test copy, who approves the Slack app) and says what bills.

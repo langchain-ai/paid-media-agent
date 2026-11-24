@@ -140,28 +140,25 @@ this template does not add a separate long-term memory service. Learned preferen
 silently override explicit business targets.
 
 Report prompts and timing live in `schedules/`. MDA runs these declarations. To send the final
-report to Slack, set a literal `deliver_to` in the schedule and replace the placeholder with your
-channel ID:
+report to Slack, run `uv run paid-media-agent config set PAID_MEDIA_REPORT_SLACK_CHANNEL=<channel
+ID>`, which writes this literal `deliver_to` into both report schedules:
 
 ```python
-from managed_deepagents import define_schedule
-
 schedule = define_schedule(
-    cron="0 9 * * MON",
-    timezone="America/New_York",
-    prompt="Analyze the last complete week and render the weekly paid-media report.",
+    cron="0 13 * * MON",
+    timezone="UTC",
+    prompt="...",
     deliver_to={
         "channel": "slack",
-        "to": {
-            "type": "provider_conversation",
-            "conversation_id": "C_REPLACE_WITH_YOUR_CHANNEL_ID",
-        },
+        "to": {"type": "provider_conversation", "conversation_id": "C0123456789"},
     },
 )
 ```
 
 Invite the connected Slack app to that channel, then deploy. Without `deliver_to`, the scheduled
-run has no Slack delivery destination. Remove a schedule file and redeploy to disable its runs.
+run has no Slack delivery destination. MDA posts only the scheduled run's own answer, so keep a
+report's work in that run: a background helper's answer would arrive in a later run that is not
+posted. Remove a schedule file and redeploy to disable its runs.
 Self-hosted installations can call the documented report command from their own scheduler.
 Scheduled analysis uses the same skills, accounts, and tools as an interactive run.
 

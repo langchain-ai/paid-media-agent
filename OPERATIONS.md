@@ -153,14 +153,26 @@ model it does not list shows no cost. This project adds no custom cards to the m
 `schedules/weekly_report.py` and `schedules/monthly_report.py` are native MDA declarations. By
 default, they run Monday at 13:00 UTC and the first day of the month at 13:00 UTC. The weekly report
 compares two 7-day windows; the monthly report compares two 28-day windows. Remove a schedule file
-and redeploy to disable it. Use the [delivery example](docs/customization.md#memory-and-reports)
-to post the final response to your Slack channel. Without `deliver_to`, results stay in LangSmith.
+and redeploy to disable it.
+
+To post both reports to a Slack channel, invite the app to it, copy the channel ID (in Slack:
+the channel's name, then the bottom of **About**), and run:
+
+```bash
+uv run paid-media-agent config set PAID_MEDIA_REPORT_SLACK_CHANNEL=C0123456789
+```
+
+then deploy. MDA reads schedules statically, so `config set` writes the channel into both files as a
+literal `deliver_to`; setting it empty removes that again (a destination you wrote by hand stays).
+Without one, results stay in LangSmith. MDA posts the scheduled run's own
+answer, so a report is built in that run rather than handed to a background helper.
 
 Edit the static cron, timezone, prompt, and destination in those files. The console also supports
 time/day changes through `PAID_MEDIA_REPORT_TIME`, `PAID_MEDIA_REPORT_TIMEZONE`,
 `PAID_MEDIA_WEEKLY_REPORT_DAY` (0 Monday to 6 Sunday), and `PAID_MEDIA_MONTHLY_REPORT_DAY` (1–28).
-Use `config set` for these environment settings so their schedule declarations stay synchronized.
-A waited `mda deploy` reconciles schedules; `--no-wait` skips that step.
+Use `config set` for these environment settings so their schedule declarations stay synchronized;
+`mda check` says when they are out of sync. A waited `mda deploy` reconciles schedules;
+`--no-wait` skips that step.
 
 The local `report` command uses known campaign-performance adapters. Other provider schemas can
 be explored through `ask`; they need a normalization mapping before inclusion in typed reports.
